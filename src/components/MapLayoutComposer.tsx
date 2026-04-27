@@ -12,7 +12,7 @@ import {
 } from "@/lib/useLayoutComposer";
 import { exportToPNG, exportToPDF, downloadBlob, type ExportDPI } from "@/lib/layoutExport";
 import { toast } from "sonner";
-import { MapContainer, TileLayer, GeoJSON, useMap, Polyline } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, useMap, Polyline, Marker } from "react-leaflet";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import proj4 from "proj4";
@@ -579,7 +579,6 @@ function MapFaceController({ element, composer }: { element: LayoutElement; comp
 // ──────────────────────────────────────────────────────
 // GRID OVERLAY
 // ──────────────────────────────────────────────────────
-import { Marker } from "react-leaflet";
 
 function MapGridOverlay({ element }: { element: LayoutElement }) {
   const map = useMap();
