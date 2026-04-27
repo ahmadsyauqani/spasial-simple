@@ -128,10 +128,11 @@
   --sidebar-ring: oklch(0.68 0.19 45);
 }
 
+/*
 .leaflet-tile-pane {
-  /* Steel metallic filter on base map tiles */
   filter: grayscale(1) sepia(0.3) hue-rotate(180deg) brightness(0.85) contrast(1.15);
 }
+*/
 
 @layer base {
   * {
