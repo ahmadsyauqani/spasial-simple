@@ -12,9 +12,10 @@ import {
 } from "@/lib/useLayoutComposer";
 import { exportToPNG, exportToPDF, downloadBlob, type ExportDPI } from "@/lib/layoutExport";
 import { toast } from "sonner";
-import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, useMap, Polyline } from "react-leaflet";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import proj4 from "proj4";
 
 // ──────────────────────────────────────────────────────
 // MAIN COMPOSER COMPONENT
@@ -476,6 +477,7 @@ function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, h
         {/* Auto-fit to layer bounds on mount */}
         <FitBoundsController geojsons={allGeojsons} />
         <MapFaceController element={element} composer={composer} />
+        <MapGridOverlay element={element} />
       </MapContainer>
     </div>
   );
@@ -572,6 +574,177 @@ function MapFaceController({ element, composer }: { element: LayoutElement; comp
   }, [map, composer]);
 
   return null;
+}
+
+// ──────────────────────────────────────────────────────
+// GRID OVERLAY
+// ──────────────────────────────────────────────────────
+import { Marker } from "react-leaflet";
+
+function MapGridOverlay({ element }: { element: LayoutElement }) {
+  const map = useMap();
+  const cfg = element.config;
+  const showGrid = cfg.showGrid;
+  const gridType = cfg.gridType || "geographic";
+  const userInterval = cfg.gridInterval || 0;
+
+  const [lines, setLines] = useState<{ id: string; positions: [number, number][]; label: string; latlng: [number, number]; align: 'top'|'left'|'bottom'|'right' }[]>([]);
+
+  useEffect(() => {
+    if (!showGrid) {
+      setLines([]);
+      return;
+    }
+
+    const updateGrid = () => {
+      try {
+        const bounds = map.getBounds();
+        const minLat = bounds.getSouth();
+        const maxLat = bounds.getNorth();
+        let minLng = bounds.getWest();
+        let maxLng = bounds.getEast();
+        
+        // Handle longitude wrapping if needed, but for layout we usually just take it as is
+        const newLines: any[] = [];
+        
+        if (gridType === "geographic") {
+           let interval = userInterval;
+           if (!interval || interval <= 0) {
+              const latSpan = maxLat - minLat;
+              const rawInterval = latSpan / 4;
+              const niceIntervals = [0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 30];
+              interval = niceIntervals.find(i => i >= rawInterval) || 10;
+           }
+
+           const startLat = Math.ceil(minLat / interval) * interval;
+           for (let lat = startLat; lat <= maxLat; lat += interval) {
+             const label = lat.toFixed(4).replace(/\.?0+$/, '') + "°";
+             newLines.push({ id: `h_${lat}`, positions: [[lat, minLng], [lat, maxLng]], label, latlng: [lat, minLng], align: 'left' });
+             newLines.push({ id: `h2_${lat}`, positions: [], label, latlng: [lat, maxLng], align: 'right' });
+           }
+
+           const startLng = Math.ceil(minLng / interval) * interval;
+           for (let lng = startLng; lng <= maxLng; lng += interval) {
+             const label = lng.toFixed(4).replace(/\.?0+$/, '') + "°";
+             newLines.push({ id: `v_${lng}`, positions: [[minLat, lng], [maxLat, lng]], label, latlng: [minLat, lng], align: 'bottom' });
+             newLines.push({ id: `v2_${lng}`, positions: [], label, latlng: [maxLat, lng], align: 'top' });
+           }
+        } else {
+           // Cartesian UTM
+           const centerLat = (minLat + maxLat) / 2;
+           const centerLng = (minLng + maxLng) / 2;
+           
+           const zone = Math.floor((centerLng + 180) / 6) + 1;
+           const isSouth = centerLat < 0;
+           const epsg = isSouth ? 32700 + zone : 32600 + zone;
+           const projStr = `+proj=utm +zone=${zone} ${isSouth ? '+south ' : ''}+datum=WGS84 +units=m +no_defs`;
+           
+           if (!proj4.defs(`EPSG:${epsg}`)) {
+              proj4.defs(`EPSG:${epsg}`, projStr);
+           }
+           
+           const sw = proj4('EPSG:4326', `EPSG:${epsg}`, [minLng, minLat]);
+           const ne = proj4('EPSG:4326', `EPSG:${epsg}`, [maxLng, maxLat]);
+           const nw = proj4('EPSG:4326', `EPSG:${epsg}`, [minLng, maxLat]);
+           const se = proj4('EPSG:4326', `EPSG:${epsg}`, [maxLng, minLat]);
+           
+           const minX = Math.min(sw[0], nw[0]);
+           const maxX = Math.max(ne[0], se[0]);
+           const minY = Math.min(sw[1], se[1]);
+           const maxY = Math.max(ne[1], nw[1]);
+           
+           let interval = userInterval;
+           if (!interval || interval <= 0) {
+              const ySpan = maxY - minY;
+              const rawInterval = ySpan / 4;
+              const pow10 = Math.pow(10, Math.floor(Math.log10(rawInterval)));
+              let d = rawInterval / pow10;
+              d = d >= 5 ? 5 : d >= 2 ? 2 : 1;
+              interval = pow10 * d;
+           }
+           
+           const startX = Math.ceil(minX / interval) * interval;
+           for (let x = startX; x <= maxX; x += interval) {
+             const pts: [number, number][] = [];
+             for (let y = minY; y <= maxY; y += (maxY - minY) / 20) {
+                const wgs = proj4(`EPSG:${epsg}`, 'EPSG:4326', [x, y]);
+                pts.push([wgs[1], wgs[0]]);
+             }
+             const wgsEnd = proj4(`EPSG:${epsg}`, 'EPSG:4326', [x, maxY]);
+             pts.push([wgsEnd[1], wgsEnd[0]]);
+             
+             const label = x.toLocaleString("id-ID") + "m";
+             const bottomWgs = proj4(`EPSG:${epsg}`, 'EPSG:4326', [x, minY]);
+             const topWgs = proj4(`EPSG:${epsg}`, 'EPSG:4326', [x, maxY]);
+             newLines.push({ id: `utmv_${x}`, positions: pts, label, latlng: [Math.max(minLat, Math.min(maxLat, bottomWgs[1])), bottomWgs[0]], align: 'bottom' });
+             newLines.push({ id: `utmv2_${x}`, positions: [], label, latlng: [Math.max(minLat, Math.min(maxLat, topWgs[1])), topWgs[0]], align: 'top' });
+           }
+           
+           const startY = Math.ceil(minY / interval) * interval;
+           for (let y = startY; y <= maxY; y += interval) {
+             const pts: [number, number][] = [];
+             for (let x = minX; x <= maxX; x += (maxX - minX) / 20) {
+                const wgs = proj4(`EPSG:${epsg}`, 'EPSG:4326', [x, y]);
+                pts.push([wgs[1], wgs[0]]);
+             }
+             const wgsEnd = proj4(`EPSG:${epsg}`, 'EPSG:4326', [maxX, y]);
+             pts.push([wgsEnd[1], wgsEnd[0]]);
+             
+             const label = y.toLocaleString("id-ID") + "m";
+             const leftWgs = proj4(`EPSG:${epsg}`, 'EPSG:4326', [minX, y]);
+             const rightWgs = proj4(`EPSG:${epsg}`, 'EPSG:4326', [maxX, y]);
+             newLines.push({ id: `utmh_${y}`, positions: pts, label, latlng: [leftWgs[1], Math.max(minLng, Math.min(maxLng, leftWgs[0]))], align: 'left' });
+             newLines.push({ id: `utmh2_${y}`, positions: [], label, latlng: [rightWgs[1], Math.max(minLng, Math.min(maxLng, rightWgs[0]))], align: 'right' });
+           }
+        }
+        setLines(newLines);
+      } catch (e) {
+        console.warn("Error drawing grid", e);
+      }
+    };
+
+    map.on('move', updateGrid);
+    map.on('zoom', updateGrid);
+    updateGrid();
+
+    return () => {
+      map.off('move', updateGrid);
+      map.off('zoom', updateGrid);
+    };
+  }, [map, showGrid, gridType, userInterval]);
+
+  if (!showGrid || lines.length === 0) return null;
+
+  const createIcon = (label: string, align: string) => {
+    return L.divIcon({
+       html: `<div style="
+          color: rgba(255,255,255,0.8);
+          text-shadow: 1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black;
+          font-size: 8px;
+          font-family: monospace;
+          white-space: nowrap;
+          pointer-events: none;
+          ${
+          align === 'left' ? 'transform: translateY(-50%) translateX(4px);' : 
+          align === 'right' ? 'transform: translateY(-50%) translateX(-100%) translateX(-4px);' :
+          align === 'top' ? 'transform: translateX(-50%) translateY(4px);' :
+          'transform: translateX(-50%) translateY(-100%) translateY(-4px);'
+       }">${label}</div>`,
+       className: 'grid-label-icon bg-transparent border-0',
+       iconSize: [0, 0],
+    });
+  };
+
+  return (
+    <>
+      {lines.map((l) => l.positions.length > 0 && (
+        <Polyline key={l.id} positions={l.positions} color="rgba(255,255,255,0.4)" weight={1} dashArray="4,4" interactive={false} />
+      ))}
+      {lines.map((l) => (
+        <Marker key={'lbl_'+l.id} position={l.latlng} icon={createIcon(l.label, l.align)} interactive={false} />
+      ))}
+    </>
+  );
 }
 
 // LEGEND
@@ -985,6 +1158,36 @@ function ElementConfigEditor({ element, composer }: { element: LayoutElement; co
             <input type="checkbox" checked={cfg.showBasemap !== false} onChange={(e) => updateElementConfig(element.id, { showBasemap: e.target.checked })} className="rounded" />
             Tampilkan Basemap
           </label>
+          <div className="pt-2 mt-2 border-t border-white/10 flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
+              <input type="checkbox" checked={cfg.showGrid || false} onChange={(e) => updateElementConfig(element.id, { showGrid: e.target.checked })} className="rounded" />
+              Tampilkan Grid Koordinat
+            </label>
+            
+            {cfg.showGrid && (
+              <>
+                <label className="layout-props-label">Jenis Grid</label>
+                <select value={cfg.gridType || "geographic"} onChange={(e) => updateElementConfig(element.id, { gridType: e.target.value })} className="layout-props-select">
+                  <option value="geographic">Geografis (Lintang/Bujur)</option>
+                  <option value="cartesian">Kartesian (Meter UTM)</option>
+                </select>
+
+                <label className="layout-props-label">Interval (opsional)</label>
+                <input 
+                  type="number" 
+                  value={cfg.gridInterval || ""} 
+                  onChange={(e) => updateElementConfig(element.id, { gridInterval: e.target.value ? Number(e.target.value) : 0 })} 
+                  className="layout-props-input" 
+                  placeholder={cfg.gridType === "cartesian" ? "Contoh: 1000 (Meter)" : "Contoh: 0.1 (Derajat)"} 
+                  min={0}
+                  step={cfg.gridType === "cartesian" ? 100 : 0.01}
+                />
+                <span className="text-[9px] text-white/40 leading-tight">
+                  Biarkan kosong atau 0 agar sistem menghitung jarak garis yang paling ideal secara otomatis.
+                </span>
+              </>
+            )}
+          </div>
         </div>
       );
     }

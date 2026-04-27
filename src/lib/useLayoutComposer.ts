@@ -173,7 +173,7 @@ export function useLayoutComposer() {
 
   const addElement = useCallback((type: LayoutElementType) => {
     const defaults: Record<LayoutElementType, Partial<LayoutElement>> = {
-      mapFace: { x: 10, y: 10, width: 60, height: 50, config: { centerLat: -6.2, centerLng: 106.8, zoom: 12, showBasemap: true } },
+      mapFace: { x: 10, y: 10, width: 60, height: 50, config: { centerLat: -6.2, centerLng: 106.8, zoom: 12, showBasemap: true, showGrid: false, gridType: 'geographic', gridInterval: 0 } },
       legend: { x: 5, y: 75, width: 25, height: 15, config: { title: "LEGENDA", fontSize: 10, showAllLayers: true } },
       scaleBar: { x: 35, y: 85, width: 20, height: 6, config: { unit: "km", style: "bar", segments: 4 } },
       northArrow: { x: 80, y: 15, width: 8, height: 10, config: { style: "compass" } },
