@@ -446,14 +446,14 @@ function MapFaceElement({ element, layers, layerGeojsonCache, width, height }: {
         zoom={initialZoom}
         zoomControl={false}
         attributionControl={false}
-        style={{ width: "100%", height: "100%", background: "#f0f0f0" }}
+        style={{ width: "100%", height: "100%", background: "#1a1a1a" }}
         dragging={true}
         scrollWheelZoom={true}
         key={`mapface-${element.id}`}
       >
         {cfg.showBasemap !== false && (
           <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             attribution=""
           />
         )}
