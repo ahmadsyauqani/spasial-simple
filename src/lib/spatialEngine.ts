@@ -12,6 +12,29 @@ export async function parseSpatialFile(file: File): Promise<any> {
       // Assuming Shapefile inside ZIP
       const buffer = await file.arrayBuffer();
       geojson = await shp(buffer);
+    } else if (extension === "rar") {
+      const buffer = await file.arrayBuffer();
+      try {
+        const unrar = require('unrar.js/lib/Unrar');
+        const JSZip = require('jszip');
+        const files = unrar(buffer);
+        const zip = new JSZip();
+        
+        let hasFiles = false;
+        for (const f of files) {
+          if (f.fileData && f.filename) {
+            zip.file(f.filename, f.fileData);
+            hasFiles = true;
+          }
+        }
+        
+        if (!hasFiles) throw new Error("File RAR kosong atau format tidak didukung (RAR5 tidak disupport).");
+        
+        const zipBuffer = await zip.generateAsync({ type: "arraybuffer" });
+        geojson = await shp(zipBuffer);
+      } catch (err: any) {
+        throw new Error("Gagal mengekstrak RAR. Kemungkinan format RAR5 baru atau password-protected. Mohon ekstrak dan jadikan .zip: " + err.message);
+      }
     } else if (extension === "kml") {
       const text = await file.text();
       const dom = new DOMParser().parseFromString(text, "text/xml");
@@ -23,7 +46,7 @@ export async function parseSpatialFile(file: File): Promise<any> {
       throw new Error("DXF parsing is not fully implemented yet.");
       // Will require dxf-parser and turf.polygonize
     } else {
-      throw new Error("Format tidak didukung. Unggah .zip (Shapefile), .kml, .geojson, atau .json");
+      throw new Error("Format tidak didukung. Unggah .zip/.rar (Shapefile), .kml, .geojson, atau .json");
     }
 
     // Normalize to single FeatureCollection
