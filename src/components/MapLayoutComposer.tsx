@@ -567,9 +567,23 @@ function LegendElement({ element, layers }: { element: LayoutElement; layers: an
 // SCALE BAR
 function ScaleBarElement({ element, composer, width }: { element: LayoutElement; composer: ReturnType<typeof useLayoutComposer>; width: number }) {
   const cfg = element.config;
-  const segments = cfg.segments || 4;
-
+  const style = cfg.style || "bar";
   const mpp = composer.state.mapMetersPerPixel || 0;
+
+  if (style === "numeric") {
+      const scaleValue = mpp > 0 ? Math.round(mpp * 3000 * composer.state.canvasZoom) : 0;
+      const formattedScale = scaleValue > 0 ? `1 : ${scaleValue.toLocaleString("id-ID")}` : "1 : -";
+      
+      return (
+        <div className="w-full h-full bg-white border border-slate-300 flex items-center justify-center p-1">
+           <span style={{ fontSize: cfg.fontSize || 14, fontWeight: "bold", color: "#1a1a2e", fontFamily: "monospace" }}>
+               {formattedScale}
+           </span>
+        </div>
+      );
+  }
+
+  const segments = cfg.segments || 4;
   const maxBarWidth = Math.max(60, width - 20); // available width in px
   
   let displayVal = 0;
@@ -916,13 +930,22 @@ function ElementConfigEditor({ element, composer }: { element: LayoutElement; co
     case "scaleBar":
       return (
         <div className="flex flex-col gap-2">
-          <label className="layout-props-label">Satuan</label>
-          <select value={cfg.unit || "km"} onChange={(e) => updateElementConfig(element.id, { unit: e.target.value })} className="layout-props-select">
-            <option value="m">Meter</option>
-            <option value="km">Kilometer</option>
+          <label className="layout-props-label">Jenis Skala</label>
+          <select value={cfg.style || "bar"} onChange={(e) => updateElementConfig(element.id, { style: e.target.value })} className="layout-props-select">
+            <option value="bar">Skala Grafis (Bar)</option>
+            <option value="numeric">Skala Angka (1:X)</option>
           </select>
-          <label className="layout-props-label">Jumlah Segmen</label>
-          <input type="number" value={cfg.segments || 4} onChange={(e) => updateElementConfig(element.id, { segments: Number(e.target.value) })} className="layout-props-input" min={2} max={10} />
+          {cfg.style === "numeric" ? (
+             <>
+               <label className="layout-props-label">Ukuran Font</label>
+               <input type="number" value={cfg.fontSize || 14} onChange={(e) => updateElementConfig(element.id, { fontSize: Number(e.target.value) })} className="layout-props-input" min={6} max={72} />
+             </>
+          ) : (
+             <>
+                <label className="layout-props-label">Jumlah Segmen</label>
+                <input type="number" value={cfg.segments || 4} onChange={(e) => updateElementConfig(element.id, { segments: Number(e.target.value) })} className="layout-props-input" min={2} max={10} />
+             </>
+          )}
         </div>
       );
 
