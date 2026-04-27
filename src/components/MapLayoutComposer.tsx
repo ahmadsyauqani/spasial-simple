@@ -448,6 +448,8 @@ function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, h
         zoom={initialZoom}
         zoomControl={false}
         attributionControl={false}
+        zoomSnap={0}
+        wheelPxPerZoomLevel={60}
         style={{ width: "100%", height: "100%", background: "#1a1a1a" }}
         dragging={true}
         scrollWheelZoom={true}
@@ -473,7 +475,7 @@ function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, h
         })}
         {/* Auto-fit to layer bounds on mount */}
         <FitBoundsController geojsons={allGeojsons} />
-        <MapFaceController composer={composer} />
+        <MapFaceController element={element} composer={composer} />
       </MapContainer>
     </div>
   );
@@ -502,10 +504,51 @@ function FitBoundsController({ geojsons }: { geojsons: any[] }) {
   return null;
 }
 
-// Controller to compute actual scale in meters per pixel
-function MapFaceController({ composer }: { composer: ReturnType<typeof useLayoutComposer> }) {
+// Controller to compute actual scale in meters per pixel and sync state
+function MapFaceController({ element, composer }: { element: LayoutElement; composer: ReturnType<typeof useLayoutComposer> }) {
   const map = useMap();
 
+  // 1. Sync Composer config -> Leaflet map (when user types in properties panel)
+  useEffect(() => {
+     const center = map.getCenter();
+     const zoom = map.getZoom();
+     const cfgZoom = element.config.zoom || 12;
+     const cfgLat = element.config.centerLat || -6.2;
+     const cfgLng = element.config.centerLng || 106.8;
+     
+     if (Math.abs(cfgZoom - zoom) > 0.01 || 
+         Math.abs(cfgLat - center.lat) > 0.0001 || 
+         Math.abs(cfgLng - center.lng) > 0.0001) {
+         map.setView([cfgLat, cfgLng], cfgZoom, { animate: false });
+     }
+  }, [map, element.config.zoom, element.config.centerLat, element.config.centerLng]);
+
+  // 2. Sync Leaflet map -> Composer config (when user drags/zooms map)
+  useEffect(() => {
+    const onMoveEnd = () => {
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      
+      const cfgZoom = element.config.zoom || 12;
+      const cfgLat = element.config.centerLat || -6.2;
+      const cfgLng = element.config.centerLng || 106.8;
+
+      if (Math.abs(cfgZoom - zoom) > 0.01 ||
+          Math.abs(cfgLat - center.lat) > 0.0001 ||
+          Math.abs(cfgLng - center.lng) > 0.0001) {
+         composer.updateElementConfig(element.id, {
+           zoom,
+           centerLat: center.lat,
+           centerLng: center.lng
+         });
+      }
+    };
+    map.on('moveend', onMoveEnd);
+    map.on('zoomend', onMoveEnd);
+    return () => { map.off('moveend', onMoveEnd); map.off('zoomend', onMoveEnd); };
+  }, [map, element.id, element.config.zoom, element.config.centerLat, element.config.centerLng, composer]);
+
+  // 3. Always compute real mpp for the Scale Bar
   useEffect(() => {
     const updateScale = () => {
       try {
@@ -515,14 +558,11 @@ function MapFaceController({ composer }: { composer: ReturnType<typeof useLayout
         const dist = map.distance(p1, p2);
         const mpp = dist / 100;
         composer.setMapMetersPerPixel(mpp);
-      } catch (e) {
-        // map might not be fully initialized
-      }
+      } catch (e) {}
     };
     
     map.on('move', updateScale);
     map.on('zoom', updateScale);
-    // run once on mount
     updateScale();
 
     return () => {
@@ -901,21 +941,53 @@ function ElementConfigEditor({ element, composer }: { element: LayoutElement; co
         </div>
       );
 
-    case "mapFace":
+    case "mapFace": {
+      // Hitung skala berdasarkan zoom aktual
+      const C = 40075016.686;
+      const lat = cfg.centerLat || -6.2;
+      const currentZoom = cfg.zoom || 12;
+      const currentMpp = (C * Math.cos(lat * Math.PI / 180)) / Math.pow(2, currentZoom + 8);
+      const currentScale = Math.round(currentMpp * 3000 * composer.state.canvasZoom);
+
+      const handleScaleInput = (val: string) => {
+         const targetScale = Number(val);
+         if (targetScale > 0) {
+            const desiredMpp = targetScale / (3000 * composer.state.canvasZoom);
+            const newZoom = Math.log2((C * Math.cos(lat * Math.PI / 180)) / desiredMpp) - 8;
+            updateElementConfig(element.id, { zoom: newZoom });
+         }
+      };
+
       return (
         <div className="flex flex-col gap-2">
-          <label className="layout-props-label">Latitude Pusat</label>
+          <label className="layout-props-label text-orange-300">Skala Peta 1 : ...</label>
+          <div className="flex items-center gap-1 bg-white/5 rounded px-2 border border-white/10 focus-within:border-primary">
+            <span className="text-white/40 text-xs font-mono">1 :</span>
+            <input 
+              type="number" 
+              value={currentScale} 
+              onChange={(e) => handleScaleInput(e.target.value)} 
+              className="w-full bg-transparent border-0 text-white text-xs font-mono py-1 focus:outline-none focus:ring-0" 
+              step={100} 
+            />
+          </div>
+
+          <label className="layout-props-label mt-2">Latitude Pusat</label>
           <input type="number" value={cfg.centerLat || -6.2} onChange={(e) => updateElementConfig(element.id, { centerLat: Number(e.target.value) })} className="layout-props-input" step={0.01} />
+          
           <label className="layout-props-label">Longitude Pusat</label>
           <input type="number" value={cfg.centerLng || 106.8} onChange={(e) => updateElementConfig(element.id, { centerLng: Number(e.target.value) })} className="layout-props-input" step={0.01} />
-          <label className="layout-props-label">Zoom Level</label>
-          <input type="number" value={cfg.zoom || 12} onChange={(e) => updateElementConfig(element.id, { zoom: Number(e.target.value) })} className="layout-props-input" min={1} max={20} />
+          
+          <label className="layout-props-label">Zoom Level (Leaflet)</label>
+          <input type="number" value={Number((cfg.zoom || 12).toFixed(2))} onChange={(e) => updateElementConfig(element.id, { zoom: Number(e.target.value) })} className="layout-props-input" min={1} max={20} step={0.1} />
+          
           <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer mt-1">
             <input type="checkbox" checked={cfg.showBasemap !== false} onChange={(e) => updateElementConfig(element.id, { showBasemap: e.target.checked })} className="rounded" />
             Tampilkan Basemap
           </label>
         </div>
       );
+    }
 
     case "legend":
       return (
