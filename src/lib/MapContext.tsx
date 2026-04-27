@@ -20,6 +20,31 @@ type GeoJsonLayer = {
 
 export type AreaUnit = 'Ha' | 'm2' | 'km2';
 
+export type BasemapType = "dark" | "citra" | "hybrid" | "citra_terang";
+
+export const BASEMAP_OPTIONS: Record<BasemapType, { url: string, attribution: string, name: string }> = {
+  dark: {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://carto.com/">CartoDB</a>',
+    name: "Dark Map"
+  },
+  citra: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Tiles &copy; Esri",
+    name: "Citra (Esri)"
+  },
+  hybrid: {
+    url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    attribution: "&copy; Google",
+    name: "Hybrid (Google)"
+  },
+  citra_terang: {
+    url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+    attribution: "&copy; Google",
+    name: "Citra Terang (Google)"
+  }
+};
+
 export type AreaMetrics = {
   wgs84_sqm: number; // base internal storage in Square Meters
   utm_sqm?: number;
@@ -61,6 +86,8 @@ interface MapContextType {
   setLayoutComposerOpen: (open: boolean) => void;
   mapViewState: MapViewState;
   setMapViewState: (state: MapViewState) => void;
+  activeBasemap: BasemapType;
+  setActiveBasemap: (basemap: BasemapType) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -76,6 +103,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [overlapResult, setOverlapResult] = useState<OverlapResult>(null);
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
   const [mapViewState, setMapViewState] = useState<MapViewState>({ center: [-0.789275, 113.921327], zoom: 5 });
+  const [activeBasemap, setActiveBasemap] = useState<BasemapType>("dark");
 
   const cacheLayerGeojson = (id: string, geojson: any) => {
     setLayerGeojsonCache((prev) => ({ ...prev, [id]: geojson }));
@@ -113,7 +141,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <MapContext.Provider value={{ layers, setLayers, activeFeatureToZoom, setZoomFeature, updateLayerStyle, reorderLayer, layerAreas, setLayerArea, areaUnit, setAreaUnit, zoomToLayerId, triggerZoomToLayer: setZoomToLayerId, layerGeojsonCache, cacheLayerGeojson, overlapResult, setOverlapResult, isLayoutComposerOpen, setLayoutComposerOpen, mapViewState, setMapViewState }}>
+    <MapContext.Provider value={{ layers, setLayers, activeFeatureToZoom, setZoomFeature, updateLayerStyle, reorderLayer, layerAreas, setLayerArea, areaUnit, setAreaUnit, zoomToLayerId, triggerZoomToLayer: setZoomToLayerId, layerGeojsonCache, cacheLayerGeojson, overlapResult, setOverlapResult, isLayoutComposerOpen, setLayoutComposerOpen, mapViewState, setMapViewState, activeBasemap, setActiveBasemap }}>
       {children}
     </MapContext.Provider>
   );

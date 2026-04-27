@@ -5,7 +5,8 @@ import { MapContainer, TileLayer, ZoomControl, GeoJSON, useMap } from "react-lea
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import * as turf from "@turf/turf";
-import { useMapContext } from "@/lib/MapContext";
+import { useMapContext, BASEMAP_OPTIONS, BasemapType } from "@/lib/MapContext";
+import { Layers } from "lucide-react";
 
 // Fix for default Leaflet markers in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -95,10 +96,30 @@ function MapController() {
 }
 
 export default function MapArea() {
-  const { activeFeatureToZoom, layers } = useMapContext();
+  const { activeFeatureToZoom, layers, activeBasemap, setActiveBasemap } = useMapContext();
+  const currentBasemap = BASEMAP_OPTIONS[activeBasemap];
 
   return (
     <div className="w-full h-full bg-background absolute inset-0 z-0">
+      {/* Basemap Selector UI */}
+      <div className="absolute bottom-6 left-6 z-[1000] flex flex-col gap-2 group">
+        <button className="bg-card text-card-foreground border rounded-full p-2.5 shadow-md hover:bg-muted transition-colors flex items-center justify-center">
+          <Layers className="w-5 h-5 text-primary" />
+        </button>
+        <div className="absolute bottom-full left-0 mb-2 bg-card/95 backdrop-blur-md border rounded-xl p-2 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col gap-1 min-w-[150px]">
+          <div className="text-xs font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider mb-1">Pilih Basemap</div>
+          {(Object.keys(BASEMAP_OPTIONS) as BasemapType[]).map((key) => (
+            <button
+              key={key}
+              onClick={() => setActiveBasemap(key)}
+              className={`text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeBasemap === key ? 'bg-primary/20 text-primary font-medium' : 'hover:bg-white/10 text-card-foreground'}`}
+            >
+              {BASEMAP_OPTIONS[key].name}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <MapContainer
         center={[-0.789275, 113.921327]} // Center of Indonesia
         zoom={5}
@@ -107,8 +128,10 @@ export default function MapArea() {
         style={{ background: "transparent" }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CartoDB</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          key={activeBasemap}
+          attribution={currentBasemap.attribution}
+          url={currentBasemap.url}
+          maxZoom={20}
         />
         <ZoomControl position="bottomright" />
         <MapController />

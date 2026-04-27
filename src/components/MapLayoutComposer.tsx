@@ -6,7 +6,7 @@ import {
   Compass, Ruler, Type, Info, Square, Minus, ZoomIn, ZoomOut,
   RotateCcw, Trash2, Lock, Unlock, Move, ChevronDown, Printer
 } from "lucide-react";
-import { useMapContext } from "@/lib/MapContext";
+import { useMapContext, BASEMAP_OPTIONS } from "@/lib/MapContext";
 import {
   useLayoutComposer, PAPER_SIZES, type LayoutElement, type LayoutElementType, type PaperSize
 } from "@/lib/useLayoutComposer";
@@ -425,8 +425,9 @@ function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, h
   width: number;
   height: number;
 }) {
-  const { mapViewState } = useMapContext();
+  const { mapViewState, activeBasemap } = useMapContext();
   const cfg = element.config;
+  const currentBasemap = BASEMAP_OPTIONS[activeBasemap];
 
   // Only render map if has minimum size
   if (width < 30 || height < 30) {
@@ -458,8 +459,10 @@ function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, h
       >
         {cfg.showBasemap !== false && (
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            key={activeBasemap}
+            url={currentBasemap.url}
             attribution=""
+            maxZoom={20}
           />
         )}
         {layers.map((layer) => {
