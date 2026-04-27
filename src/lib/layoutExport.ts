@@ -16,7 +16,6 @@ export async function exportToPNG(
   const canvas = await html2canvas(canvasElement, {
     scale,
     useCORS: true,
-    allowTaint: true,
     backgroundColor: "#ffffff",
     logging: false,
     // Ignore interactive controls
@@ -51,7 +50,6 @@ export async function exportToPDF(
   const canvas = await html2canvas(canvasElement, {
     scale,
     useCORS: true,
-    allowTaint: true,
     backgroundColor: "#ffffff",
     logging: false,
     ignoreElements: (el) => {

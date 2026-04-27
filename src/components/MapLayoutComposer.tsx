@@ -463,6 +463,7 @@ function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, h
             url={currentBasemap.url}
             attribution=""
             maxZoom={20}
+            crossOrigin="anonymous"
           />
         )}
         {layers.map((layer) => {
