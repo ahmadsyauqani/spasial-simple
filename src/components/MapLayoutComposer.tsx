@@ -365,7 +365,7 @@ function DraggableElement({
       onClick={(e) => { e.stopPropagation(); selectElement(element.id); }}
     >
       {/* Render content based on type */}
-      <ElementContent element={element} layers={layers} layerGeojsonCache={layerGeojsonCache} width={width} height={height} />
+      <ElementContent element={element} composer={composer} layers={layers} layerGeojsonCache={layerGeojsonCache} width={width} height={height} />
 
       {/* Resize Handles (only when selected) */}
       {isSelected && !element.locked && (
@@ -386,8 +386,9 @@ function DraggableElement({
 // ──────────────────────────────────────────────────────
 // ELEMENT CONTENT RENDERERS
 // ──────────────────────────────────────────────────────
-function ElementContent({ element, layers, layerGeojsonCache, width, height }: {
+function ElementContent({ element, composer, layers, layerGeojsonCache, width, height }: {
   element: LayoutElement;
+  composer: ReturnType<typeof useLayoutComposer>;
   layers: any[];
   layerGeojsonCache: Record<string, any>;
   width: number;
@@ -395,11 +396,11 @@ function ElementContent({ element, layers, layerGeojsonCache, width, height }: {
 }) {
   switch (element.type) {
     case "mapFace":
-      return <MapFaceElement element={element} layers={layers} layerGeojsonCache={layerGeojsonCache} width={width} height={height} />;
+      return <MapFaceElement element={element} composer={composer} layers={layers} layerGeojsonCache={layerGeojsonCache} width={width} height={height} />;
     case "legend":
       return <LegendElement element={element} layers={layers} />;
     case "scaleBar":
-      return <ScaleBarElement element={element} width={width} />;
+      return <ScaleBarElement element={element} composer={composer} width={width} />;
     case "northArrow":
       return <NorthArrowElement element={element} width={width} height={height} />;
     case "infoBlock":
@@ -415,8 +416,9 @@ function ElementContent({ element, layers, layerGeojsonCache, width, height }: {
 }
 
 // MAP FACE — synced with the main working map
-function MapFaceElement({ element, layers, layerGeojsonCache, width, height }: {
+function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, height }: {
   element: LayoutElement;
+  composer: ReturnType<typeof useLayoutComposer>;
   layers: any[];
   layerGeojsonCache: Record<string, any>;
   width: number;
@@ -471,6 +473,7 @@ function MapFaceElement({ element, layers, layerGeojsonCache, width, height }: {
         })}
         {/* Auto-fit to layer bounds on mount */}
         <FitBoundsController geojsons={allGeojsons} />
+        <MapFaceController composer={composer} />
       </MapContainer>
     </div>
   );
@@ -495,6 +498,38 @@ function FitBoundsController({ geojsons }: { geojsons: any[] }) {
       console.warn("Layout map: gagal fit bounds", e);
     }
   }, [map, geojsons.length]);
+
+  return null;
+}
+
+// Controller to compute actual scale in meters per pixel
+function MapFaceController({ composer }: { composer: ReturnType<typeof useLayoutComposer> }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const updateScale = () => {
+      try {
+        const y = map.getSize().y / 2;
+        const p1 = map.containerPointToLatLng([0, y]);
+        const p2 = map.containerPointToLatLng([100, y]); // Use 100px reference
+        const dist = map.distance(p1, p2);
+        const mpp = dist / 100;
+        composer.setMapMetersPerPixel(mpp);
+      } catch (e) {
+        // map might not be fully initialized
+      }
+    };
+    
+    map.on('move', updateScale);
+    map.on('zoom', updateScale);
+    // run once on mount
+    updateScale();
+
+    return () => {
+      map.off('move', updateScale);
+      map.off('zoom', updateScale);
+    };
+  }, [map, composer]);
 
   return null;
 }
@@ -530,19 +565,43 @@ function LegendElement({ element, layers }: { element: LayoutElement; layers: an
 }
 
 // SCALE BAR
-function ScaleBarElement({ element, width }: { element: LayoutElement; width: number }) {
+function ScaleBarElement({ element, composer, width }: { element: LayoutElement; composer: ReturnType<typeof useLayoutComposer>; width: number }) {
   const cfg = element.config;
   const segments = cfg.segments || 4;
-  const unit = cfg.unit || "km";
 
-  // Determine nice scale values based on element width
-  const barWidth = Math.max(60, width - 20);
-  const niceValues = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500];
-  const scaleVal = niceValues.find((v) => v >= 1) || 1;
+  const mpp = composer.state.mapMetersPerPixel || 0;
+  const maxBarWidth = Math.max(60, width - 20); // available width in px
+  
+  let displayVal = 0;
+  let unit = "m";
+  let finalBarWidth = maxBarWidth;
+
+  if (mpp > 0) {
+      const maxMeters = maxBarWidth * mpp;
+      
+      const pow10 = Math.pow(10, (Math.floor(maxMeters) + '').length - 1);
+      let d = maxMeters / pow10;
+      d = d >= 10 ? 10 : d >= 5 ? 5 : d >= 3 ? 3 : d >= 2 ? 2 : 1;
+      const roundedMeters = pow10 * d;
+      
+      finalBarWidth = roundedMeters / mpp; // adjust width so it exactly matches roundedMeters
+      
+      if (roundedMeters >= 1000) {
+         displayVal = roundedMeters / 1000;
+         unit = "km";
+      } else {
+         displayVal = roundedMeters;
+         unit = "m";
+      }
+  } else {
+      finalBarWidth = 100;
+      displayVal = 1;
+      unit = "km";
+  }
 
   return (
     <div className="w-full h-full bg-white border border-slate-300 flex flex-col items-center justify-center p-1">
-      <div className="flex items-end" style={{ width: barWidth }}>
+      <div className="flex items-end" style={{ width: finalBarWidth }}>
         {Array.from({ length: segments }).map((_, i) => (
           <div
             key={i}
@@ -554,9 +613,9 @@ function ScaleBarElement({ element, width }: { element: LayoutElement; width: nu
           />
         ))}
       </div>
-      <div className="flex justify-between w-full mt-0.5 px-1">
+      <div className="flex justify-between mt-0.5 px-1" style={{ width: finalBarWidth }}>
         <span className="text-[8px] text-slate-600 font-mono">0</span>
-        <span className="text-[8px] text-slate-600 font-mono">{scaleVal} {unit}</span>
+        <span className="text-[8px] text-slate-600 font-mono">{displayVal} {unit}</span>
       </div>
       <div className="text-[7px] text-slate-400 mt-0.5">Skala Grafis</div>
     </div>

@@ -49,6 +49,7 @@ export type LayoutState = {
   selectedElementId: string | null;
   canvasZoom: number;
   layoutTitle: string;
+  mapMetersPerPixel: number;
 };
 
 let _idCounter = 0;
@@ -138,6 +139,7 @@ export function useLayoutComposer() {
     selectedElementId: null,
     canvasZoom: 0.7,
     layoutTitle: "Layout Peta",
+    mapMetersPerPixel: 0,
   });
 
   // Get effective paper dimensions (mm) accounting for orientation
@@ -163,6 +165,10 @@ export function useLayoutComposer() {
 
   const selectElement = useCallback((id: string | null) => {
     setState((s) => ({ ...s, selectedElementId: id }));
+  }, []);
+
+  const setMapMetersPerPixel = useCallback((mpp: number) => {
+    setState((s) => ({ ...s, mapMetersPerPixel: mpp }));
   }, []);
 
   const addElement = useCallback((type: LayoutElementType) => {
@@ -244,5 +250,6 @@ export function useLayoutComposer() {
     removeElement,
     setBackgroundColor,
     resetToDefault,
+    setMapMetersPerPixel,
   };
 }
