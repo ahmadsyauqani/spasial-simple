@@ -41,7 +41,7 @@ export const BASEMAP_OPTIONS: Record<BasemapType, { url: string, attribution: st
   citra_terang: {
     url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
     attribution: "&copy; Google",
-    name: "Citra Satelit Terang (Google)"
+    name: "Citra Satelit (Google)"
   },
   osm: {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
