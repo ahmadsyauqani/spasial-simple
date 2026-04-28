@@ -107,7 +107,7 @@ export default function MapArea() {
           <Layers className="w-5 h-5 text-primary" />
         </button>
         <div className="absolute bottom-full left-0 mb-2 bg-card/95 backdrop-blur-md border rounded-xl p-2 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col gap-1 min-w-[150px]">
-          <div className="text-xs font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider mb-1">Pilih Basemap</div>
+          <div className="text-xs font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider mb-1">Peta Dasar</div>
           {(Object.keys(BASEMAP_OPTIONS) as BasemapType[]).map((key) => (
             <button
               key={key}

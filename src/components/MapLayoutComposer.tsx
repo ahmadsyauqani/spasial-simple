@@ -1159,7 +1159,7 @@ function ElementConfigEditor({ element, composer }: { element: LayoutElement; co
           
           <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer mt-1">
             <input type="checkbox" checked={cfg.showBasemap !== false} onChange={(e) => updateElementConfig(element.id, { showBasemap: e.target.checked })} className="rounded" />
-            Tampilkan Basemap
+            Tampilkan Peta Dasar
           </label>
           <div className="pt-2 mt-2 border-t border-white/10 flex flex-col gap-2">
             <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer">

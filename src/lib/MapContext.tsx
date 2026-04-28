@@ -26,22 +26,22 @@ export const BASEMAP_OPTIONS: Record<BasemapType, { url: string, attribution: st
   dark: {
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     attribution: '&copy; <a href="https://carto.com/">CartoDB</a>',
-    name: "Dark Map"
+    name: "Peta Gelap"
   },
   citra: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     attribution: "Tiles &copy; Esri",
-    name: "Citra (Esri)"
+    name: "Citra Satelit (Esri)"
   },
   hybrid: {
     url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
     attribution: "&copy; Google",
-    name: "Hybrid (Google)"
+    name: "Hibrida (Google)"
   },
   citra_terang: {
     url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
     attribution: "&copy; Google",
-    name: "Citra Terang (Google)"
+    name: "Citra Satelit Terang (Google)"
   },
   osm: {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
