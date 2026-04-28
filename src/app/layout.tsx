@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const metadata: Metadata = {
-  title: "Geo-Spatial Analytics",
+  title: "SAKAGIS",
   description: "Browser-first spatial analysis platform",
 };
 

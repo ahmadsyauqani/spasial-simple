@@ -120,7 +120,7 @@ function createDefaultElements(): LayoutElement[] {
         dibuatOleh: "Kantor Pertanahan",
         tanggal: new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
         instansi: "Badan Pertanahan Nasional",
-        keterangan: "Sumber data: Supabase Spasial",
+        keterangan: "Sumber data: SAKAGIS",
         proyeksi: "WGS 84 / EPSG:4326",
       },
     },
