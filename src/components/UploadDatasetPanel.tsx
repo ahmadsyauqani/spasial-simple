@@ -86,7 +86,7 @@ export function UploadDatasetPanel() {
   return (
     <div className="bg-card text-card-foreground border shadow-sm rounded-xl p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm">Layer Aktif (Supabase)</h3>
+        <h3 className="font-semibold text-sm">Layer</h3>
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-muted/50 rounded-md p-0.5 gap-0.5">
             {(['Ha', 'm2', 'km2'] as const).map((unit) => (
