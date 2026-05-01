@@ -65,6 +65,14 @@ export type OverlapResult = {
   layerBName: string;
 } | null;
 
+export type ClipResult = {
+  geojson: any; // FeatureCollection of clipped polygons
+  areaMetrics: AreaMetrics;
+  inputLayerName: string;
+  clipLayerName: string;
+  featureCount: number;
+} | null;
+
 export type MapViewState = {
   center: [number, number]; // [lat, lng]
   zoom: number;
@@ -87,6 +95,8 @@ interface MapContextType {
   cacheLayerGeojson: (id: string, geojson: any) => void;
   overlapResult: OverlapResult;
   setOverlapResult: (result: OverlapResult) => void;
+  clipResult: ClipResult;
+  setClipResult: (result: ClipResult) => void;
   isLayoutComposerOpen: boolean;
   setLayoutComposerOpen: (open: boolean) => void;
   mapViewState: MapViewState;
@@ -106,6 +116,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [zoomToLayerId, setZoomToLayerId] = useState<string | null>(null);
   const [layerGeojsonCache, setLayerGeojsonCache] = useState<Record<string, any>>({});
   const [overlapResult, setOverlapResult] = useState<OverlapResult>(null);
+  const [clipResult, setClipResult] = useState<ClipResult>(null);
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
   const [mapViewState, setMapViewState] = useState<MapViewState>({ center: [-0.789275, 113.921327], zoom: 5 });
   const [activeBasemap, setActiveBasemap] = useState<BasemapType>("dark");
@@ -146,7 +157,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <MapContext.Provider value={{ layers, setLayers, activeFeatureToZoom, setZoomFeature, updateLayerStyle, reorderLayer, layerAreas, setLayerArea, areaUnit, setAreaUnit, zoomToLayerId, triggerZoomToLayer: setZoomToLayerId, layerGeojsonCache, cacheLayerGeojson, overlapResult, setOverlapResult, isLayoutComposerOpen, setLayoutComposerOpen, mapViewState, setMapViewState, activeBasemap, setActiveBasemap }}>
+    <MapContext.Provider value={{ layers, setLayers, activeFeatureToZoom, setZoomFeature, updateLayerStyle, reorderLayer, layerAreas, setLayerArea, areaUnit, setAreaUnit, zoomToLayerId, triggerZoomToLayer: setZoomToLayerId, layerGeojsonCache, cacheLayerGeojson, overlapResult, setOverlapResult, clipResult, setClipResult, isLayoutComposerOpen, setLayoutComposerOpen, mapViewState, setMapViewState, activeBasemap, setActiveBasemap }}>
       {children}
     </MapContext.Provider>
   );
