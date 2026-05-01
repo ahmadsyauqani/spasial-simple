@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { MapContainer, TileLayer, ZoomControl, GeoJSON, useMap } from "react-leaflet";
+import { useEffect, useState, useCallback } from "react";
+import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import * as turf from "@turf/turf";
 import { useMapContext, BASEMAP_OPTIONS, BasemapType } from "@/lib/MapContext";
-import { Layers } from "lucide-react";
+import { Layers, LocateFixed, Loader2 } from "lucide-react";
 
 // Fix for default Leaflet markers in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -98,26 +98,105 @@ function MapController() {
 export default function MapArea() {
   const { activeFeatureToZoom, layers, activeBasemap, setActiveBasemap } = useMapContext();
   const currentBasemap = BASEMAP_OPTIONS[activeBasemap];
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationActive, setLocationActive] = useState(false);
+
+  const handleLocateMe = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error("Browser Anda tidak mendukung Geolocation.");
+      return;
+    }
+
+    // If already active, toggle off
+    if (locationActive && userLocation) {
+      setLocationActive(false);
+      setUserLocation(null);
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const loc = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        };
+        setUserLocation(loc);
+        setLocationActive(true);
+        setIsLocating(false);
+        toast.success(
+          `Lokasi ditemukan! ${loc.lat.toFixed(6)}°, ${loc.lng.toFixed(6)}° (±${Math.round(loc.accuracy)}m)`,
+          { duration: 4000 }
+        );
+      },
+      (error) => {
+        setIsLocating(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error("Akses lokasi ditolak. Harap izinkan akses lokasi di pengaturan browser Anda.");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            toast.error("Informasi lokasi tidak tersedia.");
+            break;
+          case error.TIMEOUT:
+            toast.error("Permintaan lokasi timeout. Silakan coba lagi.");
+            break;
+          default:
+            toast.error("Gagal mendapatkan lokasi: " + error.message);
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    );
+  }, [locationActive, userLocation]);
 
   return (
     <div className="w-full h-full bg-background absolute inset-0 z-0">
-      {/* Basemap Selector UI */}
-      <div className="absolute bottom-6 left-6 z-[1000] flex flex-col gap-2 group">
-        <button className="bg-card text-card-foreground border rounded-full p-2.5 shadow-md hover:bg-muted transition-colors flex items-center justify-center">
-          <Layers className="w-5 h-5 text-primary" />
-        </button>
-        <div className="absolute bottom-full left-0 mb-2 bg-card/95 backdrop-blur-md border rounded-xl p-2 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col gap-1 min-w-[150px]">
-          <div className="text-xs font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider mb-1">Peta Dasar</div>
-          {(Object.keys(BASEMAP_OPTIONS) as BasemapType[]).map((key) => (
-            <button
-              key={key}
-              onClick={() => setActiveBasemap(key)}
-              className={`text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeBasemap === key ? 'bg-primary/20 text-primary font-medium' : 'hover:bg-white/10 text-card-foreground'}`}
-            >
-              {BASEMAP_OPTIONS[key].name}
-            </button>
-          ))}
+      {/* Bottom-left controls: Basemap + My Location */}
+      <div className="absolute bottom-6 left-6 z-[1000] flex items-end gap-2">
+        {/* Basemap Selector */}
+        <div className="flex flex-col gap-2 group">
+          <button className="bg-card text-card-foreground border rounded-full p-2.5 shadow-md hover:bg-muted transition-colors flex items-center justify-center">
+            <Layers className="w-5 h-5 text-primary" />
+          </button>
+          <div className="absolute bottom-full left-0 mb-2 bg-card/95 backdrop-blur-md border rounded-xl p-2 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col gap-1 min-w-[150px]">
+            <div className="text-xs font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider mb-1">Peta Dasar</div>
+            {(Object.keys(BASEMAP_OPTIONS) as BasemapType[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => setActiveBasemap(key)}
+                className={`text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeBasemap === key ? 'bg-primary/20 text-primary font-medium' : 'hover:bg-white/10 text-card-foreground'}`}
+              >
+                {BASEMAP_OPTIONS[key].name}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* My Location Button */}
+        <button
+          onClick={handleLocateMe}
+          disabled={isLocating}
+          className={`bg-card text-card-foreground border rounded-full p-2.5 shadow-md transition-all flex items-center justify-center ${
+            isLocating
+              ? 'animate-pulse border-blue-500/50'
+              : locationActive
+                ? 'border-blue-500/70 bg-blue-500/15 shadow-blue-500/20 shadow-lg'
+                : 'hover:bg-muted'
+          }`}
+          title={locationActive ? "Nonaktifkan lokasi" : "Temukan lokasi saya"}
+        >
+          {isLocating ? (
+            <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+          ) : (
+            <LocateFixed className={`w-5 h-5 transition-colors ${locationActive ? 'text-blue-400' : 'text-primary'}`} />
+          )}
+        </button>
       </div>
 
       <MapContainer
@@ -141,6 +220,11 @@ export default function MapArea() {
         ))}
 
         <OverlapLayer />
+
+        {/* User Location Marker */}
+        {userLocation && locationActive && (
+          <LocationMarker location={userLocation} />
+        )}
       </MapContainer>
     </div>
   );
@@ -200,8 +284,54 @@ function OverlapLayer() {
   );
 }
 
-import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+
+// ──────────────────────────────────────────────────────
+// LOCATION MARKER — Pulsing blue dot with accuracy circle
+// ──────────────────────────────────────────────────────
+function LocationMarker({ location }: { location: { lat: number; lng: number; accuracy: number } }) {
+  const map = useMap();
+
+  // Fly to location on mount
+  useEffect(() => {
+    map.flyTo([location.lat, location.lng], Math.max(map.getZoom(), 16), { duration: 1.5 });
+  }, [location.lat, location.lng, map]);
+
+  const pulsingIcon = L.divIcon({
+    html: `<div class="my-location-dot">
+             <div class="my-location-dot-core"></div>
+             <div class="my-location-dot-pulse"></div>
+           </div>`,
+    className: 'my-location-icon',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+
+  return (
+    <>
+      {/* Accuracy circle */}
+      <Circle
+        center={[location.lat, location.lng]}
+        radius={location.accuracy}
+        pathOptions={{
+          color: '#3b82f6',
+          fillColor: '#3b82f6',
+          fillOpacity: 0.08,
+          weight: 1.5,
+          dashArray: '6, 4',
+          opacity: 0.4,
+        }}
+        interactive={false}
+      />
+      {/* Pulsing dot */}
+      <Marker
+        position={[location.lat, location.lng]}
+        icon={pulsingIcon}
+        interactive={false}
+      />
+    </>
+  );
+}
 
 function LayerFeature({ layer }: { layer: any }) {
   const [featureCollection, setFeatureCollection] = useState<any>(null);
