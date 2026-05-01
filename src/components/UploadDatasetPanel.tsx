@@ -18,6 +18,7 @@ import { PROJECTIONS, reprojectCoords } from "./ExportLayerDialog";
 import { cn } from "@/lib/utils";
 import { OverlapAnalysisButton } from "./OverlapAnalysisPanel";
 import { ClipAnalysisButton } from "./ClipAnalysisPanel";
+import { MergeAnalysisButton } from "./MergeAnalysisPanel";
 
 export function UploadDatasetPanel() {
   const { layers, setLayers, setZoomFeature, areaUnit, setAreaUnit } = useMapContext();
@@ -162,6 +163,7 @@ export function UploadDatasetPanel() {
       <div className="flex items-center gap-2">
         <OverlapAnalysisButton />
         <ClipAnalysisButton />
+        <MergeAnalysisButton />
         <LayoutPetaButton />
       </div>
 

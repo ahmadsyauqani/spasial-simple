@@ -221,6 +221,7 @@ export default function MapArea() {
 
         <OverlapLayer />
         <ClipLayer />
+        <MergeLayer />
 
         {/* User Location Marker */}
         {userLocation && locationActive && (
@@ -351,6 +352,78 @@ function ClipLayer() {
       key={`clip-${Date.now()}`}
       style={() => clipStyle}
       onEachFeature={onEachClip}
+    />
+  );
+}
+
+// Komponen render hasil merge di peta
+function MergeLayer() {
+  const { mergeResult, areaUnit } = useMapContext();
+  const map = useMap();
+
+  useEffect(() => {
+    if (mergeResult?.geojson) {
+      try {
+        const bounds = L.geoJSON(mergeResult.geojson).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } catch(e) {}
+    }
+  }, [mergeResult, map]);
+
+  if (!mergeResult?.geojson) return null;
+
+  const formatUnit = (sqm: number) => {
+    if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
+    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+  };
+
+  const mergeStyle = {
+    color: '#8b5cf6',
+    fillColor: '#8b5cf6',
+    fillOpacity: 0.35,
+    weight: 2,
+  };
+
+  const onEachMerge = (feature: any, mapLayer: any) => {
+    const areaSqm = turf.area(feature);
+    let html = `<div class="p-2 min-w-[200px]">`;
+    html += `<h4 class="font-bold text-base border-b border-violet-400/30 pb-1 mb-2 text-violet-300">🔗 Merged Feature</h4>`;
+
+    if (feature.properties?._source_layer) {
+      html += `<div class="text-[10px] text-violet-400 mb-2">Asal: <span class="font-mono font-bold">${feature.properties._source_layer}</span></div>`;
+    }
+
+    if (areaSqm > 1) {
+      html += `<div class="bg-violet-900/30 p-2 rounded border border-violet-500/20 text-xs mb-2">`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-violet-300 font-bold">${formatUnit(areaSqm)}</span></div>`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9992)}</span></div>`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9998)}</span></div>`;
+      html += `</div>`;
+    }
+
+    if (feature.properties) {
+      html += `<div class="max-h-32 overflow-y-auto text-xs">`;
+      html += `<table class="w-full text-left border-collapse"><tbody>`;
+      for (const key in feature.properties) {
+        if (key === "db_id" || key === "FID") continue;
+        const value = feature.properties[key];
+        const isSource = key === '_source_layer';
+        html += `<tr class="border-b border-white/10 last:border-0"><td class="py-1 pr-2 font-medium ${isSource ? 'text-violet-400' : 'text-gray-300'} w-1/3">${key}</td><td class="py-1 text-white font-mono">${value === null ? '<span class="text-white/20 italic">null</span>' : value}</td></tr>`;
+      }
+      html += `</tbody></table></div>`;
+    }
+
+    html += `</div>`;
+    mapLayer.bindPopup(html, { className: 'custom-popup-dark', maxWidth: 300 });
+  };
+
+  return (
+    <GeoJSON
+      data={mergeResult.geojson}
+      key={`merge-${Date.now()}`}
+      style={() => mergeStyle}
+      onEachFeature={onEachMerge}
     />
   );
 }
