@@ -512,7 +512,7 @@ function LayoutPetaButton() {
 
 /**
  * Tombol besar & jelas untuk mengunduh semua hasil analisis (Overlap, Clip, Merge)
- * sekaligus. Hanya muncul jika ada minimal 1 hasil analisis.
+ * sekaligus. SELALU tampil agar pengguna tahu fitur ini ada.
  */
 function DownloadAllResultsButton() {
   const { overlapResult, clipResult, mergeResult } = useMapContext();
@@ -543,9 +543,10 @@ function DownloadAllResultsButton() {
     });
   }
 
-  if (results.length === 0) return null;
+  const hasResults = results.length > 0;
 
   const handleDownloadAll = () => {
+    if (!hasResults) return;
     for (const result of results) {
       const blob = new Blob([JSON.stringify(result.geojson, null, 2)], { type: "application/geo+json" });
       const url = URL.createObjectURL(blob);
@@ -563,43 +564,68 @@ function DownloadAllResultsButton() {
   return (
     <button
       onClick={handleDownloadAll}
-      className="group relative w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 overflow-hidden border-0 outline-none cursor-pointer"
-      style={{
-        background: "linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%)",
-        boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3), 0 2px 8px rgba(59, 130, 246, 0.2)",
-      }}
-      title="Unduh semua hasil analisis (Overlap, Clip, Merge) sekaligus"
+      disabled={!hasResults}
+      className={`group relative w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 overflow-hidden outline-none ${
+        hasResults
+          ? "cursor-pointer border-0"
+          : "cursor-not-allowed border border-dashed border-muted-foreground/30"
+      }`}
+      style={
+        hasResults
+          ? {
+              background: "linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%)",
+              boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3), 0 2px 8px rgba(59, 130, 246, 0.2)",
+            }
+          : {
+              background: "linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(59,130,246,0.15) 50%, rgba(139,92,246,0.15) 100%)",
+            }
+      }
+      title={hasResults ? "Unduh semua hasil analisis (Overlap, Clip, Merge) sekaligus" : "Jalankan analisis (Overlap / Clip / Merge) terlebih dahulu untuk mengunduh hasilnya"}
     >
-      {/* Animated shimmer overlay */}
-      <span
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        style={{
-          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)",
-          animation: "shimmer 2s infinite",
-        }}
-      />
+      {/* Animated shimmer overlay - only when active */}
+      {hasResults && (
+        <span
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          style={{
+            background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)",
+            animation: "dlShimmer 2s infinite",
+          }}
+        />
+      )}
 
-      {/* Icon with bounce animation */}
-      <span className="relative flex items-center justify-center w-7 h-7 bg-white/20 rounded-lg group-hover:scale-110 transition-transform duration-300">
-        <DownloadCloud className="w-4.5 h-4.5 text-white drop-shadow-sm" style={{ width: 18, height: 18 }} />
+      {/* Icon */}
+      <span className={`relative flex items-center justify-center w-7 h-7 rounded-lg transition-transform duration-300 ${
+        hasResults ? "bg-white/20 group-hover:scale-110" : "bg-white/5"
+      }`}>
+        <DownloadCloud
+          style={{ width: 18, height: 18 }}
+          className={hasResults ? "text-white drop-shadow-sm" : "text-muted-foreground/50"}
+        />
       </span>
 
       {/* Label */}
-      <span className="relative text-white drop-shadow-sm tracking-wide">
-        Unduh Semua Hasil Analisis
+      <span className={`relative tracking-wide ${
+        hasResults ? "text-white drop-shadow-sm" : "text-muted-foreground/50"
+      }`}>
+        {hasResults ? "Unduh Semua Hasil Analisis" : "Unduh Hasil Analisis"}
       </span>
 
-      {/* Count Badge */}
+      {/* Count Badge / hint */}
       <span
-        className="relative flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold text-white shadow-inner"
-        style={{ backgroundColor: "rgba(255,255,255,0.25)", backdropFilter: "blur(4px)" }}
+        className={`relative flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold shadow-inner ${
+          hasResults ? "text-white" : "text-muted-foreground/40"
+        }`}
+        style={{
+          backgroundColor: hasResults ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.05)",
+          backdropFilter: "blur(4px)",
+        }}
       >
-        {results.length}
+        {hasResults ? results.length : "—"}
       </span>
 
-      {/* CSS Keyframe for shimmer - inject once */}
+      {/* CSS Keyframe for shimmer */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes shimmer {
+        @keyframes dlShimmer {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
         }
