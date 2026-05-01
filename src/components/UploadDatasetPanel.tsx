@@ -160,13 +160,11 @@ export function UploadDatasetPanel() {
       </label>
 
       {/* Toolbar Analisis */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <OverlapAnalysisButton />
-          <ClipAnalysisButton />
-          <MergeAnalysisButton />
-          <LayoutPetaButton />
-        </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <OverlapAnalysisButton />
+        <ClipAnalysisButton />
+        <MergeAnalysisButton />
+        <LayoutPetaButton />
         <DownloadAllResultsButton />
       </div>
 
@@ -511,25 +509,22 @@ function LayoutPetaButton() {
 }
 
 /**
- * Tombol besar & jelas untuk mengunduh semua hasil analisis (Overlap, Clip, Merge)
- * sekaligus. SELALU tampil agar pengguna tahu fitur ini ada.
+ * Tombol kompak untuk mengunduh semua hasil analisis (Overlap, Clip, Merge).
+ * Selalu tampil agar pengguna tahu fitur ini ada.
  */
 function DownloadAllResultsButton() {
   const { overlapResult, clipResult, mergeResult } = useMapContext();
 
-  // Hitung berapa hasil analisis yang tersedia
-  const results: { label: string; geojson: any; filename: string }[] = [];
+  const results: { geojson: any; filename: string }[] = [];
 
   if (overlapResult) {
     results.push({
-      label: "Overlap",
       geojson: overlapResult.geojson,
       filename: `overlap_${overlapResult.layerAName}_x_${overlapResult.layerBName}.geojson`.replace(/\s+/g, "_"),
     });
   }
   if (clipResult) {
     results.push({
-      label: "Clip",
       geojson: clipResult.geojson,
       filename: `clip_${clipResult.inputLayerName}_by_${clipResult.clipLayerName}.geojson`.replace(/\s+/g, "_"),
     });
@@ -537,7 +532,6 @@ function DownloadAllResultsButton() {
   if (mergeResult) {
     const names = mergeResult.sourceLayerNames.map((n) => n.replace(/\.[^/.]+$/, "")).join("_");
     results.push({
-      label: "Merge",
       geojson: mergeResult.geojson,
       filename: `merge_${names}.geojson`.replace(/\s+/g, "_"),
     });
@@ -565,71 +559,20 @@ function DownloadAllResultsButton() {
     <button
       onClick={handleDownloadAll}
       disabled={!hasResults}
-      className={`group relative w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 overflow-hidden outline-none ${
+      className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${
         hasResults
-          ? "cursor-pointer border-0"
-          : "cursor-not-allowed border border-dashed border-muted-foreground/30"
+          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/25 cursor-pointer"
+          : "bg-muted/30 text-muted-foreground/40 border-border/30 cursor-not-allowed"
       }`}
-      style={
-        hasResults
-          ? {
-              background: "linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%)",
-              boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3), 0 2px 8px rgba(59, 130, 246, 0.2)",
-            }
-          : {
-              background: "linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(59,130,246,0.15) 50%, rgba(139,92,246,0.15) 100%)",
-            }
-      }
-      title={hasResults ? "Unduh semua hasil analisis (Overlap, Clip, Merge) sekaligus" : "Jalankan analisis (Overlap / Clip / Merge) terlebih dahulu untuk mengunduh hasilnya"}
+      title={hasResults ? `Unduh ${results.length} hasil analisis` : "Jalankan analisis dulu"}
     >
-      {/* Animated shimmer overlay - only when active */}
+      <DownloadCloud className="w-3.5 h-3.5" />
+      <span>Unduh</span>
       {hasResults && (
-        <span
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-          style={{
-            background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)",
-            animation: "dlShimmer 2s infinite",
-          }}
-        />
+        <span className="flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold bg-emerald-500/30 text-emerald-300">
+          {results.length}
+        </span>
       )}
-
-      {/* Icon */}
-      <span className={`relative flex items-center justify-center w-7 h-7 rounded-lg transition-transform duration-300 ${
-        hasResults ? "bg-white/20 group-hover:scale-110" : "bg-white/5"
-      }`}>
-        <DownloadCloud
-          style={{ width: 18, height: 18 }}
-          className={hasResults ? "text-white drop-shadow-sm" : "text-muted-foreground/50"}
-        />
-      </span>
-
-      {/* Label */}
-      <span className={`relative tracking-wide ${
-        hasResults ? "text-white drop-shadow-sm" : "text-muted-foreground/50"
-      }`}>
-        {hasResults ? "Unduh Semua Hasil Analisis" : "Unduh Hasil Analisis"}
-      </span>
-
-      {/* Count Badge / hint */}
-      <span
-        className={`relative flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold shadow-inner ${
-          hasResults ? "text-white" : "text-muted-foreground/40"
-        }`}
-        style={{
-          backgroundColor: hasResults ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.05)",
-          backdropFilter: "blur(4px)",
-        }}
-      >
-        {hasResults ? results.length : "—"}
-      </span>
-
-      {/* CSS Keyframe for shimmer */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes dlShimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      ` }} />
     </button>
   );
 }
