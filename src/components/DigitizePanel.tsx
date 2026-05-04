@@ -20,7 +20,8 @@ export function DigitizePanel() {
     activeEditFeature, setActiveEditFeature,
     mapInstance: map,
     isDigitizePanelExpanded: isMainExpanded,
-    setIsDigitizePanelExpanded: setIsMainExpanded
+    setIsDigitizePanelExpanded: setIsMainExpanded,
+    digitizeSettings, setDigitizeSettings
   } = useMapContext();
 
   const [isPublishing, setIsPublishing] = useState<string | null>(null);
@@ -28,6 +29,7 @@ export function DigitizePanel() {
   const [newLayerType, setNewLayerType] = useState<'Point' | 'Line' | 'Polygon'>('Polygon');
   const [expandedLayerId, setExpandedLayerId] = useState<string | null>(null);
   const [newFieldName, setNewFieldName] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const nodeRef = useRef(null);
 
@@ -117,7 +119,10 @@ export function DigitizePanel() {
     } else {
       setActiveDigitizingLayerId(layerId);
       const drawMode = layer.geometryType === 'Point' ? 'Marker' : (layer.geometryType === 'Line' ? 'Polyline' : 'Polygon');
-      map?.pm.enableDraw(drawMode, { snappable: true, snapDistance: 20 });
+      map?.pm.enableDraw(drawMode, { 
+        snappable: digitizeSettings.snapping, 
+        snapDistance: digitizeSettings.snapDistance 
+      });
       toast.success(`Mode gambar ${layer.geometryType} aktif`);
     }
   };
@@ -197,12 +202,72 @@ export function DigitizePanel() {
            </div>
            <div className="flex items-center gap-2">
              <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${isMainExpanded ? 'rotate-90 text-orange-500' : ''}`} />
-             <Settings className="w-3.5 h-3.5 text-gray-500 hover:text-white transition-colors" />
+             <Settings 
+               className={`w-3.5 h-3.5 transition-colors ${showSettings ? 'text-orange-500 rotate-90' : 'text-gray-500 hover:text-white'}`} 
+               onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); if(!isMainExpanded) setIsMainExpanded(true); }}
+             />
            </div>
         </div>
 
         {isMainExpanded && (
           <div className="p-5 flex flex-col gap-6 overflow-y-auto max-h-[75vh] scrollbar-thin scrollbar-thumb-white/10 animate-in slide-in-from-top-4 duration-300">
+            
+            {/* Global Digitize Settings */}
+            {showSettings && (
+              <div className="bg-[#25282c] p-4 rounded-xl border border-orange-500/20 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Settings className="w-3 h-3 text-orange-500" />
+                    <span className="text-[10px] font-black uppercase text-white tracking-widest">Digitizing Options</span>
+                  </div>
+                  <X className="w-3 h-3 text-gray-600 cursor-pointer hover:text-white" onClick={() => setShowSettings(false)} />
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between group">
+                     <span className="text-[9px] text-gray-400 group-hover:text-gray-200 transition-colors">Snapping Mode</span>
+                     <button 
+                       onClick={() => setDigitizeSettings({...digitizeSettings, snapping: !digitizeSettings.snapping})}
+                       className={`w-8 h-4 rounded-full relative transition-colors ${digitizeSettings.snapping ? 'bg-orange-500' : 'bg-gray-700'}`}
+                     >
+                       <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${digitizeSettings.snapping ? 'left-[18px]' : 'left-0.5'}`}></div>
+                     </button>
+                  </div>
+
+                  <div className="flex items-center justify-between group">
+                     <span className="text-[9px] text-gray-400 group-hover:text-gray-200 transition-colors">Live Area Display</span>
+                     <button 
+                       onClick={() => setDigitizeSettings({...digitizeSettings, showLiveArea: !digitizeSettings.showLiveArea})}
+                       className={`w-8 h-4 rounded-full relative transition-colors ${digitizeSettings.showLiveArea ? 'bg-orange-500' : 'bg-gray-700'}`}
+                     >
+                       <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${digitizeSettings.showLiveArea ? 'left-[18px]' : 'left-0.5'}`}></div>
+                     </button>
+                  </div>
+
+                  <div className="space-y-1.5 pt-1">
+                     <div className="flex justify-between text-[8px] text-gray-500 uppercase tracking-widest font-bold">
+                       <span>Snap Tolerance</span>
+                       <span className="text-orange-500">{digitizeSettings.snapDistance}px</span>
+                     </div>
+                     <input 
+                       type="range" min="5" max="50" step="5"
+                       value={digitizeSettings.snapDistance}
+                       onChange={(e) => setDigitizeSettings({...digitizeSettings, snapDistance: parseInt(e.target.value)})}
+                       className="w-full accent-orange-500 h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer"
+                     />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button 
+                    onClick={() => { localStorage.clear(); window.location.reload(); }}
+                    className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[8px] font-black uppercase tracking-widest border border-red-500/20 rounded-lg transition-all"
+                  >
+                    Clear Local Cache & Reset
+                  </button>
+                </div>
+              </div>
+            )}
             
             {/* Create Layer Section */}
             <div className="space-y-4">

@@ -158,6 +158,12 @@ interface MapContextType {
   setMapInstance: (map: L.Map | null) => void;
   isDigitizePanelExpanded: boolean;
   setIsDigitizePanelExpanded: (expanded: boolean) => void;
+  digitizeSettings: {
+    snapping: boolean;
+    snapDistance: number;
+    showLiveArea: boolean;
+  };
+  setDigitizeSettings: (settings: any) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -183,6 +189,11 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [activeEditFeature, setActiveEditFeature] = useState<{ layerId: string, featureIndex: number, properties: any } | null>(null);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [isDigitizePanelExpanded, setIsDigitizePanelExpanded] = useState(false);
+  const [digitizeSettings, setDigitizeSettings] = useState({
+    snapping: true,
+    snapDistance: 20,
+    showLiveArea: true
+  });
 
   const cacheLayerGeojson = (id: string, geojson: any) => {
     setLayerGeojsonCache((prev) => ({ ...prev, [id]: geojson }));
@@ -240,7 +251,8 @@ export function MapProvider({ children }: { children: ReactNode }) {
       activeDigitizingLayerId, setActiveDigitizingLayerId,
       activeEditFeature, setActiveEditFeature,
       mapInstance, setMapInstance,
-      isDigitizePanelExpanded, setIsDigitizePanelExpanded
+      isDigitizePanelExpanded, setIsDigitizePanelExpanded,
+      digitizeSettings, setDigitizeSettings
     }}>
       {children}
     </MapContext.Provider>
