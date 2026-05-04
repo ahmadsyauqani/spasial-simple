@@ -729,12 +729,16 @@ function CursorCoordinates() {
     const absolute = Math.abs(coord);
     const degrees = Math.floor(absolute);
     const minutes = Math.floor((absolute - degrees) * 60);
-    const seconds = ((absolute - degrees - minutes / 60) * 3600).toFixed(2);
+    const seconds = Math.max(0, (absolute - degrees - minutes / 60) * 3600);
     const direction = isLat ? (coord >= 0 ? "N" : "S") : (coord >= 0 ? "E" : "W");
-    return `${degrees}° ${minutes}' ${seconds}" ${direction}`;
+    
+    const pMinutes = minutes.toString().padStart(2, '0');
+    const pSeconds = seconds.toFixed(2).padStart(5, '0');
+    
+    return `${degrees}° ${pMinutes}' ${pSeconds}" ${direction}`;
   };
 
-  const wgs84 = `${toDMS(lat, true)}  ${toDMS(lng, false)}`;
+  // Removed single string wgs84 to use separate Lat/Lng display for better alignment
 
   const utmZone = Math.floor((lng + 180) / 6) + 1;
   const isSouth = lat < 0;
@@ -770,7 +774,10 @@ function CursorCoordinates() {
       )}
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full">
         <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5">WGS 84</span>
-        <span className="font-mono text-card-foreground font-medium">{wgs84}</span>
+        <div className="flex flex-col items-end sm:items-center">
+          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">{toDMS(lat, true)}</span>
+          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">{toDMS(lng, false)}</span>
+        </div>
       </div>
       <div className="hidden sm:block w-px bg-border/70"></div>
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
