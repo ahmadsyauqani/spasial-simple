@@ -782,12 +782,18 @@ function CursorCoordinates() {
       <div className="hidden sm:block w-px bg-border/70"></div>
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
         <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5">UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
-        <span className="font-mono text-card-foreground font-medium">X: {utmResult.x.toFixed(2)} Y: {utmResult.y.toFixed(2)}</span>
+        <div className="flex flex-col items-end sm:items-center">
+          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">X: {utmResult.x.toFixed(2)}</span>
+          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">Y: {utmResult.y.toFixed(2)}</span>
+        </div>
       </div>
       <div className="hidden sm:block w-px bg-border/70"></div>
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
         <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5">TM-3 {tm3ZoneDisplay}</span>
-        <span className="font-mono text-card-foreground font-medium">X: {tm3Result.x.toFixed(2)} Y: {tm3Result.y.toFixed(2)}</span>
+        <div className="flex flex-col items-end sm:items-center">
+          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">X: {tm3Result.x.toFixed(2)}</span>
+          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">Y: {tm3Result.y.toFixed(2)}</span>
+        </div>
       </div>
     </div>
   );
