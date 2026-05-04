@@ -1,6 +1,7 @@
 import MapWrapper from "@/components/MapWrapper";
 import { CommandPalette } from "@/components/CommandPalette";
 import { UploadDatasetPanel } from "@/components/UploadDatasetPanel";
+import { DigitizePanel } from "@/components/DigitizePanel";
 import { MapProvider } from "@/lib/MapContext";
 
 export default function Home() {
@@ -16,6 +17,7 @@ export default function Home() {
             <h1 className="text-xl font-bold tracking-tight">SAKAGIS</h1>
           </div>
 
+          <DigitizePanel />
           <UploadDatasetPanel />
         </div>
 

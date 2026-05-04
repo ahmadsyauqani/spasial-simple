@@ -59,7 +59,28 @@ function MapController() {
       }
     };
 
+    const { activeDigitizingLayerId, layerGeojsonCache, cacheLayerGeojson, setLayers } = useMapContext();
+    const activeDigitizingLayerIdRef = useRef(activeDigitizingLayerId);
+    useEffect(() => { activeDigitizingLayerIdRef.current = activeDigitizingLayerId; }, [activeDigitizingLayerId]);
+
+    const handleCreate = (e: any) => {
+      const { layer } = e;
+      if (activeDigitizingLayerIdRef.current) {
+        const fc = { ...layerGeojsonCache[activeDigitizingLayerIdRef.current] };
+        if (fc) {
+          const newFeature = layer.toGeoJSON();
+          newFeature.properties = {};
+          fc.features.push(newFeature);
+          cacheLayerGeojson(activeDigitizingLayerIdRef.current, fc);
+          setLayers(prev => [...prev]);
+          layer.remove();
+          toast.success("Fitur berhasil ditambahkan ke layer!");
+        }
+      }
+    };
+
     map.on('pm:edit', handleEdit);
+    map.on('pm:create', handleCreate);
 
     // Track map view state for Layout Composer
     const syncViewState = () => {
@@ -74,6 +95,7 @@ function MapController() {
     return () => {
       map.pm.removeControls();
       map.off('pm:edit', handleEdit);
+      map.off('pm:create', handleCreate);
       map.off('moveend', syncViewState);
       map.off('zoomend', syncViewState);
     };
@@ -885,7 +907,7 @@ function CursorCoordinates() {
 
 function LayerFeature({ layer }: { layer: any }) {
   const [featureCollection, setFeatureCollection] = useState<any>(null);
-  const { setLayerArea, areaUnit, zoomToLayerId, triggerZoomToLayer, cacheLayerGeojson } = useMapContext();
+  const { setLayerArea, areaUnit, zoomToLayerId, triggerZoomToLayer, cacheLayerGeojson, layerGeojsonCache, setActiveEditFeature } = useMapContext();
   const map = useMap();
 
   useEffect(() => {
@@ -904,6 +926,10 @@ function LayerFeature({ layer }: { layer: any }) {
     // If the layer just got uploaded, it might have data temporarily.
     // Otherwise, we fetch it all from supabase.
     async function loadGeometry() {
+      if (layer.id?.startsWith('local-')) {
+        setFeatureCollection(layerGeojsonCache[layer.id]);
+        return;
+      }
       setFeatureCollection(null); // Paksa Leaflet menghapus peta lama selama loading
       const dissolveKey = layer.style?.dissolve_key;
       const { data, error } = await supabase.rpc('get_layer_feature_collection', {
@@ -1000,6 +1026,13 @@ function LayerFeature({ layer }: { layer: any }) {
     loadGeometry();
   }, [layer.id, layer.style?.dissolve_key, layer.style?.definition_query]); // areaUnit is intentionally excluded to prevent refetching geometry from SQL when unit changes
 
+  // Update feature collection if cache changes for local layers
+  useEffect(() => {
+    if (layer.id?.startsWith('local-')) {
+      setFeatureCollection(layerGeojsonCache[layer.id]);
+    }
+  }, [layerGeojsonCache, layer.id]);
+
   if (!featureCollection) return null;
 
   const style = layer.style || { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2 };
@@ -1011,6 +1044,27 @@ function LayerFeature({ layer }: { layer: any }) {
   };
 
   const onEachFeature = (feature: any, mapLayer: any) => {
+    // Digitizing Edit Trigger
+    mapLayer.on('click', (e: L.LeafletMouseEvent) => {
+      if (layer.id?.startsWith('local-')) {
+        L.DomEvent.stopPropagation(e);
+        const fc = layerGeojsonCache[layer.id];
+        if (fc) {
+           const featureIndex = fc.features.findIndex((f: any) => 
+             JSON.stringify(f.geometry.coordinates) === JSON.stringify(feature.geometry.coordinates)
+           );
+           if (featureIndex !== -1) {
+             setActiveEditFeature({
+               layerId: layer.id,
+               featureIndex,
+               properties: feature.properties || {}
+             });
+             toast.info(`Mengedit atribut fitur di ${layer.name}`);
+           }
+        }
+      }
+    });
+
     if (feature.properties) {
       
       // Hitung luas ruang poligon spesifik menggunakan Turf di tempat
@@ -1105,7 +1159,7 @@ function LayerFeature({ layer }: { layer: any }) {
   return (
     <GeoJSON 
       data={featureCollection}
-      key={`${layer.id}-${JSON.stringify(style)}-${areaUnit}`}
+      key={`${layer.id}-${featureCollection?.features?.length || 0}-${JSON.stringify(style)}-${areaUnit}`}
       style={() => style}
       onEachFeature={onEachFeature}
     />

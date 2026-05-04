@@ -148,6 +148,10 @@ interface MapContextType {
   setMapViewState: (state: MapViewState) => void;
   activeBasemap: BasemapType;
   setActiveBasemap: (basemap: BasemapType) => void;
+  activeDigitizingLayerId: string | null;
+  setActiveDigitizingLayerId: (id: string | null) => void;
+  activeEditFeature: { layerId: string, featureIndex: number, properties: any } | null;
+  setActiveEditFeature: (data: { layerId: string, featureIndex: number, properties: any } | null) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -169,6 +173,8 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
   const [mapViewState, setMapViewState] = useState<MapViewState>({ center: [-0.789275, 113.921327], zoom: 5 });
   const [activeBasemap, setActiveBasemap] = useState<BasemapType>("dark");
+  const [activeDigitizingLayerId, setActiveDigitizingLayerId] = useState<string | null>(null);
+  const [activeEditFeature, setActiveEditFeature] = useState<{ layerId: string, featureIndex: number, properties: any } | null>(null);
 
   const cacheLayerGeojson = (id: string, geojson: any) => {
     setLayerGeojsonCache((prev) => ({ ...prev, [id]: geojson }));
@@ -206,7 +212,26 @@ export function MapProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <MapContext.Provider value={{ layers, setLayers, activeFeatureToZoom, setZoomFeature, updateLayerStyle, reorderLayer, layerAreas, setLayerArea, areaUnit, setAreaUnit, zoomToLayerId, triggerZoomToLayer: setZoomToLayerId, layerGeojsonCache, cacheLayerGeojson, overlapResult, setOverlapResult, clipResult, setClipResult, mergeResult, setMergeResult, bufferResult, setBufferResult, unionResult, setUnionResult, dissolveResult, setDissolveResult, isLayoutComposerOpen, setLayoutComposerOpen, mapViewState, setMapViewState, activeBasemap, setActiveBasemap }}>
+    <MapContext.Provider value={{ 
+      layers, setLayers, 
+      activeFeatureToZoom, setZoomFeature, 
+      updateLayerStyle, reorderLayer, 
+      layerAreas, setLayerArea, 
+      areaUnit, setAreaUnit, 
+      zoomToLayerId, triggerZoomToLayer: setZoomToLayerId, 
+      layerGeojsonCache, cacheLayerGeojson, 
+      overlapResult, setOverlapResult, 
+      clipResult, setClipResult, 
+      mergeResult, setMergeResult, 
+      bufferResult, setBufferResult, 
+      unionResult, setUnionResult, 
+      dissolveResult, setDissolveResult, 
+      isLayoutComposerOpen, setLayoutComposerOpen, 
+      mapViewState, setMapViewState, 
+      activeBasemap, setActiveBasemap,
+      activeDigitizingLayerId, setActiveDigitizingLayerId,
+      activeEditFeature, setActiveEditFeature
+    }}>
       {children}
     </MapContext.Provider>
   );
