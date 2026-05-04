@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Ma
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import * as turf from "@turf/turf";
+import proj4 from "proj4";
 import { useMapContext, BASEMAP_OPTIONS, BasemapType } from "@/lib/MapContext";
 import { Layers, LocateFixed, Loader2 } from "lucide-react";
 
@@ -230,6 +231,8 @@ export default function MapArea() {
         {userLocation && locationActive && (
           <LocationMarker location={userLocation} />
         )}
+        
+        <CursorCoordinates />
       </MapContainer>
     </div>
   );
@@ -674,6 +677,78 @@ function LocationMarker({ location }: { location: { lat: number; lng: number; ac
         interactive={false}
       />
     </>
+  );
+}
+
+// ──────────────────────────────────────────────────────
+// CURSOR COORDINATES — Real-time display of cursor position
+// ──────────────────────────────────────────────────────
+function CursorCoordinates() {
+  const map = useMap();
+  const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: L.LeafletMouseEvent) => {
+      setCoords(e.latlng);
+    };
+    
+    // Set initial coords to center
+    setCoords(map.getCenter());
+    
+    map.on('mousemove', handleMouseMove);
+    return () => {
+      map.off('mousemove', handleMouseMove);
+    };
+  }, [map]);
+
+  if (!coords) return null;
+
+  const { lat, lng } = coords;
+
+  const wgs84 = `${lat.toFixed(6)}°, ${lng.toFixed(6)}°`;
+
+  const utmZone = Math.floor((lng + 180) / 6) + 1;
+  const isSouth = lat < 0;
+  const utmProjString = `+proj=utm +zone=${utmZone} ${isSouth ? '+south ' : ''}+datum=WGS84 +units=m +no_defs`;
+  let utmResult = { x: 0, y: 0 };
+  let tm3Result = { x: 0, y: 0 };
+  let tm3ZoneDisplay = "-";
+
+  try {
+    const utmCoords = proj4('WGS84', utmProjString, [lng, lat]);
+    utmResult = { x: utmCoords[0], y: utmCoords[1] };
+  } catch (e) {}
+
+  const tm3Index = Math.round((lng - 94.5) / 3);
+  if (tm3Index >= 0 && tm3Index <= 20) {
+    const cm = 94.5 + (tm3Index * 3);
+    const tm3ProjString = \`+proj=tmerc +lat_0=0 +lon_0=\${cm} +k=0.9999 +x_0=200000 +y_0=1500000 +ellps=WGS84 +datum=WGS84 +units=m +no_defs\`;
+    try {
+      const tm3Coords = proj4('WGS84', tm3ProjString, [lng, lat]);
+      tm3Result = { x: tm3Coords[0], y: tm3Coords[1] };
+      const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
+      const subZone = (tm3Index % 2 === 0) ? 2 : 1;
+      tm3ZoneDisplay = \`Zona \${baseZone}-\${subZone}\`;
+    } catch (e) {}
+  }
+
+  return (
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-card/90 backdrop-blur-md border rounded-xl px-5 py-2.5 shadow-xl flex gap-6 text-xs select-none pointer-events-none transition-all">
+      <div className="flex flex-col items-center justify-center">
+        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">WGS 84</span>
+        <span className="font-mono text-card-foreground font-medium">{wgs84}</span>
+      </div>
+      <div className="w-px bg-border/70"></div>
+      <div className="flex flex-col items-center justify-center">
+        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
+        <span className="font-mono text-card-foreground font-medium">X: {utmResult.x.toFixed(2)} Y: {utmResult.y.toFixed(2)}</span>
+      </div>
+      <div className="w-px bg-border/70"></div>
+      <div className="flex flex-col items-center justify-center">
+        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">TM-3 {tm3ZoneDisplay}</span>
+        <span className="font-mono text-card-foreground font-medium">X: {tm3Result.x.toFixed(2)} Y: {tm3Result.y.toFixed(2)}</span>
+      </div>
+    </div>
   );
 }
 
