@@ -922,7 +922,11 @@ function CursorCoordinates() {
 
 function LayerFeature({ layer }: { layer: any }) {
   const [featureCollection, setFeatureCollection] = useState<any>(null);
-  const { setLayerArea, areaUnit, zoomToLayerId, triggerZoomToLayer, cacheLayerGeojson, layerGeojsonCache, setActiveEditFeature } = useMapContext();
+  const { 
+    setLayerArea, areaUnit, zoomToLayerId, triggerZoomToLayer, 
+    cacheLayerGeojson, layerGeojsonCache, setActiveEditFeature,
+    setIsDigitizePanelExpanded 
+  } = useMapContext();
   const map = useMap();
 
   useEffect(() => {
@@ -1061,8 +1065,10 @@ function LayerFeature({ layer }: { layer: any }) {
   const onEachFeature = (feature: any, mapLayer: any) => {
     // Digitizing Edit Trigger
     mapLayer.on('click', (e: L.LeafletMouseEvent) => {
-      if (layer.id?.startsWith('local-')) {
-        L.DomEvent.stopPropagation(e);
+      L.DomEvent.stopPropagation(e);
+      const isLocal = layer.id?.startsWith('local-');
+      
+      if (isLocal) {
         const fc = layerGeojsonCache[layer.id];
         if (fc) {
            const featureIndex = fc.features.findIndex((f: any) => 
@@ -1074,9 +1080,19 @@ function LayerFeature({ layer }: { layer: any }) {
                featureIndex,
                properties: feature.properties || {}
              });
+             setIsDigitizePanelExpanded(true);
              toast.info(`Mengedit atribut fitur di ${layer.name}`);
            }
         }
+      } else {
+        // DB Layer
+        setActiveEditFeature({ 
+          layerId: layer.id, 
+          featureIndex: -1, 
+          properties: feature.properties || {} 
+        });
+        setIsDigitizePanelExpanded(true);
+        toast.info(`Mengedit atribut database: ${layer.name}`);
       }
     });
 

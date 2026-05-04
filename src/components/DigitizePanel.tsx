@@ -17,7 +17,9 @@ export function DigitizePanel() {
     layerGeojsonCache, cacheLayerGeojson,
     activeDigitizingLayerId, setActiveDigitizingLayerId,
     activeEditFeature, setActiveEditFeature,
-    mapInstance: map
+    mapInstance: map,
+    isDigitizePanelExpanded: isMainExpanded,
+    setIsDigitizePanelExpanded: setIsMainExpanded
   } = useMapContext();
 
   const [isPublishing, setIsPublishing] = useState<string | null>(null);
@@ -25,7 +27,6 @@ export function DigitizePanel() {
   const [newLayerType, setNewLayerType] = useState<'Point' | 'Line' | 'Polygon'>('Polygon');
   const [expandedLayerId, setExpandedLayerId] = useState<string | null>(null);
   const [newFieldName, setNewFieldName] = useState("");
-  const [isMainExpanded, setIsMainExpanded] = useState(false);
 
   const createEmptyLayer = () => {
     if (!newLayerName) {

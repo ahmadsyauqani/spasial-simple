@@ -156,6 +156,8 @@ interface MapContextType {
   setActiveEditFeature: (data: { layerId: string, featureIndex: number, properties: any } | null) => void;
   mapInstance: L.Map | null;
   setMapInstance: (map: L.Map | null) => void;
+  isDigitizePanelExpanded: boolean;
+  setIsDigitizePanelExpanded: (expanded: boolean) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -180,6 +182,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [activeDigitizingLayerId, setActiveDigitizingLayerId] = useState<string | null>(null);
   const [activeEditFeature, setActiveEditFeature] = useState<{ layerId: string, featureIndex: number, properties: any } | null>(null);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+  const [isDigitizePanelExpanded, setIsDigitizePanelExpanded] = useState(false);
 
   const cacheLayerGeojson = (id: string, geojson: any) => {
     setLayerGeojsonCache((prev) => ({ ...prev, [id]: geojson }));
@@ -236,7 +239,8 @@ export function MapProvider({ children }: { children: ReactNode }) {
       activeBasemap, setActiveBasemap,
       activeDigitizingLayerId, setActiveDigitizingLayerId,
       activeEditFeature, setActiveEditFeature,
-      mapInstance, setMapInstance
+      mapInstance, setMapInstance,
+      isDigitizePanelExpanded, setIsDigitizePanelExpanded
     }}>
       {children}
     </MapContext.Provider>
