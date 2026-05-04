@@ -190,7 +190,7 @@ export function PdfOverlayPanel() {
           <div className="p-1 bg-indigo-500/20 rounded-md">
             <MapIcon className="w-3.5 h-3.5 text-indigo-400" />
           </div>
-          <h2 className="text-[10px] font-bold uppercase tracking-wider text-foreground">PDF Map Overlay</h2>
+          <h2 className="text-[10px] font-bold uppercase tracking-wider text-foreground">PDF MAP</h2>
         </div>
         <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform duration-300 ${isExpanded ? 'rotate-180 text-indigo-400' : ''}`} />
       </div>
