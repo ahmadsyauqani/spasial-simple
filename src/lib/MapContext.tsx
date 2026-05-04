@@ -152,6 +152,8 @@ interface MapContextType {
   setActiveDigitizingLayerId: (id: string | null) => void;
   activeEditFeature: { layerId: string, featureIndex: number, properties: any } | null;
   setActiveEditFeature: (data: { layerId: string, featureIndex: number, properties: any } | null) => void;
+  mapInstance: L.Map | null;
+  setMapInstance: (map: L.Map | null) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -175,6 +177,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [activeBasemap, setActiveBasemap] = useState<BasemapType>("dark");
   const [activeDigitizingLayerId, setActiveDigitizingLayerId] = useState<string | null>(null);
   const [activeEditFeature, setActiveEditFeature] = useState<{ layerId: string, featureIndex: number, properties: any } | null>(null);
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
 
   const cacheLayerGeojson = (id: string, geojson: any) => {
     setLayerGeojsonCache((prev) => ({ ...prev, [id]: geojson }));
@@ -230,7 +233,8 @@ export function MapProvider({ children }: { children: ReactNode }) {
       mapViewState, setMapViewState, 
       activeBasemap, setActiveBasemap,
       activeDigitizingLayerId, setActiveDigitizingLayerId,
-      activeEditFeature, setActiveEditFeature
+      activeEditFeature, setActiveEditFeature,
+      mapInstance, setMapInstance
     }}>
       {children}
     </MapContext.Provider>

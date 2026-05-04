@@ -24,7 +24,19 @@ import { toast } from "sonner";
 
 function MapController() {
   const map = useMap();
-  const { activeFeatureToZoom, setMapViewState } = useMapContext();
+  const { 
+    activeFeatureToZoom, setMapViewState, 
+    activeDigitizingLayerId, layerGeojsonCache, 
+    cacheLayerGeojson, setLayers, setMapInstance 
+  } = useMapContext();
+
+  useEffect(() => {
+    setMapInstance(map);
+    return () => setMapInstance(null);
+  }, [map, setMapInstance]);
+
+  const activeDigitizingLayerIdRef = useRef(activeDigitizingLayerId);
+  useEffect(() => { activeDigitizingLayerIdRef.current = activeDigitizingLayerId; }, [activeDigitizingLayerId]);
 
   useEffect(() => {
     // Add Geoman controls for editing and snapping
@@ -58,10 +70,6 @@ function MapController() {
         }
       }
     };
-
-    const { activeDigitizingLayerId, layerGeojsonCache, cacheLayerGeojson, setLayers } = useMapContext();
-    const activeDigitizingLayerIdRef = useRef(activeDigitizingLayerId);
-    useEffect(() => { activeDigitizingLayerIdRef.current = activeDigitizingLayerId; }, [activeDigitizingLayerId]);
 
     const handleCreate = (e: any) => {
       const { layer } = e;
@@ -760,7 +768,8 @@ function CursorCoordinates() {
         });
 
         if (currentSnap) {
-          targetLatLng = L.latLng(currentSnap.lat, currentSnap.lng);
+          const s = currentSnap as { lat: number, lng: number };
+          targetLatLng = L.latLng(s.lat, s.lng);
         }
       }
 

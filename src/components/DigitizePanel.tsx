@@ -4,15 +4,14 @@ import { useState } from "react";
 import { useMapContext } from "@/lib/MapContext";
 import { Plus, MousePointer2, Trash2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
-import { useMap } from "react-leaflet";
 
 export function DigitizePanel() {
-  const map = useMap();
   const { 
     layers, setLayers, 
     layerGeojsonCache, cacheLayerGeojson,
     activeDigitizingLayerId, setActiveDigitizingLayerId,
-    activeEditFeature, setActiveEditFeature
+    activeEditFeature, setActiveEditFeature,
+    mapInstance: map
   } = useMapContext();
 
   const [newLayerName, setNewLayerName] = useState("");
@@ -40,11 +39,11 @@ export function DigitizePanel() {
   const toggleDigitize = (layerId: string) => {
     if (activeDigitizingLayerId === layerId) {
       setActiveDigitizingLayerId(null);
-      map.pm.disableDraw();
+      map?.pm.disableDraw();
       toast.info("Mode digitasi dinonaktifkan");
     } else {
       setActiveDigitizingLayerId(layerId);
-      map.pm.enableDraw('Polygon', {
+      map?.pm.enableDraw('Polygon', {
         snappable: true,
         snapDistance: 20,
       });
