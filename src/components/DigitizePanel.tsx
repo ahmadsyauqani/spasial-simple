@@ -337,20 +337,29 @@ export function DigitizePanel() {
               
               <div className="bg-[#1e2023] p-5 space-y-4">
                  <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin">
-                   {(layers.find(l => l.id === activeEditFeature.layerId)?.fields || ["Nama", "Keterangan", "Kategori"]).map(f => (
-                     <div key={f} className="space-y-1.5 group">
-                       <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.1em] ml-1 group-focus-within:text-orange-500 transition-colors">{f}</label>
-                       <textarea 
-                         rows={f === "Keterangan" ? 3 : 1}
-                         defaultValue={activeEditFeature.properties[f] || ""}
-                         className="w-full bg-[#2a2d31] border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all resize-none shadow-inner"
-                         onBlur={(e) => {
-                           const newProps = { ...activeEditFeature.properties, [f]: e.target.value };
-                           setActiveEditFeature({ ...activeEditFeature, properties: newProps });
-                         }}
-                       />
-                     </div>
-                   ))}
+                   {(() => {
+                     const layer = layers.find(l => l.id === activeEditFeature.layerId);
+                     const props = activeEditFeature.properties || {};
+                     // Prioritas: Field layer yang sudah didefinisikan, jika tidak ada tampilkan semua key yang ada di data
+                     const fieldsToShow = (layer?.fields && layer.fields.length > 0) 
+                       ? layer.fields 
+                       : Object.keys(props).filter(k => !['db_id', 'FID', 'id', 'geometry'].includes(k));
+
+                     return fieldsToShow.map(f => (
+                       <div key={f} className="space-y-1.5 group">
+                         <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.1em] ml-1 group-focus-within:text-orange-500 transition-colors">{f}</label>
+                         <textarea 
+                           rows={1}
+                           defaultValue={props[f] || ""}
+                           className="w-full bg-[#2a2d31] border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all resize-none shadow-inner"
+                           onBlur={(e) => {
+                             const newProps = { ...activeEditFeature.properties, [f]: e.target.value };
+                             setActiveEditFeature({ ...activeEditFeature, properties: newProps });
+                           }}
+                         />
+                       </div>
+                     ));
+                   })()}
                  </div>
 
                  <button 
