@@ -1066,34 +1066,8 @@ function LayerFeature({ layer }: { layer: any }) {
     // Digitizing Edit Trigger
     mapLayer.on('click', (e: L.LeafletMouseEvent) => {
       L.DomEvent.stopPropagation(e);
-      const isLocal = layer.id?.startsWith('local-');
-      
-      if (isLocal) {
-        const fc = layerGeojsonCache[layer.id];
-        if (fc) {
-           const featureIndex = fc.features.findIndex((f: any) => 
-             JSON.stringify(f.geometry.coordinates) === JSON.stringify(feature.geometry.coordinates)
-           );
-           if (featureIndex !== -1) {
-             setActiveEditFeature({
-               layerId: layer.id,
-               featureIndex,
-               properties: feature.properties || {}
-             });
-             setIsDigitizePanelExpanded(true);
-             toast.info(`Mengedit atribut fitur di ${layer.name}`);
-           }
-        }
-      } else {
-        // DB Layer
-        setActiveEditFeature({ 
-          layerId: layer.id, 
-          featureIndex: -1, 
-          properties: feature.properties || {} 
-        });
-        setIsDigitizePanelExpanded(true);
-        toast.info(`Mengedit atribut database: ${layer.name}`);
-      }
+      // Klik sekarang hanya membuka popup standar. 
+      // Fitur edit dipindahkan ke dalam tombol di popup agar tidak mengganggu navigasi.
     });
 
     if (feature.properties) {
@@ -1160,7 +1134,19 @@ function LayerFeature({ layer }: { layer: any }) {
         `;
       }
       
-      popupContent += `</tbody></table></div></div>`;
+      const btnId = `edit-btn-${Math.random().toString(36).substr(2, 9)}`;
+      popupContent += `</tbody></table></div>`;
+      
+      // Tambahkan tombol Edit di bagian bawah popup
+      popupContent += `
+        <div class="mt-3 pt-2 border-t border-white/10 flex justify-end">
+          <button id="${btnId}" class="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-all shadow-lg shadow-orange-500/20 active:scale-95">
+             Edit Atribut
+          </button>
+        </div>
+      `;
+
+      popupContent += `</div>`;
       mapLayer.bindPopup(popupContent, {
         className: "custom-popup-dark",
         maxWidth: 300
@@ -1168,7 +1154,35 @@ function LayerFeature({ layer }: { layer: any }) {
 
       // Efek Visual (Highlight) ketika di-klik / popup terbuka
       mapLayer.on('popupopen', (e: any) => {
-        const layer = e.target;
+        // Bind event ke tombol edit di dalam popup
+        const editBtn = document.getElementById(btnId);
+        if (editBtn) {
+          editBtn.onclick = (ev) => {
+            ev.stopPropagation();
+            const isLocal = layer.id?.startsWith('local-');
+            if (isLocal) {
+              const fc = layerGeojsonCache[layer.id];
+              const featureIndex = fc?.features.findIndex((f: any) => 
+                JSON.stringify(f.geometry.coordinates) === JSON.stringify(feature.geometry.coordinates)
+              );
+              setActiveEditFeature({
+                layerId: layer.id,
+                featureIndex: featureIndex !== undefined ? featureIndex : -1,
+                properties: feature.properties || {}
+              });
+            } else {
+              setActiveEditFeature({ 
+                layerId: layer.id, 
+                featureIndex: -1, 
+                properties: feature.properties || {} 
+              });
+            }
+            setIsDigitizePanelExpanded(true);
+            mapLayer.closePopup();
+          };
+        }
+
+        const l = e.target;
         layer.setStyle({
           weight: 4,
           color: '#ffffff',
