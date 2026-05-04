@@ -705,7 +705,16 @@ function CursorCoordinates() {
 
   const { lat, lng } = coords;
 
-  const wgs84 = `${lat.toFixed(6)}°, ${lng.toFixed(6)}°`;
+  const toDMS = (coord: number, isLat: boolean) => {
+    const absolute = Math.abs(coord);
+    const degrees = Math.floor(absolute);
+    const minutes = Math.floor((absolute - degrees) * 60);
+    const seconds = ((absolute - degrees - minutes / 60) * 3600).toFixed(2);
+    const direction = isLat ? (coord >= 0 ? "N" : "S") : (coord >= 0 ? "E" : "W");
+    return `${degrees}° ${minutes}' ${seconds}" ${direction}`;
+  };
+
+  const wgs84 = `${toDMS(lat, true)}  ${toDMS(lng, false)}`;
 
   const utmZone = Math.floor((lng + 180) / 6) + 1;
   const isSouth = lat < 0;
