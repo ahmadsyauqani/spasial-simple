@@ -193,7 +193,7 @@ export function DigitizePanel() {
            <div className="p-1.5 bg-orange-500/20 rounded-lg">
              <Database className="w-4 h-4 text-orange-500" />
            </div>
-           <h2 className="text-[11px] font-black uppercase tracking-[0.1em] text-white">Spatial Data Editor</h2>
+           <h2 className="text-[11px] font-black uppercase tracking-[0.1em] text-white">New Layer</h2>
          </div>
          <div className="flex items-center gap-2">
            <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${isMainExpanded ? 'rotate-90 text-orange-500' : ''}`} />
