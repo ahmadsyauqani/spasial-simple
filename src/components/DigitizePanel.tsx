@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMapContext } from "@/lib/MapContext";
 import { 
   Plus, MousePointer2, Trash2, Pencil, X, 
@@ -28,6 +28,14 @@ export function DigitizePanel() {
   const [newLayerType, setNewLayerType] = useState<'Point' | 'Line' | 'Polygon'>('Polygon');
   const [expandedLayerId, setExpandedLayerId] = useState<string | null>(null);
   const [newFieldName, setNewFieldName] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
+  const nodeRef = useRef(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
 
   const createEmptyLayer = () => {
     if (!newLayerName) {
@@ -305,8 +313,8 @@ export function DigitizePanel() {
 
       {/* Floating Draggable Attribute Inspector */}
       {activeEditFeature && (
-        <Draggable handle=".inspector-handle" bounds="body">
-          <div className="fixed top-24 left-[380px] z-[9999] w-[350px] bg-[#1a1c1e] text-gray-200 border border-orange-500/40 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+        <Draggable handle=".inspector-handle" bounds="body" nodeRef={nodeRef}>
+          <div ref={nodeRef} className="fixed top-24 left-[380px] z-[9999] w-[350px] bg-[#1a1c1e] text-gray-200 border border-orange-500/40 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
             {/* Window Header / Drag Handle */}
             <div className="inspector-handle bg-[#25282c] px-4 py-3.5 flex items-center justify-between border-b border-white/10 cursor-grab active:cursor-grabbing">
               <div className="flex items-center gap-2.5">
