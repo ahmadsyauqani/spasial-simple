@@ -706,12 +706,43 @@ function LayerFeature({ layer }: { layer: any }) {
       });
 
       if (!error && data) {
-        setFeatureCollection(data as any);
-        cacheLayerGeojson(layer.id, data);
+        let finalData: any = data;
+        
+        // 1. Terapkan Definition Query jika ada
+        const defQuery = layer.style?.definition_query;
+        if (defQuery && finalData.features) {
+          const { field, operator, value } = defQuery;
+          const filteredFeatures = finalData.features.filter((f: any) => {
+            const props = f.properties || {};
+            const pVal = props[field];
+            if (pVal === undefined || pVal === null) return false;
+            
+            const strVal = String(pVal).toLowerCase();
+            const targetVal = String(value).toLowerCase();
+            const numVal = Number(pVal);
+            const numTarget = Number(value);
+
+            switch (operator) {
+              case '=': return strVal === targetVal;
+              case '!=': return strVal !== targetVal;
+              case '>': return !isNaN(numVal) && !isNaN(numTarget) ? numVal > numTarget : strVal > targetVal;
+              case '<': return !isNaN(numVal) && !isNaN(numTarget) ? numVal < numTarget : strVal < targetVal;
+              case '>=': return !isNaN(numVal) && !isNaN(numTarget) ? numVal >= numTarget : strVal >= targetVal;
+              case '<=': return !isNaN(numVal) && !isNaN(numTarget) ? numVal <= numTarget : strVal <= targetVal;
+              case 'LIKE': return strVal.includes(targetVal);
+              default: return true;
+            }
+          });
+          
+          finalData = { ...finalData, features: filteredFeatures };
+        }
+
+        setFeatureCollection(finalData);
+        cacheLayerGeojson(layer.id, finalData);
         // Menghitung Luas Area
         
         try {
-          const areaSqMeters = turf.area(data as any);
+          const areaSqMeters = turf.area(finalData);
           const wgs84_sqm = areaSqMeters;
           
           let utm_epsg = undefined;
@@ -721,7 +752,7 @@ function LayerFeature({ layer }: { layer: any }) {
 
           // Estimasi Planar Area berdasarkan Centroid untuk Proyeksi Lokal Indonesia
           try {
-            const centroid = turf.centroid(data as any).geometry.coordinates; // [lng, lat]
+            const centroid = turf.centroid(finalData).geometry.coordinates; // [lng, lat]
             const lng = centroid[0];
             const lat = centroid[1];
             
@@ -759,7 +790,7 @@ function LayerFeature({ layer }: { layer: any }) {
     }
     
     loadGeometry();
-  }, [layer.id, layer.style?.dissolve_key]); // areaUnit is intentionally excluded to prevent refetching geometry from SQL when unit changes
+  }, [layer.id, layer.style?.dissolve_key, layer.style?.definition_query]); // areaUnit is intentionally excluded to prevent refetching geometry from SQL when unit changes
 
   if (!featureCollection) return null;
 

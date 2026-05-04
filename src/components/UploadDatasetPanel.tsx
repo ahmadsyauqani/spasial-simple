@@ -301,7 +301,7 @@ function LayersIcon() {
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
-import { ArrowUp, ArrowDown, Palette, Info } from "lucide-react";
+import { ArrowUp, ArrowDown, Palette, Info, Filter } from "lucide-react";
 import { ExportLayerDialog } from "./ExportLayerDialog";
 
 function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => void }) {
@@ -326,6 +326,29 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
     }
     loadKeys();
   }, [layer.id, layer.style?.dissolve_key]);
+
+  // State lokal untuk form definition query
+  const [defField, setDefField] = useState(layer.style?.definition_query?.field || "");
+  const [defOperator, setDefOperator] = useState(layer.style?.definition_query?.operator || "=");
+  const [defValue, setDefValue] = useState(layer.style?.definition_query?.value || "");
+
+  const handleApplyDefinitionQuery = async () => {
+    if (!defField || !defOperator || !defValue) return;
+    const newQuery = { field: defField, operator: defOperator, value: defValue };
+    const newStyle = { ...style, definition_query: newQuery };
+    updateLayerStyle(layer.id, newStyle);
+    if (layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
+  };
+
+  const handleClearDefinitionQuery = async () => {
+    setDefField("");
+    setDefOperator("=");
+    setDefValue("");
+    const newStyle = { ...style };
+    delete newStyle.definition_query;
+    updateLayerStyle(layer.id, newStyle);
+    if (layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
+  };
 
   const handleColorChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
@@ -488,6 +511,54 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
             )}
           </PopoverContent>
         </Popover>
+
+        {availableKeys.length > 0 && (
+          <Popover>
+            <PopoverTrigger className={`p-1 hover:bg-muted rounded outline-none transition-colors ${layer.style?.definition_query ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'}`} title="Definition Query (Filter)">
+              <Filter className="w-3.5 h-3.5" />
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-4 flex flex-col gap-3 bg-popover text-popover-foreground border shadow-lg z-50">
+              <h4 className="text-sm font-semibold border-b pb-1">Definition Query</h4>
+              <p className="text-[10px] text-muted-foreground leading-tight mb-1">
+                Filter fitur yang tampil di peta berdasarkan atribut.
+              </p>
+              
+              <div className="flex flex-col gap-2">
+                <select value={defField} onChange={e => setDefField(e.target.value)} className="w-full text-xs p-2 rounded bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-primary">
+                  <option value="">-- Pilih Field --</option>
+                  {availableKeys.map(k => <option key={k} value={k}>{k}</option>)}
+                </select>
+                <select value={defOperator} onChange={e => setDefOperator(e.target.value)} className="w-full text-xs p-2 rounded bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-primary">
+                  <option value="=">Sama Dengan (=)</option>
+                  <option value="!=">Tidak Sama (!=)</option>
+                  <option value=">">Lebih Besar {'>'}</option>
+                  <option value="<">Lebih Kecil {'<'}</option>
+                  <option value=">=">Lebih/Sama {'>='}</option>
+                  <option value="<=">Kurang/Sama {'<='}</option>
+                  <option value="LIKE">Berisi Teks (LIKE)</option>
+                </select>
+                <input 
+                  type="text" 
+                  value={defValue} 
+                  onChange={e => setDefValue(e.target.value)} 
+                  placeholder="Nilai kriteria..." 
+                  className="w-full text-xs p-2 rounded bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <div className="flex gap-2 mt-1">
+                <Button size="sm" onClick={handleApplyDefinitionQuery} disabled={!defField || !defValue} className="w-full h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
+                  Terapkan
+                </Button>
+                {layer.style?.definition_query && (
+                  <Button size="sm" variant="destructive" onClick={handleClearDefinitionQuery} className="h-8 px-2 text-xs">
+                    Hapus
+                  </Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
 
         <ExportLayerDialog layer={layer} />
 

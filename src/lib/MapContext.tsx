@@ -8,6 +8,11 @@ type LayerStyle = {
   fillOpacity: number;
   weight: number;
   dissolve_key?: string;
+  definition_query?: {
+    field: string;
+    operator: string; // '=', '!=', '>', '<', '>=', '<=', 'LIKE'
+    value: string;
+  };
 };
 
 type GeoJsonLayer = {
