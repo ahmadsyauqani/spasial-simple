@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useMapContext } from "@/lib/MapContext";
 import { 
   Plus, MousePointer2, Trash2, Pencil, X, 
@@ -11,7 +12,8 @@ import {
 import { toast } from "sonner";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, updateFeaturePropertiesInSupabase } from "@/lib/database";
 import Draggable from 'react-draggable';
-import { PdfOverlayPanel } from "./PdfOverlayPanel";
+
+const PdfOverlayPanel = dynamic(() => import("./PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
 
 export function DigitizePanel() {
   const { 
