@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import * as turf from "@turf/turf";
 import proj4 from "proj4";
 import { useMapContext, BASEMAP_OPTIONS, BasemapType } from "@/lib/MapContext";
-import { Layers, LocateFixed, Loader2 } from "lucide-react";
+import { Layers, LocateFixed, Loader2, Lock } from "lucide-react";
 
 // Fix for default Leaflet markers in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -686,18 +686,38 @@ function LocationMarker({ location }: { location: { lat: number; lng: number; ac
 function CursorCoordinates() {
   const map = useMap();
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const isLockedRef = useRef(isLocked);
+
+  useEffect(() => {
+    isLockedRef.current = isLocked;
+  }, [isLocked]);
 
   useEffect(() => {
     const handleMouseMove = (e: L.LeafletMouseEvent) => {
-      setCoords(e.latlng);
+      if (!isLockedRef.current) {
+        setCoords(e.latlng);
+      }
+    };
+    
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      if (isLockedRef.current) {
+        setIsLocked(false);
+        setCoords(e.latlng);
+      } else {
+        setIsLocked(true);
+        setCoords(e.latlng);
+      }
     };
     
     // Set initial coords to center
     setCoords(map.getCenter());
     
     map.on('mousemove', handleMouseMove);
+    map.on('click', handleMapClick);
     return () => {
       map.off('mousemove', handleMouseMove);
+      map.off('click', handleMapClick);
     };
   }, [map]);
 
@@ -742,7 +762,12 @@ function CursorCoordinates() {
   }
 
   return (
-    <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100vw-2rem)] sm:w-auto bg-card/90 backdrop-blur-md border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none pointer-events-none transition-all">
+    <div className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/95 border-primary/50 shadow-primary/20' : 'bg-card/90 border-border/50'} backdrop-blur-md border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none pointer-events-none transition-all duration-300`}>
+      {isLocked && (
+        <div className="absolute -top-3 -right-2 sm:-right-3 bg-primary text-primary-foreground rounded-full p-1.5 shadow-lg flex items-center justify-center animate-in zoom-in duration-300 border border-primary-foreground/20">
+           <Lock className="w-3 h-3" />
+        </div>
+      )}
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full">
         <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5">WGS 84</span>
         <span className="font-mono text-card-foreground font-medium">{wgs84}</span>
