@@ -38,6 +38,9 @@ function MapController() {
   const activeDigitizingLayerIdRef = useRef(activeDigitizingLayerId);
   useEffect(() => { activeDigitizingLayerIdRef.current = activeDigitizingLayerId; }, [activeDigitizingLayerId]);
 
+  const cacheRef = useRef(layerGeojsonCache);
+  useEffect(() => { cacheRef.current = layerGeojsonCache; }, [layerGeojsonCache]);
+
   useEffect(() => {
     // Add Geoman controls for editing and snapping
     map.pm.addControls({
@@ -73,13 +76,14 @@ function MapController() {
 
     const handleCreate = (e: any) => {
       const { layer } = e;
-      if (activeDigitizingLayerIdRef.current) {
-        const fc = { ...layerGeojsonCache[activeDigitizingLayerIdRef.current] };
+      const activeId = activeDigitizingLayerIdRef.current;
+      if (activeId) {
+        const fc = { ...cacheRef.current[activeId] };
         if (fc) {
           const newFeature = layer.toGeoJSON();
           newFeature.properties = {};
           fc.features.push(newFeature);
-          cacheLayerGeojson(activeDigitizingLayerIdRef.current, fc);
+          cacheLayerGeojson(activeId, fc);
           setLayers(prev => [...prev]);
           layer.remove();
           toast.success("Fitur berhasil ditambahkan ke layer!");
