@@ -701,13 +701,8 @@ function CursorCoordinates() {
     };
     
     const handleMapClick = (e: L.LeafletMouseEvent) => {
-      if (isLockedRef.current) {
-        setIsLocked(false);
-        setCoords(e.latlng);
-      } else {
-        setIsLocked(true);
-        setCoords(e.latlng);
-      }
+      setCoords(e.latlng);
+      setIsLocked(true);
     };
     
     // Set initial coords to center
@@ -720,6 +715,11 @@ function CursorCoordinates() {
       map.off('click', handleMapClick);
     };
   }, [map]);
+
+  const handleUnlock = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsLocked(false);
+  };
 
   if (!coords) return null;
 
@@ -765,13 +765,33 @@ function CursorCoordinates() {
     } catch (e) {}
   }
 
+  const customIcon = L.divIcon({
+    html: `
+      <div class="flex items-center justify-center">
+        <div class="w-8 h-8 bg-primary/30 rounded-full animate-ping absolute"></div>
+        <div class="w-4 h-4 bg-primary border-2 border-white rounded-full shadow-lg z-10"></div>
+      </div>
+    `,
+    className: 'custom-marker',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
+  });
+
   return (
-    <div className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/95 border-primary/50 shadow-primary/20' : 'bg-card/90 border-border/50'} backdrop-blur-md border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none pointer-events-none transition-all duration-300`}>
-      {isLocked && (
-        <div className="absolute -top-3 -right-2 sm:-right-3 bg-primary text-primary-foreground rounded-full p-1.5 shadow-lg flex items-center justify-center animate-in zoom-in duration-300 border border-primary-foreground/20">
-           <Lock className="w-3 h-3" />
-        </div>
+    <>
+      {isLocked && coords && (
+        <Marker position={[coords.lat, coords.lng]} icon={customIcon} />
       )}
+      <div className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/95 border-primary/50 shadow-primary/20' : 'bg-card/90 border-border/50'} backdrop-blur-md border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
+        {isLocked && (
+          <button 
+            onClick={handleUnlock}
+            className="absolute -top-3 -right-2 sm:-right-3 bg-red-500 text-white rounded-full p-1 shadow-lg flex items-center justify-center animate-in zoom-in duration-300 border border-white hover:bg-red-600 transition-colors pointer-events-auto"
+            title="Buka Kunci (Kembali ke mode kursor)"
+          >
+            <Lock className="w-3.5 h-3.5" />
+          </button>
+        )}
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full">
         <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5">WGS 84</span>
         <div className="flex flex-col items-end sm:items-center">
