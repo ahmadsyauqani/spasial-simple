@@ -222,6 +222,9 @@ export default function MapArea() {
         <OverlapLayer />
         <ClipLayer />
         <MergeLayer />
+        <BufferLayer />
+        <UnionLayer />
+        <DissolveLayer />
 
         {/* User Location Marker */}
         {userLocation && locationActive && (
@@ -424,6 +427,203 @@ function MergeLayer() {
       key={`merge-${Date.now()}`}
       style={() => mergeStyle}
       onEachFeature={onEachMerge}
+    />
+  );
+}
+
+// Komponen render hasil Buffer di peta
+function BufferLayer() {
+  const { bufferResult, areaUnit } = useMapContext();
+  const map = useMap();
+
+  useEffect(() => {
+    if (bufferResult?.geojson) {
+      try {
+        const bounds = L.geoJSON(bufferResult.geojson).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } catch(e) {}
+    }
+  }, [bufferResult, map]);
+
+  if (!bufferResult?.geojson) return null;
+
+  const formatUnit = (sqm: number) => {
+    if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
+    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+  };
+
+  const bufferStyle = {
+    color: '#0ea5e9',
+    fillColor: '#0ea5e9',
+    fillOpacity: 0.3,
+    weight: 2,
+    dashArray: '5, 5'
+  };
+
+  const onEachBuffer = (feature: any, mapLayer: any) => {
+    const areaSqm = turf.area(feature);
+    let html = `<div class="p-2 min-w-[200px]">`;
+    html += `<h4 class="font-bold text-base border-b border-sky-400/30 pb-1 mb-2 text-sky-300">🎯 Zona Buffer</h4>`;
+    html += `<div class="text-[10px] text-sky-400 mb-2">Jarak: <span class="font-mono font-bold">${bufferResult.distance} ${bufferResult.unit}</span></div>`;
+
+    if (areaSqm > 1) {
+      html += `<div class="bg-sky-900/30 p-2 rounded border border-sky-500/20 text-xs mb-2">`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-sky-300 font-bold">${formatUnit(areaSqm)}</span></div>`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9992)}</span></div>`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9998)}</span></div>`;
+      html += `</div>`;
+    }
+
+    html += `<div class="text-[10px] text-gray-400 mt-1">Source: ${bufferResult.inputLayerName}</div>`;
+    html += `</div>`;
+    mapLayer.bindPopup(html, { className: 'custom-popup-dark', maxWidth: 300 });
+  };
+
+  return (
+    <GeoJSON
+      data={bufferResult.geojson}
+      key={`buffer-${Date.now()}`}
+      style={() => bufferStyle}
+      onEachFeature={onEachBuffer}
+    />
+  );
+}
+
+// Komponen render hasil Union di peta
+function UnionLayer() {
+  const { unionResult, areaUnit } = useMapContext();
+  const map = useMap();
+
+  useEffect(() => {
+    if (unionResult?.geojson) {
+      try {
+        const bounds = L.geoJSON(unionResult.geojson).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } catch(e) {}
+    }
+  }, [unionResult, map]);
+
+  if (!unionResult?.geojson) return null;
+
+  const formatUnit = (sqm: number) => {
+    if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
+    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+  };
+
+  const unionStyle = {
+    color: '#f59e0b',
+    fillColor: '#f59e0b',
+    fillOpacity: 0.4,
+    weight: 2,
+  };
+
+  const onEachUnion = (feature: any, mapLayer: any) => {
+    const areaSqm = turf.area(feature);
+    let html = `<div class="p-2 min-w-[200px]">`;
+    html += `<h4 class="font-bold text-base border-b border-amber-400/30 pb-1 mb-2 text-amber-300">🧩 Hasil Union</h4>`;
+
+    if (areaSqm > 1) {
+      html += `<div class="bg-amber-900/30 p-2 rounded border border-amber-500/20 text-xs mb-2">`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-amber-300 font-bold">${formatUnit(areaSqm)}</span></div>`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9992)}</span></div>`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9998)}</span></div>`;
+      html += `</div>`;
+    }
+
+    if (feature.properties) {
+      html += `<div class="max-h-32 overflow-y-auto text-xs">`;
+      html += `<table class="w-full text-left border-collapse"><tbody>`;
+      for (const key in feature.properties) {
+        if (key === "db_id" || key === "FID") continue;
+        const value = feature.properties[key];
+        html += `<tr class="border-b border-white/10 last:border-0"><td class="py-1 pr-2 font-medium text-gray-300 w-1/3">${key}</td><td class="py-1 text-white font-mono">${value === null ? '<span class="text-white/20 italic">null</span>' : value}</td></tr>`;
+      }
+      html += `</tbody></table></div>`;
+    }
+
+    html += `</div>`;
+    mapLayer.bindPopup(html, { className: 'custom-popup-dark', maxWidth: 300 });
+  };
+
+  return (
+    <GeoJSON
+      data={unionResult.geojson}
+      key={`union-${Date.now()}`}
+      style={() => unionStyle}
+      onEachFeature={onEachUnion}
+    />
+  );
+}
+
+// Komponen render hasil Dissolve di peta
+function DissolveLayer() {
+  const { dissolveResult, areaUnit } = useMapContext();
+  const map = useMap();
+
+  useEffect(() => {
+    if (dissolveResult?.geojson) {
+      try {
+        const bounds = L.geoJSON(dissolveResult.geojson).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } catch(e) {}
+    }
+  }, [dissolveResult, map]);
+
+  if (!dissolveResult?.geojson) return null;
+
+  const formatUnit = (sqm: number) => {
+    if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
+    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+  };
+
+  const dissolveStyle = {
+    color: '#d946ef',
+    fillColor: '#d946ef',
+    fillOpacity: 0.35,
+    weight: 2.5,
+  };
+
+  const onEachDissolve = (feature: any, mapLayer: any) => {
+    const areaSqm = turf.area(feature);
+    let html = `<div class="p-2 min-w-[200px]">`;
+    html += `<h4 class="font-bold text-base border-b border-fuchsia-400/30 pb-1 mb-2 text-fuchsia-300">🌫️ Hasil Dissolve</h4>`;
+
+    if (dissolveResult.dissolveProperty) {
+      html += `<div class="text-[10px] text-fuchsia-400 mb-2">Berdasarkan: <span class="font-mono font-bold">${dissolveResult.dissolveProperty}</span></div>`;
+    }
+
+    if (areaSqm > 1) {
+      html += `<div class="bg-fuchsia-900/30 p-2 rounded border border-fuchsia-500/20 text-xs mb-2">`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-fuchsia-300 font-bold">${formatUnit(areaSqm)}</span></div>`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9992)}</span></div>`;
+      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9998)}</span></div>`;
+      html += `</div>`;
+    }
+
+    if (feature.properties) {
+      html += `<div class="max-h-32 overflow-y-auto text-xs">`;
+      html += `<table class="w-full text-left border-collapse"><tbody>`;
+      for (const key in feature.properties) {
+        if (key === "db_id" || key === "FID") continue;
+        const value = feature.properties[key];
+        html += `<tr class="border-b border-white/10 last:border-0"><td class="py-1 pr-2 font-medium text-gray-300 w-1/3">${key}</td><td class="py-1 text-white font-mono">${value === null ? '<span class="text-white/20 italic">null</span>' : value}</td></tr>`;
+      }
+      html += `</tbody></table></div>`;
+    }
+
+    html += `</div>`;
+    mapLayer.bindPopup(html, { className: 'custom-popup-dark', maxWidth: 300 });
+  };
+
+  return (
+    <GeoJSON
+      data={dissolveResult.geojson}
+      key={`dissolve-${Date.now()}`}
+      style={() => dissolveStyle}
+      onEachFeature={onEachDissolve}
     />
   );
 }

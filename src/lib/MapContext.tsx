@@ -81,6 +81,30 @@ export type MergeResult = {
   allAttributeKeys: string[];
 } | null;
 
+export type BufferResult = {
+  geojson: any; // FeatureCollection of buffered polygons
+  areaMetrics: AreaMetrics;
+  inputLayerName: string;
+  distance: number;
+  unit: string;
+  featureCount: number;
+} | null;
+
+export type UnionResult = {
+  geojson: any; // FeatureCollection of unioned polygons
+  areaMetrics: AreaMetrics;
+  sourceLayerNames: string[];
+  featureCount: number;
+} | null;
+
+export type DissolveResult = {
+  geojson: any; // FeatureCollection of dissolved polygons
+  areaMetrics: AreaMetrics;
+  inputLayerName: string;
+  dissolveProperty: string | null;
+  featureCount: number;
+} | null;
+
 export type MapViewState = {
   center: [number, number]; // [lat, lng]
   zoom: number;
@@ -107,6 +131,12 @@ interface MapContextType {
   setClipResult: (result: ClipResult) => void;
   mergeResult: MergeResult;
   setMergeResult: (result: MergeResult) => void;
+  bufferResult: BufferResult;
+  setBufferResult: (result: BufferResult) => void;
+  unionResult: UnionResult;
+  setUnionResult: (result: UnionResult) => void;
+  dissolveResult: DissolveResult;
+  setDissolveResult: (result: DissolveResult) => void;
   isLayoutComposerOpen: boolean;
   setLayoutComposerOpen: (open: boolean) => void;
   mapViewState: MapViewState;
@@ -128,6 +158,9 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [overlapResult, setOverlapResult] = useState<OverlapResult>(null);
   const [clipResult, setClipResult] = useState<ClipResult>(null);
   const [mergeResult, setMergeResult] = useState<MergeResult>(null);
+  const [bufferResult, setBufferResult] = useState<BufferResult>(null);
+  const [unionResult, setUnionResult] = useState<UnionResult>(null);
+  const [dissolveResult, setDissolveResult] = useState<DissolveResult>(null);
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
   const [mapViewState, setMapViewState] = useState<MapViewState>({ center: [-0.789275, 113.921327], zoom: 5 });
   const [activeBasemap, setActiveBasemap] = useState<BasemapType>("dark");
@@ -168,7 +201,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <MapContext.Provider value={{ layers, setLayers, activeFeatureToZoom, setZoomFeature, updateLayerStyle, reorderLayer, layerAreas, setLayerArea, areaUnit, setAreaUnit, zoomToLayerId, triggerZoomToLayer: setZoomToLayerId, layerGeojsonCache, cacheLayerGeojson, overlapResult, setOverlapResult, clipResult, setClipResult, mergeResult, setMergeResult, isLayoutComposerOpen, setLayoutComposerOpen, mapViewState, setMapViewState, activeBasemap, setActiveBasemap }}>
+    <MapContext.Provider value={{ layers, setLayers, activeFeatureToZoom, setZoomFeature, updateLayerStyle, reorderLayer, layerAreas, setLayerArea, areaUnit, setAreaUnit, zoomToLayerId, triggerZoomToLayer: setZoomToLayerId, layerGeojsonCache, cacheLayerGeojson, overlapResult, setOverlapResult, clipResult, setClipResult, mergeResult, setMergeResult, bufferResult, setBufferResult, unionResult, setUnionResult, dissolveResult, setDissolveResult, isLayoutComposerOpen, setLayoutComposerOpen, mapViewState, setMapViewState, activeBasemap, setActiveBasemap }}>
       {children}
     </MapContext.Provider>
   );

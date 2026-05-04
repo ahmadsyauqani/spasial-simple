@@ -19,6 +19,9 @@ import { cn } from "@/lib/utils";
 import { OverlapAnalysisButton } from "./OverlapAnalysisPanel";
 import { ClipAnalysisButton } from "./ClipAnalysisPanel";
 import { MergeAnalysisButton } from "./MergeAnalysisPanel";
+import { BufferAnalysisButton } from "./BufferAnalysisPanel";
+import { UnionAnalysisButton } from "./UnionAnalysisPanel";
+import { DissolveAnalysisButton } from "./DissolveAnalysisPanel";
 
 export function UploadDatasetPanel() {
   const { layers, setLayers, setZoomFeature, areaUnit, setAreaUnit } = useMapContext();
@@ -161,8 +164,11 @@ export function UploadDatasetPanel() {
 
       {/* Toolbar Analisis */}
       <div className="flex items-center gap-2 flex-wrap">
-        <OverlapAnalysisButton />
+        <BufferAnalysisButton />
         <ClipAnalysisButton />
+        <OverlapAnalysisButton />
+        <UnionAnalysisButton />
+        <DissolveAnalysisButton />
         <MergeAnalysisButton />
         <LayoutPetaButton />
         <DownloadAllResultsButton />
@@ -513,7 +519,7 @@ function LayoutPetaButton() {
  * Selalu tampil agar pengguna tahu fitur ini ada.
  */
 function DownloadAllResultsButton() {
-  const { overlapResult, clipResult, mergeResult } = useMapContext();
+  const { overlapResult, clipResult, mergeResult, bufferResult, unionResult, dissolveResult } = useMapContext();
 
   const results: { geojson: any; filename: string }[] = [];
 
@@ -534,6 +540,25 @@ function DownloadAllResultsButton() {
     results.push({
       geojson: mergeResult.geojson,
       filename: `merge_${names}.geojson`.replace(/\s+/g, "_"),
+    });
+  }
+  if (bufferResult) {
+    results.push({
+      geojson: bufferResult.geojson,
+      filename: `buffer_${bufferResult.inputLayerName}_${bufferResult.distance}${bufferResult.unit}.geojson`.replace(/\s+/g, "_"),
+    });
+  }
+  if (unionResult) {
+    const names = unionResult.sourceLayerNames.map((n) => n.replace(/\.[^/.]+$/, "")).join("_");
+    results.push({
+      geojson: unionResult.geojson,
+      filename: `union_${names}.geojson`.replace(/\s+/g, "_"),
+    });
+  }
+  if (dissolveResult) {
+    results.push({
+      geojson: dissolveResult.geojson,
+      filename: `dissolve_${dissolveResult.inputLayerName}_by_${dissolveResult.dissolveProperty || "all"}.geojson`.replace(/\s+/g, "_"),
     });
   }
 
