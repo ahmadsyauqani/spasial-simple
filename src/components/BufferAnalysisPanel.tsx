@@ -114,8 +114,10 @@ export function BufferAnalysisButton() {
 
         // Hitung jumlah fitur valid (tidak null)
         let featureCount = 0;
-        if (buffered.type === "FeatureCollection") {
-            featureCount = buffered.features.filter(f => f !== null && f !== undefined).length;
+        if ((buffered as any).type === "FeatureCollection") {
+            featureCount = (buffered as any).features.filter((f: any) => f !== null && f !== undefined).length;
+        } else if ((buffered as any).type === "Feature") {
+            featureCount = 1;
         }
 
         setBufferResult({

@@ -111,18 +111,18 @@ export function UnionAnalysisButton() {
               // Jika A dan B bersinggungan
               if (turf.booleanIntersects(remnantA, polyB)) {
                 // Ambil irisannya (A ∩ B)
-                const intersection = turf.intersect(remnantA, polyB);
+                const intersection = turf.intersect(turf.featureCollection([remnantA, polyB]));
                 if (intersection) {
                   intersection.properties = { ...propsA, ...polyB.properties };
                   unionedFeatures.push(intersection);
                 }
 
                 // Kurangi B dengan A (B - A)
-                const diffB = turf.difference(polyB, remnantA);
+                const diffB = turf.difference(turf.featureCollection([polyB, remnantA]));
                 remnantsB[j] = diffB ? { ...diffB, properties: polyB.properties } : null;
 
                 // Kurangi A dengan B (A - B)
-                const diffA = turf.difference(remnantA, polyB);
+                const diffA = turf.difference(turf.featureCollection([remnantA, polyB]));
                 remnantA = diffA ? { ...diffA, properties: propsA } : null;
               }
             } catch (err) {
