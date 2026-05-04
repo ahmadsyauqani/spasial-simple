@@ -152,11 +152,11 @@ export function UploadDatasetPanel() {
         ) : (
           <FileUp className="w-4 h-4" />
         )}
-        <span>{isUploading ? "Memproses..." : (isDragging ? "Lepaskan File Disini!" : "Unggah File (SHP/RAR/KML/GeoJSON)")}</span>
+        <span>{isUploading ? "Memproses..." : (isDragging ? "Lepaskan File Disini!" : "Unggah File (.SHP/.RAR/.GDB.ZIP/.KML/.GEOJSON)")}</span>
         <input
           type="file"
           className="hidden"
-          accept=".zip,.rar,.kml,.kmz,.geojson,.json"
+          accept=".zip,.rar,.kml,.kmz,.geojson,.json,.gdb.zip"
           onChange={handleFileUpload}
           disabled={isUploading}
         />

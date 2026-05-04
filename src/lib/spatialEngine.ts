@@ -3,12 +3,37 @@ import shp from "shpjs";
 import { kml } from "@tmcw/togeojson";
 
 export async function parseSpatialFile(file: File): Promise<any> {
-  const extension = file.name.split(".").pop()?.toLowerCase();
+  let extension = file.name.split(".").pop()?.toLowerCase();
+  
+  // Deteksi khusus jika ekstensi gdb.zip
+  if (file.name.toLowerCase().endsWith(".gdb.zip")) {
+    extension = "gdbzip";
+  }
 
   let geojson = null;
 
   try {
-    if (extension === "zip") {
+    if (extension === "gdbzip") {
+      const buffer = await file.arrayBuffer();
+      const fgdb = require('fgdb');
+      const gdbData = await fgdb(buffer);
+      
+      // gdbData is an object: { layerName1: { type: "FeatureCollection", features: [...] }, layerName2: ... }
+      const allFeatures: any[] = [];
+      if (typeof gdbData === 'object' && gdbData !== null) {
+        Object.values(gdbData).forEach((collection: any) => {
+          if (collection && collection.type === 'FeatureCollection' && Array.isArray(collection.features)) {
+             allFeatures.push(...collection.features);
+          }
+        });
+      }
+      
+      if (allFeatures.length === 0) {
+         throw new Error("Gagal mengekstrak GDB atau GDB tidak memiliki fitur geometri yang valid.");
+      }
+      
+      geojson = turf.featureCollection(allFeatures);
+    } else if (extension === "zip") {
       // Assuming Shapefile inside ZIP
       const buffer = await file.arrayBuffer();
       geojson = await shp(buffer);
@@ -46,7 +71,7 @@ export async function parseSpatialFile(file: File): Promise<any> {
       throw new Error("DXF parsing is not fully implemented yet.");
       // Will require dxf-parser and turf.polygonize
     } else {
-      throw new Error("Format tidak didukung. Unggah .zip/.rar (Shapefile), .kml, .geojson, atau .json");
+      throw new Error("Format tidak didukung. Unggah .zip (Shapefile), .gdb.zip (File Geodatabase), .rar, .kml, .geojson, atau .json");
     }
 
     // Normalize to single FeatureCollection
