@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMapContext } from "@/lib/MapContext";
-import { FileUp, Map as MapIcon, X, Eye, EyeOff, Trash2, Sliders, ChevronDown } from "lucide-react";
+import { FileUp, Map as MapIcon, X, Eye, EyeOff, Trash2, Sliders, ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
+import { 
+  getOrCreateDefaultProject, uploadPdfImage, savePdfOverlay, 
+  fetchPdfOverlays, deletePdfOverlayFromSupabase, updatePdfOverlaySettings 
+} from "@/lib/database";
 
 // Set worker source for pdfjs
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -13,7 +17,14 @@ export function PdfOverlayPanel() {
   const { pdfOverlays, setPdfOverlays, mapInstance } = useMapContext();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchPdfOverlays()
+      .then(data => setPdfOverlays(data))
+      .catch(err => console.error("Error loading PDF overlays:", err));
+  }, []);
 
   // Temporary state for georeferencing
   const [pendingOverlay, setPendingOverlay] = useState<{ url: string, name: string } | null>(null);
@@ -56,7 +67,7 @@ export function PdfOverlayPanel() {
     }
   };
 
-  const addOverlay = () => {
+  const addOverlay = async () => {
     if (!pendingOverlay) return;
     
     const sw = [parseFloat(bounds.swLat), parseFloat(bounds.swLng)];
@@ -67,41 +78,72 @@ export function PdfOverlayPanel() {
       return;
     }
 
-    const newOverlay = {
-      id: `pdf-${Date.now()}`,
-      name: pendingOverlay.name,
-      url: pendingOverlay.url,
-      bounds: [sw, ne],
-      visible: true,
-      opacity: 0.7
-    };
+    try {
+      setIsSaving(true);
+      toast.info("Sedang mengunggah gambar peta ke storage...");
+      
+      const project = await getOrCreateDefaultProject();
+      const fileId = `pdf-${Date.now()}`;
+      
+      // 1. Upload image to Storage
+      const publicUrl = await uploadPdfImage(fileId, pendingOverlay.url);
+      
+      const newOverlayData = {
+        name: pendingOverlay.name,
+        url: publicUrl,
+        bounds: [sw, ne],
+        visible: true,
+        opacity: 0.7
+      };
 
-    setPdfOverlays([...pdfOverlays, newOverlay]);
-    setPendingOverlay(null);
-    setBounds({ swLat: "", swLng: "", neLat: "", neLng: "" });
-    toast.success("Peta PDF berhasil dipasang!");
+      // 2. Save to DB
+      const savedOverlay = await savePdfOverlay(project.id, newOverlayData);
 
-    // Zoom to overlay
-    if (mapInstance) {
-      mapInstance.fitBounds(newOverlay.bounds as any);
+      setPdfOverlays([...pdfOverlays, savedOverlay]);
+      setPendingOverlay(null);
+      setBounds({ swLat: "", swLng: "", neLat: "", neLng: "" });
+      toast.success("Peta PDF berhasil dipasang dan tersimpan!");
+
+      if (mapInstance) {
+        mapInstance.fitBounds(savedOverlay.bounds as any);
+      }
+    } catch (err: any) {
+      toast.error("Gagal menyimpan overlay: " + err.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const removeOverlay = (id: string) => {
-    setPdfOverlays(pdfOverlays.filter(o => o.id !== id));
-    toast.info("Overlay dihapus");
+  const removeOverlay = async (id: string) => {
+    try {
+      await deletePdfOverlayFromSupabase(id);
+      setPdfOverlays(pdfOverlays.filter(o => o.id !== id));
+      toast.info("Overlay dihapus");
+    } catch (err: any) {
+      toast.error("Gagal menghapus: " + err.message);
+    }
   };
 
-  const toggleVisibility = (id: string) => {
+  const toggleVisibility = async (id: string) => {
+    const overlay = pdfOverlays.find(o => o.id === id);
+    if (!overlay) return;
+    
+    const newVisible = !overlay.visible;
     setPdfOverlays(pdfOverlays.map(o => 
-      o.id === id ? { ...o, visible: !o.visible } : o
+      o.id === id ? { ...o, visible: newVisible } : o
     ));
+    
+    await updatePdfOverlaySettings(id, { visible: newVisible });
   };
 
-  const updateOpacity = (id: string, opacity: number) => {
+  const updateOpacity = async (id: string, opacity: number) => {
     setPdfOverlays(pdfOverlays.map(o => 
       o.id === id ? { ...o, opacity } : o
     ));
+  };
+
+  const handleOpacityCommit = async (id: string, opacity: number) => {
+    await updatePdfOverlaySettings(id, { opacity });
   };
 
   return (
@@ -201,9 +243,11 @@ export function PdfOverlayPanel() {
                      </button>
                      <button 
                        onClick={addOverlay}
-                       className="flex-[2] py-2.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 transition-all"
+                       disabled={isSaving}
+                       className="flex-[2] py-2.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 transition-all flex items-center justify-center gap-2"
                      >
-                        Pasang di Peta
+                        {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                        {isSaving ? "Menyimpan..." : "Pasang di Peta"}
                      </button>
                   </div>
                </div>
@@ -244,6 +288,8 @@ export function PdfOverlayPanel() {
                             type="range" min="0" max="1" step="0.1"
                             value={overlay.opacity}
                             onChange={(e) => updateOpacity(overlay.id, parseFloat(e.target.value))}
+                            onMouseUp={() => handleOpacityCommit(overlay.id, overlay.opacity)}
+                            onTouchEnd={() => handleOpacityCommit(overlay.id, overlay.opacity)}
                             className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                           />
                        </div>

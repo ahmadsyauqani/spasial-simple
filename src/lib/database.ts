@@ -119,3 +119,76 @@ export async function updateFeaturePropertiesInSupabase(featureId: string, prope
   if (error) throw new Error("Gagal update atribut: " + error.message);
   return true;
 }
+
+// PDF Map Overlays (Avenza Style)
+export async function uploadPdfImage(fileId: string, dataUrl: string) {
+  const base64Data = dataUrl.split(',')[1];
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: 'image/png' });
+
+  const { data, error } = await supabase.storage
+    .from('pdf-overlays')
+    .upload(`${fileId}.png`, blob, {
+      contentType: 'image/png',
+      upsert: true
+    });
+
+  if (error) throw error;
+  
+  const { data: { publicUrl } } = supabase.storage
+    .from('pdf-overlays')
+    .getPublicUrl(`${fileId}.png`);
+    
+  return publicUrl;
+}
+
+export async function savePdfOverlay(projectId: string, overlay: any) {
+  const { data, error } = await supabase
+    .from("pdf_overlays")
+    .insert([{ 
+      project_id: projectId,
+      name: overlay.name,
+      url: overlay.url,
+      bounds: overlay.bounds,
+      opacity: overlay.opacity,
+      visible: overlay.visible
+    }])
+    .select()
+    .single();
+    
+  if (error) throw new Error("Gagal menyimpan PDF overlay: " + error.message);
+  return data;
+}
+
+export async function fetchPdfOverlays() {
+  const { data, error } = await supabase
+    .from("pdf_overlays")
+    .select("*")
+    .order("created_at", { ascending: true });
+    
+  if (error) throw new Error("Gagal load PDF overlays: " + error.message);
+  return data;
+}
+
+export async function deletePdfOverlayFromSupabase(id: string) {
+  const { error } = await supabase
+    .from("pdf_overlays")
+    .delete()
+    .eq("id", id);
+    
+  if (error) throw new Error("Gagal menghapus PDF overlay: " + error.message);
+  return true;
+}
+
+export async function updatePdfOverlaySettings(id: string, settings: any) {
+  const { error } = await supabase
+    .from("pdf_overlays")
+    .update(settings)
+    .eq("id", id);
+  return !error;
+}
