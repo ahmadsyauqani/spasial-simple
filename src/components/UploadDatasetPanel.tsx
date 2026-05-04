@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, ChevronsUpDown, Loader2, DownloadCloud } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
@@ -22,6 +23,8 @@ import { MergeAnalysisButton } from "./MergeAnalysisPanel";
 import { BufferAnalysisButton } from "./BufferAnalysisPanel";
 import { UnionAnalysisButton } from "./UnionAnalysisPanel";
 import { DissolveAnalysisButton } from "./DissolveAnalysisPanel";
+
+const PdfOverlayPanel = dynamic(() => import("./PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
 
 export function UploadDatasetPanel() {
   const { layers, setLayers, setZoomFeature, areaUnit, setAreaUnit } = useMapContext();
@@ -130,6 +133,9 @@ export function UploadDatasetPanel() {
           </div>
         )}
       </ScrollArea>
+
+      {/* PDF Map Overlay (Avenza Style) */}
+      <PdfOverlayPanel />
 
       <label 
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}

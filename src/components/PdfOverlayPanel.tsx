@@ -105,23 +105,23 @@ export function PdfOverlayPanel() {
   };
 
   return (
-    <div className="bg-white/5 text-gray-200 border border-white/5 rounded-2xl overflow-hidden transition-all duration-300">
+    <div className="bg-muted/30 text-gray-200 border border-border/50 rounded-xl overflow-hidden transition-all duration-300">
       {/* Header */}
       <div 
-        className="bg-[#25282c] px-4 py-3.5 border-b border-white/10 flex items-center justify-between cursor-pointer hover:bg-[#2a2d31] transition-colors"
+        className="bg-muted/50 px-3 py-2.5 border-b border-border/50 flex items-center justify-between cursor-pointer hover:bg-muted transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-center gap-2.5">
-          <div className="p-1.5 bg-indigo-500/20 rounded-lg">
-            <MapIcon className="w-4 h-4 text-indigo-400" />
+        <div className="flex items-center gap-2">
+          <div className="p-1 bg-indigo-500/20 rounded-md">
+            <MapIcon className="w-3.5 h-3.5 text-indigo-400" />
           </div>
-          <h2 className="text-[11px] font-black uppercase tracking-[0.1em] text-white">PDF Map Overlay</h2>
+          <h2 className="text-[10px] font-bold uppercase tracking-wider text-foreground">PDF Map Overlay</h2>
         </div>
-        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-indigo-400' : ''}`} />
+        <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform duration-300 ${isExpanded ? 'rotate-180 text-indigo-400' : ''}`} />
       </div>
 
       {isExpanded && (
-        <div className="p-5 space-y-6 animate-in slide-in-from-top-4 duration-300">
+        <div className="p-4 space-y-5 animate-in slide-in-from-top-4 duration-300">
           
           {/* Upload Section */}
           {!pendingOverlay ? (
