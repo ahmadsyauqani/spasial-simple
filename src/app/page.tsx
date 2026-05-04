@@ -1,3 +1,5 @@
+"use client";
+
 import dynamic from "next/dynamic";
 import MapWrapper from "@/components/MapWrapper";
 import { CommandPalette } from "@/components/CommandPalette";
