@@ -33,6 +33,31 @@ export function PdfOverlayPanel() {
     neLat: "", neLng: ""
   });
 
+  const extractGeoPdfMetadata = (arrayBuffer: ArrayBuffer) => {
+    const text = new TextDecoder().decode(new Uint8Array(arrayBuffer.slice(0, 1000000))); // Check first 1MB
+    
+    // Look for GeoPDF tags (Simple best-effort extraction)
+    // Common pattern: /GPTS [lat1 lon1 lat2 lon2 ...] or /BBox [x1 y1 x2 y2]
+    const gptsMatch = text.match(/\/GPTS\s*\[([\s\d.-]+)\]/);
+    const geoMatch = text.match(/\/GEO\s*<</);
+    
+    if (gptsMatch) {
+      const coords = gptsMatch[1].trim().split(/\s+/).map(Number);
+      if (coords.length >= 8) {
+        // Simple heuristic: min/max lat/lng from the points
+        const lats = coords.filter((_, i) => i % 2 === 0);
+        const lngs = coords.filter((_, i) => i % 2 === 1);
+        return {
+          swLat: Math.min(...lats).toString(),
+          swLng: Math.min(...lngs).toString(),
+          neLat: Math.max(...lats).toString(),
+          neLng: Math.max(...lngs).toString()
+        };
+      }
+    }
+    return null;
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -45,6 +70,14 @@ export function PdfOverlayPanel() {
     try {
       setIsProcessing(true);
       const arrayBuffer = await file.arrayBuffer();
+      
+      // Try to auto-detect coordinates
+      const autoCoords = extractGeoPdfMetadata(arrayBuffer);
+      if (autoCoords) {
+        setBounds(autoCoords);
+        toast.success("Koordinat GeoPDF terdeteksi otomatis!");
+      }
+
       const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
       const page = await pdf.getPage(1);
       
