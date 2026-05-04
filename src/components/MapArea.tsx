@@ -689,6 +689,7 @@ function CursorCoordinates() {
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [isLocked, setIsLocked] = useState(false);
   const [isSnapEnabled, setIsSnapEnabled] = useState(false);
+  const [snapPoint, setSnapPoint] = useState<{lat: number, lng: number} | null>(null);
   
   const isLockedRef = useRef(isLocked);
   const isSnapEnabledRef = useRef(isSnapEnabled);
@@ -706,34 +707,42 @@ function CursorCoordinates() {
       if (isLockedRef.current) return;
 
       let targetLatLng = e.latlng;
+      let currentSnap: {lat: number, lng: number} | null = null;
 
       if (isSnapEnabledRef.current) {
         let minDistance = Infinity;
-        let nearestPoint = null;
-        const snapThreshold = 20; // pixels
+        const snapThreshold = 25; // pixels (increased for easier snapping)
         const cursorPoint = map.latLngToContainerPoint(e.latlng);
 
         layers.forEach((layer) => {
           const fc = layerGeojsonCache[layer.id || ""];
           if (!fc) return;
 
-          turf.coordEach(fc, (coord) => {
-            const latLng = L.latLng(coord[1], coord[0]);
-            const point = map.latLngToContainerPoint(latLng);
-            const dist = point.distanceTo(cursorPoint);
-
-            if (dist < minDistance && dist < snapThreshold) {
-              minDistance = dist;
-              nearestPoint = latLng;
-            }
-          });
+          // Optimization: Check bounds first if available
+          try {
+             // For large FCs, we could use a spatial index, but turf.coordEach is okay for medium data
+             turf.coordEach(fc, (coord) => {
+               const latLng = L.latLng(coord[1], coord[0]);
+               
+               // Quick bounding box check in pixels to avoid expensive distanceTo for far points
+               const p = map.latLngToContainerPoint(latLng);
+               if (Math.abs(p.x - cursorPoint.x) < snapThreshold && Math.abs(p.y - cursorPoint.y) < snapThreshold) {
+                 const dist = p.distanceTo(cursorPoint);
+                 if (dist < minDistance && dist < snapThreshold) {
+                   minDistance = dist;
+                   currentSnap = { lat: latLng.lat, lng: latLng.lng };
+                 }
+               }
+             });
+          } catch(err) {}
         });
 
-        if (nearestPoint) {
-          targetLatLng = nearestPoint;
+        if (currentSnap) {
+          targetLatLng = L.latLng(currentSnap.lat, currentSnap.lng);
         }
       }
 
+      setSnapPoint(currentSnap);
       setCoords(targetLatLng);
     };
     
@@ -816,6 +825,13 @@ function CursorCoordinates() {
 
   return (
     <>
+      {isSnapEnabled && snapPoint && !isLocked && (
+        <CircleMarker 
+          center={[snapPoint.lat, snapPoint.lng]} 
+          radius={6} 
+          pathOptions={{ color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.6, weight: 2 }}
+        />
+      )}
       {isLocked && coords && (
         <Marker position={[coords.lat, coords.lng]} icon={customIcon} />
       )}
