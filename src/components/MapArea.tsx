@@ -7,7 +7,7 @@ import * as L from "leaflet";
 import * as turf from "@turf/turf";
 import proj4 from "proj4";
 import { useMapContext, BASEMAP_OPTIONS, BasemapType } from "@/lib/MapContext";
-import { Layers, LocateFixed, Loader2, Lock } from "lucide-react";
+import { Layers, LocateFixed, Loader2, Lock, Magnet } from "lucide-react";
 
 // Fix for default Leaflet markers in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -685,19 +685,56 @@ function LocationMarker({ location }: { location: { lat: number; lng: number; ac
 // ──────────────────────────────────────────────────────
 function CursorCoordinates() {
   const map = useMap();
+  const { layers, layerGeojsonCache } = useMapContext();
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [isLocked, setIsLocked] = useState(false);
+  const [isSnapEnabled, setIsSnapEnabled] = useState(false);
+  
   const isLockedRef = useRef(isLocked);
+  const isSnapEnabledRef = useRef(isSnapEnabled);
 
   useEffect(() => {
     isLockedRef.current = isLocked;
   }, [isLocked]);
 
   useEffect(() => {
+    isSnapEnabledRef.current = isSnapEnabled;
+  }, [isSnapEnabled]);
+
+  useEffect(() => {
     const handleMouseMove = (e: L.LeafletMouseEvent) => {
-      if (!isLockedRef.current) {
-        setCoords(e.latlng);
+      if (isLockedRef.current) return;
+
+      let targetLatLng = e.latlng;
+
+      if (isSnapEnabledRef.current) {
+        let minDistance = Infinity;
+        let nearestPoint = null;
+        const snapThreshold = 20; // pixels
+        const cursorPoint = map.latLngToContainerPoint(e.latlng);
+
+        layers.forEach((layer) => {
+          const fc = layerGeojsonCache[layer.id || ""];
+          if (!fc) return;
+
+          turf.coordEach(fc, (coord) => {
+            const latLng = L.latLng(coord[1], coord[0]);
+            const point = map.latLngToContainerPoint(latLng);
+            const dist = point.distanceTo(cursorPoint);
+
+            if (dist < minDistance && dist < snapThreshold) {
+              minDistance = dist;
+              nearestPoint = latLng;
+            }
+          });
+        });
+
+        if (nearestPoint) {
+          targetLatLng = nearestPoint;
+        }
       }
+
+      setCoords(targetLatLng);
     };
     
     const handleMapClick = (e: L.LeafletMouseEvent) => {
@@ -783,6 +820,16 @@ function CursorCoordinates() {
         <Marker position={[coords.lat, coords.lng]} icon={customIcon} />
       )}
       <div className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/95 border-primary/50 shadow-primary/20' : 'bg-card/90 border-border/50'} backdrop-blur-md border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
+        <div className="absolute -top-10 left-0 flex gap-2 sm:static sm:mr-4">
+          <button 
+            onClick={() => setIsSnapEnabled(!isSnapEnabled)}
+            className={`p-2 rounded-full shadow-lg border transition-all duration-300 ${isSnapEnabled ? 'bg-indigo-500 text-white border-indigo-400 animate-pulse' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
+            title={isSnapEnabled ? "Matikan Snap" : "Aktifkan Snap ke Vertex"}
+          >
+            <Magnet className="w-4 h-4" />
+          </button>
+        </div>
+        
         {isLocked && (
           <button 
             onClick={handleUnlock}
