@@ -793,26 +793,26 @@ function CursorCoordinates() {
           </button>
         )}
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full">
-        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5">WGS 84</span>
+        <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>WGS 84</span>
         <div className="flex flex-col items-end sm:items-center">
-          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">{toDMS(lat, true)}</span>
-          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">{toDMS(lng, false)}</span>
+          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>{toDMS(lat, true)}</span>
+          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>{toDMS(lng, false)}</span>
         </div>
       </div>
       <div className="hidden sm:block w-px bg-border/70"></div>
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
-        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap">UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
+        <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
         <div className="flex flex-col items-end sm:items-center">
-          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">X: {utmResult.x.toFixed(2)}</span>
-          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">Y: {utmResult.y.toFixed(2)}</span>
+          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>X: {utmResult.x.toFixed(2)}</span>
+          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>Y: {utmResult.y.toFixed(2)}</span>
         </div>
       </div>
       <div className="hidden sm:block w-px bg-border/70"></div>
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
-        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap">TM-3 {tm3ZoneDisplay}</span>
+        <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>TM-3 {tm3ZoneDisplay}</span>
         <div className="flex flex-col items-end sm:items-center">
-          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">X: {tm3Result.x.toFixed(2)}</span>
-          <span className="font-mono text-card-foreground font-medium whitespace-nowrap">Y: {tm3Result.y.toFixed(2)}</span>
+          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>X: {tm3Result.x.toFixed(2)}</span>
+          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>Y: {tm3Result.y.toFixed(2)}</span>
         </div>
       </div>
     </div>
