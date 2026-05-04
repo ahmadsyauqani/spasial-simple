@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap, ImageOverlay } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import * as turf from "@turf/turf";
@@ -133,7 +133,7 @@ function MapController() {
 }
 
 export default function MapArea() {
-  const { activeFeatureToZoom, layers, activeBasemap, setActiveBasemap } = useMapContext();
+  const { activeFeatureToZoom, layers, activeBasemap, setActiveBasemap, pdfOverlays } = useMapContext();
   const currentBasemap = BASEMAP_OPTIONS[activeBasemap];
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -268,6 +268,17 @@ export default function MapArea() {
           <LocationMarker location={userLocation} />
         )}
         
+        {/* PDF Map Overlays (Avenza-style) */}
+        {pdfOverlays.map(overlay => overlay.visible && (
+          <ImageOverlay
+            key={overlay.id}
+            url={overlay.url}
+            bounds={overlay.bounds as any}
+            opacity={overlay.opacity || 0.7}
+            zIndex={100}
+          />
+        ))}
+
         <CursorCoordinates />
       </MapContainer>
     </div>

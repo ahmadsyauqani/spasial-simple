@@ -164,6 +164,8 @@ interface MapContextType {
     showLiveArea: boolean;
   };
   setDigitizeSettings: (settings: any) => void;
+  pdfOverlays: any[];
+  setPdfOverlays: (overlays: any[]) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -194,6 +196,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
     snapDistance: 20,
     showLiveArea: true
   });
+  const [pdfOverlays, setPdfOverlays] = useState<any[]>([]);
 
   const cacheLayerGeojson = (id: string, geojson: any) => {
     setLayerGeojsonCache((prev) => ({ ...prev, [id]: geojson }));
@@ -252,7 +255,8 @@ export function MapProvider({ children }: { children: ReactNode }) {
       activeEditFeature, setActiveEditFeature,
       mapInstance, setMapInstance,
       isDigitizePanelExpanded, setIsDigitizePanelExpanded,
-      digitizeSettings, setDigitizeSettings
+      digitizeSettings, setDigitizeSettings,
+      pdfOverlays, setPdfOverlays
     }}>
       {children}
     </MapContext.Provider>

@@ -2,6 +2,7 @@ import MapWrapper from "@/components/MapWrapper";
 import { CommandPalette } from "@/components/CommandPalette";
 import { UploadDatasetPanel } from "@/components/UploadDatasetPanel";
 import { DigitizePanel } from "@/components/DigitizePanel";
+import { PdfOverlayPanel } from "@/components/PdfOverlayPanel";
 import { MapProvider } from "@/lib/MapContext";
 
 export default function Home() {
@@ -18,6 +19,7 @@ export default function Home() {
           </div>
 
           <DigitizePanel />
+          <PdfOverlayPanel />
           <UploadDatasetPanel />
         </div>
 
