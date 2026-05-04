@@ -44,7 +44,7 @@ export function PdfOverlayPanel() {
       canvas.width = viewport.width;
 
       if (context) {
-        await page.render({ canvasContext: context, viewport }).promise;
+        await (page as any).render({ canvasContext: context, viewport }).promise;
         const imageUrl = canvas.toDataURL("image/png");
         setPendingOverlay({ url: imageUrl, name: file.name });
         toast.success("PDF berhasil di-render. Silakan masukkan koordinat.");

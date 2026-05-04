@@ -112,15 +112,15 @@ export function DigitizePanel() {
 
     if (activeDigitizingLayerId === layerId) {
       setActiveDigitizingLayerId(null);
-      if (map?.pm.Draw.getActiveMode()) {
-        (map.pm.Draw as any).getActiveShape()?.finish?.();
+      if ((map?.pm as any).Draw.getActiveMode()) {
+        (map?.pm.Draw as any).getActiveShape()?.finish?.();
       }
       map?.pm.disableDraw();
       toast.info("Mode digitasi dinonaktifkan");
     } else {
       setActiveDigitizingLayerId(layerId);
       const drawMode = layer.geometryType === 'Point' ? 'Marker' : (layer.geometryType === 'Line' ? 'Polyline' : 'Polygon');
-      map?.pm.enableDraw(drawMode, { 
+      (map?.pm as any).enableDraw(drawMode, { 
         snappable: digitizeSettings.snapping, 
         snapDistance: digitizeSettings.snapDistance 
       });
