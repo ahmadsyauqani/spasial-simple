@@ -15,28 +15,24 @@ export async function parseSpatialFile(file: File): Promise<any> {
   try {
     if (extension === "gdbzip") {
       const buffer = await file.arrayBuffer();
-      const fgdb = require('fgdb');
-      const gdbData = await fgdb(buffer);
-      
-      // gdbData is an object: { layerName1: { type: "FeatureCollection", features: [...] }, layerName2: ... }
-      const allFeatures: any[] = [];
-      if (typeof gdbData === 'object' && gdbData !== null) {
-        Object.values(gdbData).forEach((collection: any) => {
-          if (collection && collection.type === 'FeatureCollection' && Array.isArray(collection.features)) {
-             allFeatures.push(...collection.features);
-          }
-        });
-      }
-      
-      if (allFeatures.length === 0) {
-         throw new Error("Gagal mengekstrak GDB atau GDB tidak memiliki fitur geometri yang valid.");
-      }
-      
-      geojson = turf.featureCollection(allFeatures);
+      geojson = await processGdb(buffer);
     } else if (extension === "zip") {
       // Assuming Shapefile inside ZIP
       const buffer = await file.arrayBuffer();
-      geojson = await shp(buffer);
+      try {
+        geojson = await shp(buffer.slice(0));
+      } catch (err: any) {
+        if (err.message && err.message.toLowerCase().includes("no layers")) {
+           // Fallback to GDB
+           try {
+             geojson = await processGdb(buffer.slice(0));
+           } catch(e) {
+             throw new Error("Gagal membaca .zip sebagai Shapefile maupun File Geodatabase. Pastikan file valid.");
+           }
+        } else {
+          throw err;
+        }
+      }
     } else if (extension === "rar") {
       const buffer = await file.arrayBuffer();
       try {
@@ -122,4 +118,24 @@ function checkTopology(geojson: any) {
     }
   });
   return errors;
+}
+
+async function processGdb(buffer: ArrayBuffer) {
+  const fgdb = require('fgdb');
+  const gdbData = await fgdb(buffer);
+  
+  const allFeatures: any[] = [];
+  if (typeof gdbData === 'object' && gdbData !== null) {
+    Object.values(gdbData).forEach((collection: any) => {
+      if (collection && collection.type === 'FeatureCollection' && Array.isArray(collection.features)) {
+         allFeatures.push(...collection.features);
+      }
+    });
+  }
+  
+  if (allFeatures.length === 0) {
+     throw new Error("Gagal mengekstrak GDB atau GDB tidak memiliki fitur geometri yang valid.");
+  }
+  
+  return turf.featureCollection(allFeatures);
 }
