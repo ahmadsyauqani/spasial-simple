@@ -722,13 +722,13 @@ function CursorCoordinates() {
   const tm3Index = Math.round((lng - 94.5) / 3);
   if (tm3Index >= 0 && tm3Index <= 20) {
     const cm = 94.5 + (tm3Index * 3);
-    const tm3ProjString = \`+proj=tmerc +lat_0=0 +lon_0=\${cm} +k=0.9999 +x_0=200000 +y_0=1500000 +ellps=WGS84 +datum=WGS84 +units=m +no_defs\`;
+    const tm3ProjString = `+proj=tmerc +lat_0=0 +lon_0=${cm} +k=0.9999 +x_0=200000 +y_0=1500000 +ellps=WGS84 +datum=WGS84 +units=m +no_defs`;
     try {
       const tm3Coords = proj4('WGS84', tm3ProjString, [lng, lat]);
       tm3Result = { x: tm3Coords[0], y: tm3Coords[1] };
       const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
       const subZone = (tm3Index % 2 === 0) ? 2 : 1;
-      tm3ZoneDisplay = \`Zona \${baseZone}-\${subZone}\`;
+      tm3ZoneDisplay = `Zona ${baseZone}-${subZone}`;
     } catch (e) {}
   }
 
