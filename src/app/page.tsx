@@ -1,9 +1,11 @@
+import dynamic from "next/dynamic";
 import MapWrapper from "@/components/MapWrapper";
 import { CommandPalette } from "@/components/CommandPalette";
 import { UploadDatasetPanel } from "@/components/UploadDatasetPanel";
 import { DigitizePanel } from "@/components/DigitizePanel";
-import { PdfOverlayPanel } from "@/components/PdfOverlayPanel";
 import { MapProvider } from "@/lib/MapContext";
+
+const PdfOverlayPanel = dynamic(() => import("@/components/PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
 
 export default function Home() {
   return (
