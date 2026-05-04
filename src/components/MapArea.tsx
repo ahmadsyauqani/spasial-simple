@@ -816,6 +816,7 @@ function CursorCoordinates() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
