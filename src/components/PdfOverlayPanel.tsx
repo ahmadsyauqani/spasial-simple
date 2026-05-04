@@ -105,7 +105,7 @@ export function PdfOverlayPanel() {
   };
 
   return (
-    <div className="bg-[#1a1c1e] text-gray-200 border border-white/10 rounded-2xl shadow-2xl overflow-hidden mt-4 transition-all duration-300">
+    <div className="bg-white/5 text-gray-200 border border-white/5 rounded-2xl overflow-hidden transition-all duration-300">
       {/* Header */}
       <div 
         className="bg-[#25282c] px-4 py-3.5 border-b border-white/10 flex items-center justify-between cursor-pointer hover:bg-[#2a2d31] transition-colors"

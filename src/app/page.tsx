@@ -7,7 +7,7 @@ import { UploadDatasetPanel } from "@/components/UploadDatasetPanel";
 import { DigitizePanel } from "@/components/DigitizePanel";
 import { MapProvider } from "@/lib/MapContext";
 
-const PdfOverlayPanel = dynamic(() => import("@/components/PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
+
 
 export default function Home() {
   return (
@@ -23,7 +23,6 @@ export default function Home() {
           </div>
 
           <DigitizePanel />
-          <PdfOverlayPanel />
           <UploadDatasetPanel />
         </div>
 

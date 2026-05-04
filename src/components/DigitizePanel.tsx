@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, updateFeaturePropertiesInSupabase } from "@/lib/database";
 import Draggable from 'react-draggable';
+import { PdfOverlayPanel } from "./PdfOverlayPanel";
 
 export function DigitizePanel() {
   const { 
@@ -372,6 +373,9 @@ export function DigitizePanel() {
                 ))}
               </div>
             </div>
+
+            {/* PDF Map Overlay Integrated */}
+            <PdfOverlayPanel />
           </div>
         )}
       </div>
