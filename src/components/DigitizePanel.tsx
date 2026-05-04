@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useMapContext } from "@/lib/MapContext";
-import { Plus, MousePointer2, Trash2, Pencil, X } from "lucide-react";
+import { Plus, MousePointer2, Trash2, Pencil, X, CloudUpload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { getOrCreateDefaultProject, uploadLayerToSupabase, updateFeaturePropertiesInSupabase } from "@/lib/database";
 
 export function DigitizePanel() {
   const { 
@@ -13,6 +14,8 @@ export function DigitizePanel() {
     activeEditFeature, setActiveEditFeature,
     mapInstance: map
   } = useMapContext();
+
+  const [isPublishing, setIsPublishing] = useState<string | null>(null);
 
   const [newLayerName, setNewLayerName] = useState("");
   // Default fields for any new layer
@@ -51,19 +54,56 @@ export function DigitizePanel() {
     }
   };
 
-  const handleSaveAttributes = (updatedProps: any) => {
+  const publishLayer = async (layerId: string) => {
+    const layer = layers.find(l => l.id === layerId);
+    const fc = layerGeojsonCache[layerId];
+    if (!layer || !fc || fc.features.length === 0) {
+      toast.error("Tidak ada data untuk disimpan ke database");
+      return;
+    }
+
+    try {
+      setIsPublishing(layerId);
+      toast.loading("Menyimpan layer ke Supabase...", { id: "publish" });
+      const project = await getOrCreateDefaultProject();
+      const dbLayer = await uploadLayerToSupabase(project.id, layer.name, fc);
+      
+      // Update layers: remove local, add the real one from DB
+      setLayers(prev => prev.filter(l => l.id !== layerId).concat(dbLayer));
+      setActiveDigitizingLayerId(null);
+      
+      toast.success("Layer berhasil disimpan secara permanen di Supabase!", { id: "publish" });
+    } catch (err: any) {
+      toast.error("Gagal menyimpan: " + err.message, { id: "publish" });
+    } finally {
+      setIsPublishing(null);
+    }
+  };
+
+  const handleSaveAttributes = async (updatedProps: any) => {
     if (!activeEditFeature) return;
     const { layerId, featureIndex } = activeEditFeature;
+
+    // Sinkron ke Supabase jika ini adalah fitur dari database
+    const db_id = updatedProps.db_id;
+    if (db_id) {
+      try {
+        toast.loading("Menyinkronkan ke Supabase...", { id: "attr" });
+        await updateFeaturePropertiesInSupabase(db_id, updatedProps);
+        toast.success("Data berhasil tersimpan di database!", { id: "attr" });
+      } catch (err: any) {
+        toast.error("Gagal sinkron database: " + err.message, { id: "attr" });
+        return; // Jangan update lokal jika gagal ke server
+      }
+    }
+
     const fc = { ...layerGeojsonCache[layerId] };
     if (fc && fc.features[featureIndex]) {
       fc.features[featureIndex].properties = updatedProps;
       cacheLayerGeojson(layerId, fc);
-      
-      // Update the layers state to trigger re-render
       setLayers(prev => [...prev]);
-      
       setActiveEditFeature(null);
-      toast.success("Atribut berhasil diperbarui");
+      if (!db_id) toast.success("Atribut diperbarui (Lokal)");
     }
   };
 
@@ -111,6 +151,14 @@ export function DigitizePanel() {
                 <span className="text-[9px] text-muted-foreground uppercase">{layerGeojsonCache[layer.id!]?.features?.length || 0} fitur</span>
               </div>
               <div className="flex gap-1.5">
+                <button 
+                  onClick={() => publishLayer(layer.id!)}
+                  disabled={isPublishing === layer.id}
+                  className="p-2 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 shadow-sm transition-all"
+                  title="Simpan Permanen ke Supabase"
+                >
+                  {isPublishing === layer.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CloudUpload className="w-3.5 h-3.5" />}
+                </button>
                 <button 
                   onClick={() => toggleDigitize(layer.id!)}
                   className={`p-2 rounded-md transition-all ${activeDigitizingLayerId === layer.id ? 'bg-primary text-primary-foreground shadow-md' : 'bg-background hover:bg-muted text-muted-foreground border shadow-sm'}`}

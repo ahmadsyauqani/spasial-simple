@@ -110,3 +110,12 @@ export async function updateGeometryInSupabase(geometryId: string, geojson: any)
   }
   return true;
 }
+
+export async function updateFeaturePropertiesInSupabase(featureId: string, properties: any) {
+  const { error } = await supabase
+    .from("layer_geometries")
+    .update({ properties })
+    .eq("id", featureId);
+  if (error) throw new Error("Gagal update atribut: " + error.message);
+  return true;
+}
