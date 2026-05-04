@@ -108,7 +108,9 @@ export function BufferAnalysisButton() {
           utm_epsg = `${isSouth ? 32700 + utmZone : 32600 + utmZone}`;
           const tm3Index = Math.round((lng - 94.5) / 3);
           if (tm3Index >= 0 && tm3Index <= 20) {
-            tm3_epsg = `${23826 + tm3Index}`;
+            const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
+            const subZone = (tm3Index % 2 === 0) ? 2 : 1;
+            tm3_epsg = `${23826 + tm3Index} (Zona ${baseZone}-${subZone})`;
           }
         } catch (e) {}
 

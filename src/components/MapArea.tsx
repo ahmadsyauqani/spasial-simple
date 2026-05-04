@@ -766,7 +766,9 @@ function LayerFeature({ layer }: { layer: any }) {
             // CM Dasar Indonesia: Sabang 94.5 (EPSG:23826 Zone 46.1)
             const tm3Index = Math.round((lng - 94.5) / 3);
             if (tm3Index >= 0 && tm3Index <= 20) {
-              tm3_epsg = `${23826 + tm3Index}`;
+              const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
+            const subZone = (tm3Index % 2 === 0) ? 2 : 1;
+            tm3_epsg = `${23826 + tm3Index} (Zona ${baseZone}-${subZone})`;
               tm3_sqm = wgs84_sqm * 0.9998;
             }
           } catch (internalE) {
