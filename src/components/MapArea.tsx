@@ -159,7 +159,7 @@ export default function MapArea() {
   return (
     <div className="w-full h-full bg-background absolute inset-0 z-0">
       {/* Bottom-left controls: Basemap + My Location */}
-      <div className="absolute bottom-6 left-6 z-[1000] flex items-end gap-2">
+      <div className="absolute bottom-28 sm:bottom-6 left-4 sm:left-6 z-[1000] flex items-end gap-2">
         {/* Basemap Selector */}
         <div className="flex flex-col gap-2 group">
           <button className="bg-card text-card-foreground border rounded-full p-2.5 shadow-md hover:bg-muted transition-colors flex items-center justify-center">
@@ -742,19 +742,19 @@ function CursorCoordinates() {
   }
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-card/90 backdrop-blur-md border rounded-xl px-5 py-2.5 shadow-xl flex gap-6 text-xs select-none pointer-events-none transition-all">
-      <div className="flex flex-col items-center justify-center">
-        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">WGS 84</span>
+    <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100vw-2rem)] sm:w-auto bg-card/90 backdrop-blur-md border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none pointer-events-none transition-all">
+      <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full">
+        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5">WGS 84</span>
         <span className="font-mono text-card-foreground font-medium">{wgs84}</span>
       </div>
-      <div className="w-px bg-border/70"></div>
-      <div className="flex flex-col items-center justify-center">
-        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
+      <div className="hidden sm:block w-px bg-border/70"></div>
+      <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
+        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5">UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
         <span className="font-mono text-card-foreground font-medium">X: {utmResult.x.toFixed(2)} Y: {utmResult.y.toFixed(2)}</span>
       </div>
-      <div className="w-px bg-border/70"></div>
-      <div className="flex flex-col items-center justify-center">
-        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">TM-3 {tm3ZoneDisplay}</span>
+      <div className="hidden sm:block w-px bg-border/70"></div>
+      <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
+        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-0 sm:mb-0.5">TM-3 {tm3ZoneDisplay}</span>
         <span className="font-mono text-card-foreground font-medium">X: {tm3Result.x.toFixed(2)} Y: {tm3Result.y.toFixed(2)}</span>
       </div>
     </div>

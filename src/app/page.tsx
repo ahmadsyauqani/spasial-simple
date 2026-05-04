@@ -11,7 +11,7 @@ export default function Home() {
         <MapWrapper />
 
         {/* Floating UI Elements */}
-        <div className="absolute top-4 left-4 z-10 w-80 flex flex-col gap-4 max-h-[calc(100vh-2rem)]">
+        <div className="absolute top-4 left-4 z-10 w-[calc(100vw-2rem)] sm:w-80 flex flex-col gap-2 sm:gap-4 max-h-[45vh] sm:max-h-[calc(100vh-2rem)] overflow-y-auto">
           <div className="bg-card text-card-foreground border rounded-xl p-5 shadow-sm flex flex-col gap-3">
             <h1 className="text-xl font-bold tracking-tight">SAKAGIS</h1>
           </div>
