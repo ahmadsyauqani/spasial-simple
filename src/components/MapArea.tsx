@@ -45,15 +45,17 @@ function MapController() {
     // Add Geoman controls for editing and snapping
     map.pm.addControls({
       position: 'topright',
+      drawMarker: true,
+      drawPolygon: true,
+      drawPolyline: true,
       drawCircleMarker: false,
-      drawPolyline: false,
       drawRectangle: false,
       drawCircle: false,
       drawText: false,
       cutPolygon: false,
       editMode: true,
       dragMode: false,
-      removalMode: false,
+      removalMode: true,
     });
     
     // Global snap settings
@@ -1174,6 +1176,9 @@ function LayerFeature({ layer }: { layer: any }) {
       data={featureCollection}
       key={`${layer.id}-${featureCollection?.features?.length || 0}-${JSON.stringify(style)}-${areaUnit}`}
       style={() => style}
+      pointToLayer={(feature, latlng) => {
+        return L.circleMarker(latlng, style);
+      }}
       onEachFeature={onEachFeature}
     />
   );

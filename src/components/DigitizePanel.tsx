@@ -98,6 +98,10 @@ export function DigitizePanel() {
 
     if (activeDigitizingLayerId === layerId) {
       setActiveDigitizingLayerId(null);
+      // Try to finish any active drawing before disabling
+      if (map?.pm.Draw.getActiveMode()) {
+        (map.pm.Draw as any).getActiveShape()?.finish?.();
+      }
       map?.pm.disableDraw();
       toast.info("Mode digitasi dinonaktifkan");
     } else {
