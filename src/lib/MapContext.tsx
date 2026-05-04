@@ -21,6 +21,7 @@ type GeoJsonLayer = {
   data?: any; // GeoJSON (optional, only loaded actively initially or lazily fetched)
   style?: LayerStyle;
   sort_order?: number;
+  fields?: string[]; // Custom attribute schema for digitizing/editing
 };
 
 export type AreaUnit = 'Ha' | 'm2' | 'km2';
