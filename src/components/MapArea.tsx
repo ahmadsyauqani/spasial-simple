@@ -816,6 +816,22 @@ function LayerFeature({ layer }: { layer: any }) {
          if (wgsSqM > 1) { 
             let utmSqM = wgsSqM * 0.9992;
             let tm3SqM = wgsSqM * 0.9998;
+            
+            let utm_epsg = "";
+            let tm3_epsg = "";
+            try {
+              const centroid = turf.centroid(feature).geometry.coordinates; // [lng, lat]
+              const lng = centroid[0];
+              const lat = centroid[1];
+              const utmZone = Math.floor((lng + 180) / 6) + 1;
+              utm_epsg = ` Zona ${utmZone}`;
+              const tm3Index = Math.round((lng - 94.5) / 3);
+              if (tm3Index >= 0 && tm3Index <= 20) {
+                const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
+                const subZone = (tm3Index % 2 === 0) ? 2 : 1;
+                tm3_epsg = ` Zona ${baseZone}-${subZone}`;
+              }
+            } catch(e) {}
              
             localAreaHtml += `
             <div class="mb-2 bg-black/40 p-2 text-xs rounded border border-primary/20">
@@ -825,11 +841,11 @@ function LayerFeature({ layer }: { layer: any }) {
                  <span class="font-mono text-primary font-bold">${formatUnit(wgsSqM)}</span>
               </div>
               <div class="flex justify-between items-center mt-1">
-                 <span class="text-gray-300">UTM Planar</span>
+                 <span class="text-gray-300">UTM${utm_epsg}</span>
                  <span class="font-mono text-gray-100">${formatUnit(utmSqM)}</span>
               </div>
               <div class="flex justify-between items-center mt-1">
-                 <span class="text-gray-300">BPN TM-3</span>
+                 <span class="text-gray-300">TM-3${tm3_epsg}</span>
                  <span class="font-mono text-gray-100">${formatUnit(tm3SqM)}</span>
               </div>
             </div>`;
