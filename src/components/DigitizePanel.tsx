@@ -71,6 +71,22 @@ export function DigitizePanel() {
     toast.info(`Kolom ${fieldName} dihapus`);
   };
 
+  const renameField = (layerId: string, oldName: string, newName: string) => {
+    if (!newName || oldName === newName) return;
+    setLayers(prev => prev.map(l => {
+      if (l.id === layerId) {
+        const fields = l.fields || ["Nama", "Keterangan", "Kategori"];
+        if (fields.includes(newName)) {
+          toast.error("Nama kolom baru sudah ada");
+          return l;
+        }
+        return { ...l, fields: fields.map(f => f === oldName ? newName : f) };
+      }
+      return l;
+    }));
+    toast.success(`Kolom ${oldName} diubah menjadi ${newName}`);
+  };
+
   const toggleDigitize = (layerId: string) => {
     if (activeDigitizingLayerId === layerId) {
       setActiveDigitizingLayerId(null);
@@ -193,7 +209,7 @@ export function DigitizePanel() {
           <div className="space-y-2.5">
             {localLayers.map(layer => (
               <div key={layer.id} className={`group flex flex-col rounded-2xl border transition-all duration-300 ${expandedLayerId === layer.id ? 'bg-[#25282c] border-orange-500/30' : 'bg-[#212327] border-white/5 hover:border-white/10'}`}>
-                <div className="flex items-center justify-between p-3.5 cursor-pointer" onClick={() => setExpandedLayerId(expandedLayerId === layer.id ? null : layer.id)}>
+                <div className="flex items-center justify-between p-3.5 cursor-pointer" onClick={() => setExpandedLayerId(expandedLayerId === layer.id ? null : (layer.id as string))}>
                   <div className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${activeDigitizingLayerId === layer.id ? 'bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.8)]' : 'bg-gray-600'}`}></div>
                     <div className="flex flex-col">
@@ -243,7 +259,15 @@ export function DigitizePanel() {
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {(layer.fields || ["Nama", "Keterangan", "Kategori"]).map(field => (
                           <div key={field} className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/5 rounded-full group/field hover:border-white/20 transition-all">
-                            <span className="text-[9px] text-gray-400 font-medium">{field}</span>
+                            <span 
+                              className="text-[9px] text-gray-400 font-medium cursor-text focus:outline-none focus:text-orange-400 min-w-[20px]"
+                              contentEditable
+                              suppressContentEditableWarning
+                              onBlur={(e) => renameField(layer.id!, field, e.currentTarget.textContent || "")}
+                              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                            >
+                              {field}
+                            </span>
                             <X className="w-2.5 h-2.5 text-gray-600 hover:text-red-500 cursor-pointer hidden group-hover/field:block" onClick={() => removeField(layer.id!, field)} />
                           </div>
                         ))}
