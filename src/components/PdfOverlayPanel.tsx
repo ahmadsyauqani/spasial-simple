@@ -11,7 +11,11 @@ import {
 } from "@/lib/database";
 
 // Set worker source for pdfjs
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Set worker source for pdfjs (Using local worker from public folder)
+if (typeof window !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+  console.log("PDF Worker source set to:", pdfjs.GlobalWorkerOptions.workerSrc);
+}
 
 export function PdfOverlayPanel() {
   const { pdfOverlays, setPdfOverlays, mapInstance } = useMapContext();
