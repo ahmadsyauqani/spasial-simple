@@ -26,9 +26,9 @@ export default function Home() {
         </div>
 
         {/* GPS Tracking Floating Button (Avenza Style) */}
-        <div className="absolute bottom-16 left-4 z-[1001] pointer-events-auto">
+        {/* <div className="absolute bottom-16 left-4 z-[1001] pointer-events-auto">
            <GpsTrackingPanel />
-        </div>
+        </div> */}
 
         <CommandPalette />
       </main>
