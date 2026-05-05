@@ -172,6 +172,14 @@ interface MapContextType {
   updatePdfOverlayRotation: (id: string, rotation: number) => void;
   updatePdfOverlayScale: (id: string, scale: number) => void;
   updatePdfOverlayMargins: (id: string, margins: any) => void;
+  
+  // GPS Tracking
+  isTracking: boolean;
+  setIsTracking: (val: boolean) => void;
+  trackingPath: [number, number][];
+  setTrackingPath: (path: [number, number][]) => void;
+  trackingDistance: number;
+  setTrackingDistance: (val: number) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -204,6 +212,11 @@ export function MapProvider({ children }: { children: ReactNode }) {
   });
   const [pdfOverlays, setPdfOverlays] = useState<any[]>([]);
   const [editingPdfId, setEditingPdfId] = useState<string | null>(null);
+
+  // GPS Tracking States
+  const [isTracking, setIsTracking] = useState(false);
+  const [trackingPath, setTrackingPath] = useState<[number, number][]>([]);
+  const [trackingDistance, setTrackingDistance] = useState(0);
 
   const updatePdfOverlayBounds = (id: string, bounds: any) => {
     setPdfOverlays(prev => prev.map(o => o.id === id ? { ...o, bounds } : o));
@@ -281,7 +294,13 @@ export function MapProvider({ children }: { children: ReactNode }) {
       digitizeSettings, setDigitizeSettings,
       pdfOverlays, setPdfOverlays,
       editingPdfId, setEditingPdfId,
-      updatePdfOverlayBounds
+      updatePdfOverlayBounds,
+      updatePdfOverlayRotation,
+      updatePdfOverlayScale,
+      updatePdfOverlayMargins,
+      isTracking, setIsTracking,
+      trackingPath, setTrackingPath,
+      trackingDistance, setTrackingDistance
     }}>
       {children}
     </MapContext.Provider>

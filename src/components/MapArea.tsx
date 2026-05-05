@@ -285,6 +285,35 @@ export default function MapArea() {
           />
         ))}
 
+        {/* GPS Tracking Path */}
+        {trackingPath.length > 1 && (
+          <Polyline 
+            positions={trackingPath} 
+            pathOptions={{ 
+              color: '#6366f1', 
+              weight: 4, 
+              opacity: 0.8,
+              dashArray: '10, 10'
+            }} 
+          />
+        )}
+        
+        {/* Tracking Current Position Marker */}
+        {isTracking && trackingPath.length > 0 && (
+          <CircleMarker 
+            center={trackingPath[trackingPath.length - 1]} 
+            radius={6}
+            pathOptions={{ 
+              color: 'white', 
+              fillColor: '#6366f1', 
+              fillOpacity: 1, 
+              weight: 2 
+            }}
+          >
+            <Popup>Lokasi Anda Sekarang</Popup>
+          </CircleMarker>
+        )}
+
         <PdfEditMarkers />
         <CursorCoordinates />
       </MapContainer>
