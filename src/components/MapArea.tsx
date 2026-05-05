@@ -1194,8 +1194,8 @@ function LayerFeature({ layer }: { layer: any }) {
             const tm3Index = Math.round((lng - 94.5) / 3);
             if (tm3Index >= 0 && tm3Index <= 20) {
               const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
-            const subZone = (tm3Index % 2 === 0) ? 2 : 1;
-            tm3_epsg = `${23826 + tm3Index} (Zona ${baseZone}-${subZone})`;
+              const subZone = (tm3Index % 2 === 0) ? 2 : 1;
+              tm3_epsg = `${23826 + tm3Index} (Zona ${baseZone}-${subZone})`;
               tm3_sqm = wgs84_sqm * 0.9998;
             }
           } catch (internalE) {
