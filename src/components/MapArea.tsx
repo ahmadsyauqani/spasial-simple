@@ -277,8 +277,11 @@ export default function MapArea() {
             opacity={overlay.opacity || 0.7}
             zIndex={100}
             className={`${overlay.blendMode === 'multiply' ? 'mix-blend-multiply' : ''} pdf-overlay-image`}
-            // Use CSS transform for rotation
-            {...({ style: { transform: `rotate(${overlay.rotation || 0}deg)` } } as any)}
+            // Use CSS transform for rotation and scale
+            {...({ style: { 
+              transform: `rotate(${overlay.rotation || 0}deg) scale(${overlay.scale || 1})`,
+              clipPath: overlay.margins ? `inset(${overlay.margins.top}% ${overlay.margins.right}% ${overlay.margins.bottom}% ${overlay.margins.left}%)` : 'none'
+            } } as any)}
           />
         ))}
 

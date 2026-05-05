@@ -170,6 +170,8 @@ interface MapContextType {
   setEditingPdfId: (id: string | null) => void;
   updatePdfOverlayBounds: (id: string, bounds: any) => void;
   updatePdfOverlayRotation: (id: string, rotation: number) => void;
+  updatePdfOverlayScale: (id: string, scale: number) => void;
+  updatePdfOverlayMargins: (id: string, margins: any) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -209,6 +211,14 @@ export function MapProvider({ children }: { children: ReactNode }) {
 
   const updatePdfOverlayRotation = (id: string, rotation: number) => {
     setPdfOverlays(prev => prev.map(o => o.id === id ? { ...o, rotation } : o));
+  };
+
+  const updatePdfOverlayScale = (id: string, scale: number) => {
+    setPdfOverlays(prev => prev.map(o => o.id === id ? { ...o, scale } : o));
+  };
+
+  const updatePdfOverlayMargins = (id: string, margins: any) => {
+    setPdfOverlays(prev => prev.map(o => o.id === id ? { ...o, margins } : o));
   };
 
   const cacheLayerGeojson = (id: string, geojson: any) => {

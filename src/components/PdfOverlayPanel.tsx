@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useMapContext } from "@/lib/MapContext";
-import { FileUp, Map as MapIcon, X, Eye, EyeOff, Trash2, Sliders, ChevronDown, Loader2, Edit, Check, RotateCw } from "lucide-react";
+import { FileUp, Map as MapIcon, X, Eye, EyeOff, Trash2, Sliders, ChevronDown, Loader2, Edit, Check, RotateCw, Minimize2, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
 import { 
@@ -20,7 +20,8 @@ if (typeof window !== 'undefined') {
 export function PdfOverlayPanel() {
   const { 
     pdfOverlays, setPdfOverlays, mapInstance, 
-    editingPdfId, setEditingPdfId, updatePdfOverlayRotation
+    editingPdfId, setEditingPdfId, updatePdfOverlayRotation,
+    updatePdfOverlayScale, updatePdfOverlayMargins
   } = useMapContext();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -157,7 +158,9 @@ export function PdfOverlayPanel() {
         visible: true,
         opacity: 0.7,
         blendMode: 'multiply',
-        rotation: 0
+        rotation: 0,
+        scale: 1,
+        margins: { top: 0, right: 0, bottom: 0, left: 0 }
       };
 
       // 2. Save to DB
@@ -213,7 +216,9 @@ export function PdfOverlayPanel() {
     try {
       await updatePdfOverlaySettings(id, { 
         bounds: overlay.bounds,
-        rotation: overlay.rotation || 0
+        rotation: overlay.rotation || 0,
+        scale: overlay.scale || 1,
+        margins: overlay.margins || { top: 0, right: 0, bottom: 0, left: 0 }
       });
       setEditingPdfId(null);
       toast.success("Posisi overlay diperbarui secara permanen");
@@ -449,11 +454,47 @@ export function PdfOverlayPanel() {
                                   <span>{overlay.rotation || 0}°</span>
                                </div>
                                <input 
-                                 type="range" min="-180" max="180" step="1"
+                                 type="range" min="-180" max="180" step="0.1"
                                  value={overlay.rotation || 0}
-                                 onChange={(e) => updatePdfOverlayRotation(overlay.id, parseInt(e.target.value))}
+                                 onChange={(e) => updatePdfOverlayRotation(overlay.id, parseFloat(e.target.value))}
                                  className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                               <div className="flex justify-between items-center text-[8px] text-gray-500 uppercase font-bold tracking-tighter">
+                                  <div className="flex items-center gap-1">
+                                     <Maximize2 className="w-2.5 h-2.5" />
+                                     <span>Skala Peta (Zoom)</span>
+                                  </div>
+                                  <span>{((overlay.scale || 1) * 100).toFixed(0)}%</span>
+                               </div>
+                               <input 
+                                 type="range" min="0.5" max="2" step="0.01"
+                                 value={overlay.scale || 1}
+                                 onChange={(e) => updatePdfOverlayScale(overlay.id, parseFloat(e.target.value))}
+                                 className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                               />
+                            </div>
+
+                            <div className="space-y-2">
+                               <span className="text-[8px] text-gray-500 uppercase font-bold tracking-tighter block">Potong Margin (Crop)</span>
+                               <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                  {['top', 'bottom', 'left', 'right'].map((dir) => (
+                                    <div key={dir} className="space-y-1">
+                                       <span className="text-[7px] text-gray-600 uppercase font-bold">{dir}</span>
+                                       <input 
+                                         type="range" min="0" max="50" step="1"
+                                         value={overlay.margins?.[dir as keyof typeof overlay.margins] || 0}
+                                         onChange={(e) => updatePdfOverlayMargins(overlay.id, {
+                                           ...(overlay.margins || { top: 0, right: 0, bottom: 0, left: 0 }),
+                                           [dir]: parseInt(e.target.value)
+                                         })}
+                                         className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                                       />
+                                    </div>
+                                  ))}
+                               </div>
                             </div>
                             
                             <button 
@@ -461,7 +502,7 @@ export function PdfOverlayPanel() {
                               className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] font-black uppercase rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
                             >
                               <Check className="w-3 h-3" />
-                              Simpan Posisi & Rotasi
+                              Simpan Penyetelan Halus
                             </button>
                          </div>
                        )}
