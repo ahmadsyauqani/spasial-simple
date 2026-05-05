@@ -166,6 +166,9 @@ interface MapContextType {
   setDigitizeSettings: (settings: any) => void;
   pdfOverlays: any[];
   setPdfOverlays: (overlays: any[]) => void;
+  editingPdfId: string | null;
+  setEditingPdfId: (id: string | null) => void;
+  updatePdfOverlayBounds: (id: string, bounds: any) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -197,6 +200,11 @@ export function MapProvider({ children }: { children: ReactNode }) {
     showLiveArea: true
   });
   const [pdfOverlays, setPdfOverlays] = useState<any[]>([]);
+  const [editingPdfId, setEditingPdfId] = useState<string | null>(null);
+
+  const updatePdfOverlayBounds = (id: string, bounds: any) => {
+    setPdfOverlays(prev => prev.map(o => o.id === id ? { ...o, bounds } : o));
+  };
 
   const cacheLayerGeojson = (id: string, geojson: any) => {
     setLayerGeojsonCache((prev) => ({ ...prev, [id]: geojson }));
@@ -256,7 +264,9 @@ export function MapProvider({ children }: { children: ReactNode }) {
       mapInstance, setMapInstance,
       isDigitizePanelExpanded, setIsDigitizePanelExpanded,
       digitizeSettings, setDigitizeSettings,
-      pdfOverlays, setPdfOverlays
+      pdfOverlays, setPdfOverlays,
+      editingPdfId, setEditingPdfId,
+      updatePdfOverlayBounds
     }}>
       {children}
     </MapContext.Provider>

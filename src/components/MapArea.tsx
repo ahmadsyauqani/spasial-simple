@@ -280,6 +280,7 @@ export default function MapArea() {
           />
         ))}
 
+        <PdfEditMarkers />
         <CursorCoordinates />
       </MapContainer>
     </div>
@@ -723,6 +724,57 @@ function LocationMarker({ location }: { location: { lat: number; lng: number; ac
         position={[location.lat, location.lng]}
         icon={pulsingIcon}
         interactive={false}
+      />
+    </>
+  );
+}
+
+// ──────────────────────────────────────────────────────
+// PDF EDIT MARKERS — Draggable handles for georeferencing
+// ──────────────────────────────────────────────────────
+function PdfEditMarkers() {
+  const { editingPdfId, pdfOverlays, updatePdfOverlayBounds } = useMapContext();
+  
+  if (!editingPdfId) return null;
+  
+  const overlay = pdfOverlays.find(o => o.id === editingPdfId);
+  if (!overlay) return null;
+
+  const [sw, ne] = overlay.bounds;
+
+  const handleDragSW = (e: any) => {
+    const newPos = e.target.getLatLng();
+    updatePdfOverlayBounds(editingPdfId, [[newPos.lat, newPos.lng], ne]);
+  };
+
+  const handleDragNE = (e: any) => {
+    const newPos = e.target.getLatLng();
+    updatePdfOverlayBounds(editingPdfId, [sw, [newPos.lat, newPos.lng]]);
+  };
+
+  return (
+    <>
+      <Marker 
+        position={sw as any} 
+        draggable={true} 
+        eventHandlers={{ drag: handleDragSW }}
+        icon={L.divIcon({
+          html: '<div class="w-4 h-4 bg-red-500 border-2 border-white rounded-full shadow-lg"></div>',
+          className: '',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        })}
+      />
+      <Marker 
+        position={ne as any} 
+        draggable={true} 
+        eventHandlers={{ drag: handleDragNE }}
+        icon={L.divIcon({
+          html: '<div class="w-4 h-4 bg-green-500 border-2 border-white rounded-full shadow-lg"></div>',
+          className: '',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        })}
       />
     </>
   );

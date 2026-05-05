@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useMapContext } from "@/lib/MapContext";
-import { FileUp, Map as MapIcon, X, Eye, EyeOff, Trash2, Sliders, ChevronDown, Loader2 } from "lucide-react";
+import { FileUp, Map as MapIcon, X, Eye, EyeOff, Trash2, Sliders, ChevronDown, Loader2, Edit, Check } from "lucide-react";
 import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
 import { 
@@ -18,7 +18,10 @@ if (typeof window !== 'undefined') {
 }
 
 export function PdfOverlayPanel() {
-  const { pdfOverlays, setPdfOverlays, mapInstance } = useMapContext();
+  const { 
+    pdfOverlays, setPdfOverlays, mapInstance, 
+    editingPdfId, setEditingPdfId 
+  } = useMapContext();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -185,6 +188,19 @@ export function PdfOverlayPanel() {
     setPdfOverlays(pdfOverlays.map(o => 
       o.id === id ? { ...o, opacity } : o
     ));
+  };
+
+  const saveManualGeoref = async (id: string) => {
+    const overlay = pdfOverlays.find(o => o.id === id);
+    if (!overlay) return;
+    
+    try {
+      await updatePdfOverlaySettings(id, { bounds: overlay.bounds });
+      setEditingPdfId(null);
+      toast.success("Posisi overlay diperbarui secara permanen");
+    } catch (err: any) {
+      toast.error("Gagal menyimpan posisi: " + err.message);
+    }
   };
 
   const toggleBlendMode = async (id: string) => {
@@ -354,6 +370,13 @@ export function PdfOverlayPanel() {
                              <span className="text-xs font-bold text-gray-200 truncate">{overlay.name}</span>
                           </div>
                            <div className="flex items-center gap-1.5">
+                             <button 
+                               onClick={() => setEditingPdfId(editingPdfId === overlay.id ? null : overlay.id)} 
+                               className={`p-1.5 rounded-lg transition-all ${editingPdfId === overlay.id ? 'bg-indigo-500 text-white' : 'hover:bg-white/5 text-gray-500 hover:text-indigo-400'}`}
+                               title="Georeferensi Manual (Drag di Map)"
+                             >
+                                <Edit className="w-3.5 h-3.5" />
+                             </button>
                              <button onClick={() => fitToOverlay(overlay.bounds)} className="p-1.5 hover:bg-white/5 rounded-lg text-gray-500 hover:text-indigo-400 transition-all" title="Fit to Map">
                                 <MapIcon className="w-3.5 h-3.5" />
                              </button>
@@ -395,6 +418,18 @@ export function PdfOverlayPanel() {
                              </button>
                           </div>
                        </div>
+
+                       {editingPdfId === overlay.id && (
+                         <div className="pt-2 animate-in fade-in slide-in-from-top-1">
+                            <button 
+                              onClick={() => saveManualGeoref(overlay.id)}
+                              className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] font-black uppercase rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
+                            >
+                              <Check className="w-3 h-3" />
+                              Simpan Posisi Baru
+                            </button>
+                         </div>
+                       )}
                     </div>
                   ))}
                </div>
