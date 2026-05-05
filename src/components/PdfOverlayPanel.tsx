@@ -41,12 +41,11 @@ export function PdfOverlayPanel() {
   });
 
   const extractGeoPdfMetadata = (arrayBuffer: ArrayBuffer) => {
-    const text = new TextDecoder().decode(new Uint8Array(arrayBuffer.slice(0, 1000000))); // Check first 1MB
+    // Membaca lebih banyak data untuk mencari metadata (cek 2MB pertama)
+    const text = new TextDecoder().decode(new Uint8Array(arrayBuffer.slice(0, 2000000)));
     
-    // Look for GeoPDF tags (Simple best-effort extraction)
-    // Common pattern: /GPTS [lat1 lon1 lat2 lon2 ...] or /BBox [x1 y1 x2 y2]
+    // 1. Deteksi /GPTS (Ground Control Points) - Standar GeoPDF / Avenza
     const gptsMatch = text.match(/\/GPTS\s*\[([\s\d.-]+)\]/);
-    const geoMatch = text.match(/\/GEO\s*<</);
     
     if (gptsMatch) {
       const coords = gptsMatch[1].trim().split(/\s+/).map(Number);
@@ -62,6 +61,22 @@ export function PdfOverlayPanel() {
         };
       }
     }
+    // 2. Deteksi /Measure dengan /GCS (Geographic Coordinate System)
+    if (text.includes('/Measure') && text.includes('/GCS')) {
+      const geoPairs = text.match(/\[\s*(-?\d+\.\d+)\s+(-?\d+\.\d+)\s+(-?\d+\.\d+)\s+(-?\d+\.\d+)\s*\]/g);
+      if (geoPairs && geoPairs.length > 0) {
+        const nums = geoPairs[geoPairs.length - 1].match(/-?\d+\.\d+/g)?.map(Number);
+        if (nums && nums.length >= 4) {
+          return {
+            swLat: Math.min(nums[0], nums[2]).toString(),
+            swLng: Math.min(nums[1], nums[3]).toString(),
+            neLat: Math.max(nums[0], nums[2]).toString(),
+            neLng: Math.max(nums[1], nums[3]).toString()
+          };
+        }
+      }
+    }
+
     return null;
   };
 
