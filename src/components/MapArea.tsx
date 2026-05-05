@@ -1116,20 +1116,25 @@ function LayerFeature({ layer }: { layer: any }) {
     // If the layer just got uploaded, it might have data temporarily.
     // Otherwise, we fetch it all from supabase.
     async function loadGeometry() {
+      let finalData: any = null;
+      
       if (layer.id?.startsWith('local-')) {
-        setFeatureCollection(layerGeojsonCache[layer.id]);
-        return;
+        finalData = layerGeojsonCache[layer.id];
+      } else {
+        const dissolveKey = layer.style?.dissolve_key;
+        const { data, error } = await supabase.rpc('get_layer_feature_collection', {
+          p_layer_id: layer.id,
+          p_group_key: dissolveKey || 'none'
+        });
+        if (error) {
+          console.error("Fetch Geometry Error:", JSON.stringify(error, null, 2));
+          toast.error("Gagal memuat geometri: " + (error.message || JSON.stringify(error)));
+          return;
+        }
+        finalData = data;
       }
-      setFeatureCollection(null); // Paksa Leaflet menghapus peta lama selama loading
-      const dissolveKey = layer.style?.dissolve_key;
-      const { data, error } = await supabase.rpc('get_layer_feature_collection', {
-        p_layer_id: layer.id,
-        p_group_key: dissolveKey || 'none'
-      });
 
-      if (!error && data) {
-        let finalData: any = data;
-        
+      if (finalData) {
         // 1. Terapkan Definition Query jika ada
         const defQuery = layer.style?.definition_query;
         if (defQuery && finalData.features) {

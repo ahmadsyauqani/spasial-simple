@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
@@ -444,6 +444,14 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
         </div>
 
         <div className="flex items-center gap-1">
+          <button 
+            onClick={(e) => { e.stopPropagation(); triggerZoomToLayer(layer.id!); }} 
+            className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none"
+            title="Zoom ke Layer"
+          >
+            <Maximize className="w-3.5 h-3.5" />
+          </button>
+
           <Popover>
             <PopoverTrigger className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none">
               <Info className="w-3.5 h-3.5" />
@@ -535,7 +543,25 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
                     className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
-                <Button size="sm" onClick={handleApplyDefinitionQuery} className="bg-primary text-primary-foreground font-bold h-8 rounded-lg">Terapkan Filter</Button>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    onClick={() => { handleApplyDefinitionQuery(); }} 
+                    className="flex-1 bg-primary text-primary-foreground font-bold h-8 rounded-lg"
+                  >
+                    Terapkan
+                  </Button>
+                  {layer.style?.definition_query && (
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={handleClearDefinitionQuery} 
+                      className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 font-bold"
+                    >
+                      Reset
+                    </Button>
+                  )}
+                </div>
               </PopoverContent>
             </Popover>
           )}
