@@ -795,6 +795,13 @@ function CursorCoordinates() {
   const [isLocked, setIsLocked] = useState(false);
   const [isSnapEnabled, setIsSnapEnabled] = useState(false);
   const [snapPoint, setSnapPoint] = useState<{lat: number, lng: number} | null>(null);
+  const [zoom, setZoom] = useState(map.getZoom());
+  const [scale, setScale] = useState(0);
+
+  const calculateScale = (z: number, l: number) => {
+    const metersPerPixel = 156543.03392 * Math.cos(l * Math.PI / 180) / Math.pow(2, z);
+    return Math.round(metersPerPixel / 0.00026);
+  };
   
   const isLockedRef = useRef(isLocked);
   const isSnapEnabledRef = useRef(isSnapEnabled);
@@ -808,7 +815,14 @@ function CursorCoordinates() {
   }, [isSnapEnabled]);
 
   useEffect(() => {
+    const handleZoom = () => {
+      setZoom(map.getZoom());
+      setScale(calculateScale(map.getZoom(), map.getCenter().lat));
+    };
+
     const handleMouseMove = (e: L.LeafletMouseEvent) => {
+      // Update scale on move just in case center changed
+      setScale(calculateScale(map.getZoom(), map.getCenter().lat));
       if (isLockedRef.current) return;
 
       let targetLatLng = e.latlng;
@@ -862,11 +876,15 @@ function CursorCoordinates() {
     
     map.on('mousemove', handleMouseMove);
     map.on('click', handleMapClick);
+    map.on('zoomend', handleZoom);
+    handleZoom(); // Initial calculation
+
     return () => {
       map.off('mousemove', handleMouseMove);
       map.off('click', handleMapClick);
+      map.off('zoomend', handleZoom);
     };
-  }, [map]);
+  }, [map, layers, layerGeojsonCache]);
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -956,35 +974,50 @@ function CursorCoordinates() {
           <button 
             onClick={handleUnlock}
             className="absolute -top-3 -right-2 sm:-right-3 bg-red-500 text-white rounded-full p-1 shadow-lg flex items-center justify-center animate-in zoom-in duration-300 border border-white hover:bg-red-600 transition-colors pointer-events-auto"
-            title="Buka Kunci (Kembali ke mode kursor)"
+            title={isLocked ? "Buka Kunci Koordinat" : "Kunci Koordinat di Sini"}
           >
-            <Lock className="w-3.5 h-3.5" />
+            {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
           </button>
         )}
-      <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full">
-        <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>WGS 84</span>
-        <div className="flex flex-col items-end sm:items-center">
-          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>{toDMS(lat, true)}</span>
-          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>{toDMS(lng, false)}</span>
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 flex-1 min-w-0">
+          {/* SCALE & ZOOM INFO */}
+          <div className="flex items-center gap-4 border-r border-white/10 pr-6 mr-2 shrink-0">
+            <div className="flex flex-col">
+              <span className="text-[7px] text-gray-400 uppercase font-black tracking-widest opacity-50">Scale</span>
+              <span className="font-mono font-black text-white">1:{new Intl.NumberFormat('id-ID').format(scale)}</span>
+            </div>
+            <div className="flex flex-col border-l border-white/5 pl-4">
+              <span className="text-[7px] text-gray-400 uppercase font-black tracking-widest opacity-50">Zoom</span>
+              <span className="font-mono font-black text-indigo-400">LVL {zoom}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto">
+            <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>WGS 84</span>
+            <div className="flex flex-col items-end sm:items-center">
+              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>{toDMS(lat, true)}</span>
+              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>{toDMS(lng, false)}</span>
+            </div>
+          </div>
+          <div className="hidden sm:block w-px h-6 bg-border/70"></div>
+          <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
+            <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
+            <div className="flex flex-col items-end sm:items-center">
+              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>X: {utmResult.x.toFixed(2)}</span>
+              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>Y: {utmResult.y.toFixed(2)}</span>
+            </div>
+          </div>
+          <div className="hidden sm:block w-px h-6 bg-border/70"></div>
+          <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
+            <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>TM-3 {tm3ZoneDisplay}</span>
+            <div className="flex flex-col items-end sm:items-center">
+              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>X: {tm3Result.x.toFixed(2)}</span>
+              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>Y: {tm3Result.y.toFixed(2)}</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="hidden sm:block w-px bg-border/70"></div>
-      <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
-        <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
-        <div className="flex flex-col items-end sm:items-center">
-          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>X: {utmResult.x.toFixed(2)}</span>
-          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>Y: {utmResult.y.toFixed(2)}</span>
-        </div>
-      </div>
-      <div className="hidden sm:block w-px bg-border/70"></div>
-      <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
-        <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>TM-3 {tm3ZoneDisplay}</span>
-        <div className="flex flex-col items-end sm:items-center">
-          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>X: {tm3Result.x.toFixed(2)}</span>
-          <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>Y: {tm3Result.y.toFixed(2)}</span>
-        </div>
-      </div>
-    </div>
     </>
   );
 }
