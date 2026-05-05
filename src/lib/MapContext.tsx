@@ -186,6 +186,8 @@ interface MapContextType {
   isGpsPanelOpen: boolean;
   setIsGpsPanelOpen: (val: boolean) => void;
   fetchLayers: () => Promise<void>;
+  isDarkMode: boolean;
+  setIsDarkMode: (val: boolean) => void;
   BASEMAP_OPTIONS: Record<BasemapType, { name: string; url: string; attribution: string }>;
 }
 
@@ -317,6 +319,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   };
 
   const [isGpsPanelOpen, setIsGpsPanelOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   return (
     <MapContext.Provider value={{ 
@@ -352,6 +355,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
       trackingDistance, setTrackingDistance,
       fetchLayers,
       isGpsPanelOpen, setIsGpsPanelOpen,
+      isDarkMode, setIsDarkMode,
       BASEMAP_OPTIONS
     }}>
       {children}

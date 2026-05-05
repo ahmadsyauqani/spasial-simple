@@ -92,32 +92,39 @@ export function UploadDatasetPanel() {
   };
 
   return (
-    <div className="bg-card text-card-foreground border shadow-sm rounded-xl p-5 flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm">Layer</h3>
+    <div className="bg-card text-card-foreground border border-border shadow-xl rounded-2xl overflow-hidden flex flex-col transition-all duration-300">
+      <div className="bg-cyan-pastel dark:bg-[#25282c] px-4 py-3.5 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 bg-white/20 dark:bg-orange-500/20 rounded-lg shadow-sm">
+            <UploadCloud className="w-4 h-4 text-navy dark:text-orange-500" />
+          </div>
+          <h3 className="text-[11px] font-black uppercase tracking-[0.1em] text-navy dark:text-white">Dataset & Analisis</h3>
+        </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-muted/50 rounded-md p-0.5 gap-0.5">
+          <div className="flex items-center bg-white/30 dark:bg-muted/50 rounded-lg p-0.5 gap-0.5">
             {(['Ha', 'm2', 'km2'] as const).map((unit) => (
               <button
                 key={unit}
                 onClick={() => setAreaUnit(unit)}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-all ${
+                className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase transition-all ${
                   areaUnit === unit
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-white dark:bg-primary text-navy dark:text-primary-foreground shadow-sm'
+                    : 'text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground'
                 }`}
               >
                 {unit === 'Ha' ? 'Ha' : unit === 'm2' ? 'm²' : 'km²'}
               </button>
             ))}
           </div>
-          <Badge variant="secondary">{layers.length} Layer</Badge>
+          <Badge variant="secondary" className="bg-white/20 text-navy dark:bg-muted dark:text-white border-none">{layers.length} Layer</Badge>
         </div>
       </div>
 
-      <ScrollArea className="h-32 rounded-md border border-white/10 bg-black/20 p-2">
+      <div className="p-4 space-y-4">
+
+      <ScrollArea className="h-40 rounded-xl border border-border bg-muted/30 dark:bg-black/20 p-2">
         {layers.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-xs text-muted-foreground flex-col gap-2 opacity-50 pt-4">
+          <div className="h-full flex items-center justify-center text-xs text-muted-foreground flex-col gap-2 opacity-50 pt-8">
             <LayersIcon />
             <span>Belum ada layer diunggah</span>
           </div>
@@ -147,18 +154,18 @@ export function UploadDatasetPanel() {
           if (file && !isUploading) processSelectedFile(file);
         }}
         className={cn(
-          "relative flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm font-medium transition-colors",
+          "relative flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-4 text-[11px] font-black uppercase tracking-wider transition-all",
           isDragging 
-            ? "border-primary bg-primary/20 text-primary scale-[1.02] shadow-primary/20 shadow-lg" 
-            : "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
+            ? "border-cyan-500 bg-cyan-500/10 text-navy dark:text-cyan-400 scale-[1.02] shadow-lg" 
+            : "border-border bg-muted/50 text-muted-foreground hover:border-cyan-500/50 hover:bg-cyan-500/5 hover:text-navy dark:hover:text-cyan-400"
         )}
       >
         {isUploading ? (
-          <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
+          <div className="animate-spin w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full" />
         ) : (
           <FileUp className="w-4 h-4" />
         )}
-        <span>{isUploading ? "Memproses..." : (isDragging ? "Lepaskan File Disini!" : "Unggah File (.SHP/.RAR/.GDB.ZIP/.KML/.GEOJSON)")}</span>
+        <span>{isUploading ? "Memproses..." : (isDragging ? "Lepaskan File!" : "Unggah Data Baru (.SHP/.ZIP/.KML)")}</span>
         <input
           type="file"
           className="hidden"
@@ -169,7 +176,7 @@ export function UploadDatasetPanel() {
       </label>
 
       {/* Toolbar Analisis */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="bg-muted/30 dark:bg-white/5 p-3 rounded-xl border border-border flex items-center gap-2 flex-wrap">
         <BufferAnalysisButton />
         <ClipAnalysisButton />
         <OverlapAnalysisButton />

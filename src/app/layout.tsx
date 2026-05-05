@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   description: "Browser-first spatial analysis platform",
 };
 
+import { MapProvider } from "@/lib/MapContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,14 +33,16 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col overflow-hidden" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem={false}
           disableTransitionOnChange
         >
-          <TooltipProvider>
-            {children}
-            <Toaster />
-          </TooltipProvider>
+          <MapProvider>
+            <TooltipProvider>
+              {children}
+              <Toaster position="top-right" richColors />
+            </TooltipProvider>
+          </MapProvider>
         </ThemeProvider>
       </body>
     </html>

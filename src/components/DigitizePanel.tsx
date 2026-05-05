@@ -189,29 +189,29 @@ export function DigitizePanel() {
 
   return (
     <>
-      <div className="bg-[#1a1c1e] text-gray-200 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300">
-        {/* Sidebar Header */}
+      <div className="bg-card text-card-foreground border border-border rounded-2xl shadow-xl overflow-hidden flex flex-col transition-all duration-300">
+        {/* Sidebar Header - Colorful Lavender */}
         <div 
-          className="bg-[#25282c] px-4 py-3.5 border-b border-white/10 flex items-center justify-between cursor-pointer hover:bg-[#2a2d31] transition-colors"
+          className="bg-lavender dark:bg-[#25282c] px-4 py-3.5 border-b border-border flex items-center justify-between cursor-pointer hover:opacity-90 transition-all"
           onClick={() => setIsMainExpanded(!isMainExpanded)}
         >
            <div className="flex items-center gap-2.5">
-             <div className="p-1.5 bg-orange-500/20 rounded-lg">
-               <Database className="w-4 h-4 text-orange-500" />
+             <div className="p-1.5 bg-white/20 dark:bg-orange-500/20 rounded-lg shadow-sm">
+               <Database className="w-4 h-4 text-navy dark:text-orange-500" />
              </div>
-             <h2 className="text-[11px] font-black uppercase tracking-[0.1em] text-white">New Layer</h2>
+             <h2 className="text-[11px] font-black uppercase tracking-[0.1em] text-navy dark:text-white">Digitasi Data</h2>
            </div>
            <div className="flex items-center gap-2">
-             <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${isMainExpanded ? 'rotate-90 text-orange-500' : ''}`} />
+             <ChevronRight className={`w-4 h-4 text-navy/40 dark:text-gray-500 transition-transform duration-300 ${isMainExpanded ? 'rotate-90 text-navy dark:text-orange-500' : ''}`} />
              <Settings 
-               className={`w-3.5 h-3.5 transition-colors ${showSettings ? 'text-orange-500 rotate-90' : 'text-gray-500 hover:text-white'}`} 
+               className={`w-3.5 h-3.5 transition-colors ${showSettings ? 'text-navy dark:text-orange-500 rotate-90' : 'text-navy/30 dark:text-gray-500 hover:text-navy dark:hover:text-white'}`} 
                onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); if(!isMainExpanded) setIsMainExpanded(true); }}
              />
            </div>
         </div>
 
         {isMainExpanded && (
-          <div className="p-5 flex flex-col gap-6 overflow-y-auto max-h-[75vh] scrollbar-thin scrollbar-thumb-white/10 animate-in slide-in-from-top-4 duration-300">
+          <div className="p-5 flex flex-col gap-6 overflow-y-auto max-h-[75vh] scrollbar-thin scrollbar-thumb-border animate-in slide-in-from-top-4 duration-300">
             
             {/* Global Digitize Settings */}
             {showSettings && (
@@ -272,14 +272,14 @@ export function DigitizePanel() {
             
             {/* Create Layer Section */}
             <div className="space-y-4">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.15em] ml-1">New Dataset</label>
+              <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] ml-1">Dataset Baru</label>
               
-              <div className="grid grid-cols-3 gap-2 p-1 bg-[#25282c] rounded-xl border border-white/5">
+              <div className="grid grid-cols-3 gap-2 p-1 bg-muted/30 dark:bg-[#25282c] rounded-xl border border-border">
                 {(['Point', 'Line', 'Polygon'] as const).map(type => (
                   <button
                     key={type}
                     onClick={() => setNewLayerType(type)}
-                    className={`flex flex-col items-center gap-1.5 py-2.5 rounded-lg transition-all ${newLayerType === type ? 'bg-orange-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`}
+                    className={`flex flex-col items-center gap-1.5 py-2.5 rounded-lg transition-all ${newLayerType === type ? 'bg-lavender dark:bg-orange-500 text-navy dark:text-white shadow-md' : 'text-muted-foreground hover:bg-muted dark:hover:bg-white/5'}`}
                   >
                     {getGeomIcon(type)}
                     <span className="text-[9px] font-bold uppercase tracking-wider">{type}</span>
@@ -290,12 +290,12 @@ export function DigitizePanel() {
               <div className="flex gap-2">
                 <input 
                   type="text" 
-                  placeholder="Layer Name..."
-                  className="flex-1 bg-[#2a2d31] border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all shadow-inner"
+                  placeholder="Nama layer..."
+                  className="flex-1 bg-muted/50 dark:bg-[#2a2d31] border border-border rounded-xl px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-lavender/50 dark:focus:ring-orange-500/50 transition-all shadow-inner"
                   value={newLayerName}
                   onChange={(e) => setNewLayerName(e.target.value)}
                 />
-                <button onClick={createEmptyLayer} className="bg-orange-500 text-white p-2.5 rounded-xl hover:bg-orange-600 transition-all shadow-lg active:scale-95">
+                <button onClick={createEmptyLayer} className="bg-lavender dark:bg-orange-500 text-navy dark:text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-md active:scale-95">
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
@@ -304,24 +304,24 @@ export function DigitizePanel() {
             {/* Layer List */}
             <div className="space-y-3">
               <div className="flex items-center justify-between ml-1">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.15em]">Active Layers</label>
-                <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-gray-400">{localLayers.length} total</span>
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em]">Layer Aktif</label>
+                <span className="text-[9px] px-2 py-0.5 bg-muted rounded-full text-muted-foreground">{localLayers.length} total</span>
               </div>
               
               <div className="space-y-2.5">
                 {localLayers.map(layer => (
-                  <div key={layer.id} className={`group flex flex-col rounded-2xl border transition-all duration-300 ${expandedLayerId === layer.id ? 'bg-[#25282c] border-orange-500/30 shadow-xl' : 'bg-[#212327] border-white/5 hover:border-white/10'}`}>
+                  <div key={layer.id} className={`group flex flex-col rounded-2xl border transition-all duration-300 ${expandedLayerId === layer.id ? 'bg-muted/50 dark:bg-[#25282c] border-lavender dark:border-orange-500/30 shadow-md' : 'bg-card border-border hover:border-lavender/50 dark:hover:border-white/10'}`}>
                     <div className="flex items-center justify-between p-3.5 cursor-pointer" onClick={() => setExpandedLayerId(expandedLayerId === layer.id ? null : (layer.id as string))}>
                       <div className="flex items-center gap-3">
-                        <div className={`p-1.5 rounded-lg ${activeDigitizingLayerId === layer.id ? 'bg-orange-500 text-white' : 'bg-white/5 text-gray-500'}`}>
+                        <div className={`p-1.5 rounded-lg ${activeDigitizingLayerId === layer.id ? 'bg-lavender dark:bg-orange-500 text-navy dark:text-white' : 'bg-muted text-muted-foreground'}`}>
                           {getGeomIcon(layer.geometryType)}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-gray-100 group-hover:text-white transition-colors">{layer.name}</span>
-                          <span className="text-[9px] text-gray-500 font-medium uppercase tracking-tight">{layer.geometryType} • {layerGeojsonCache[layer.id!]?.features?.length || 0} Features</span>
+                          <span className="text-xs font-bold text-foreground dark:text-gray-100 group-hover:text-navy dark:group-hover:text-white transition-colors">{layer.name}</span>
+                          <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-tight">{layer.geometryType} • {layerGeojsonCache[layer.id!]?.features?.length || 0} Fitur</span>
                         </div>
                       </div>
-                      <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform duration-300 ${expandedLayerId === layer.id ? 'rotate-90 text-orange-500' : ''}`} />
+                      <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${expandedLayerId === layer.id ? 'rotate-90 text-lavender dark:text-orange-500' : ''}`} />
                     </div>
 
                     {expandedLayerId === layer.id && (
