@@ -276,6 +276,7 @@ export default function MapArea() {
             bounds={overlay.bounds as any}
             opacity={overlay.opacity || 0.7}
             zIndex={100}
+            className={overlay.blendMode === 'multiply' ? 'mix-blend-multiply' : ''}
           />
         ))}
 

@@ -137,7 +137,8 @@ export function PdfOverlayPanel() {
         url: publicUrl,
         bounds: [sw, ne],
         visible: true,
-        opacity: 0.7
+        opacity: 0.7,
+        blendMode: 'multiply' // Default to multiply for maps
       };
 
       // 2. Save to DB
@@ -184,6 +185,22 @@ export function PdfOverlayPanel() {
     setPdfOverlays(pdfOverlays.map(o => 
       o.id === id ? { ...o, opacity } : o
     ));
+  };
+
+  const toggleBlendMode = async (id: string) => {
+    const overlay = pdfOverlays.find(o => o.id === id);
+    if (!overlay) return;
+    const newMode = overlay.blendMode === 'multiply' ? 'normal' : 'multiply';
+    setPdfOverlays(pdfOverlays.map(o => 
+      o.id === id ? { ...o, blendMode: newMode } : o
+    ));
+    await updatePdfOverlaySettings(id, { blendMode: newMode });
+  };
+
+  const fitToOverlay = (bounds: any) => {
+    if (mapInstance && bounds) {
+      mapInstance.fitBounds(bounds as any);
+    }
   };
 
   const captureCurrentMapBounds = () => {
@@ -336,7 +353,10 @@ export function PdfOverlayPanel() {
                              <MapIcon className="w-3 h-3 text-indigo-400 shrink-0" />
                              <span className="text-xs font-bold text-gray-200 truncate">{overlay.name}</span>
                           </div>
-                          <div className="flex items-center gap-1.5">
+                           <div className="flex items-center gap-1.5">
+                             <button onClick={() => fitToOverlay(overlay.bounds)} className="p-1.5 hover:bg-white/5 rounded-lg text-gray-500 hover:text-indigo-400 transition-all" title="Fit to Map">
+                                <MapIcon className="w-3.5 h-3.5" />
+                             </button>
                              <button onClick={() => toggleVisibility(overlay.id)} className="p-1.5 hover:bg-white/5 rounded-lg text-gray-500 hover:text-white transition-all">
                                 {overlay.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                              </button>
@@ -346,22 +366,34 @@ export function PdfOverlayPanel() {
                           </div>
                        </div>
                        
-                       <div className="space-y-1.5">
-                          <div className="flex justify-between items-center text-[8px] text-gray-500 uppercase font-bold tracking-tighter">
-                             <div className="flex items-center gap-1">
-                                <Sliders className="w-2.5 h-2.5" />
-                                <span>Opacity</span>
+                       <div className="grid grid-cols-2 gap-3 pt-1">
+                          <div className="space-y-1.5">
+                             <div className="flex justify-between items-center text-[8px] text-gray-500 uppercase font-bold tracking-tighter">
+                                <div className="flex items-center gap-1">
+                                   <Sliders className="w-2.5 h-2.5" />
+                                   <span>Opacity</span>
+                                </div>
+                                <span>{Math.round(overlay.opacity * 100)}%</span>
                              </div>
-                             <span>{Math.round(overlay.opacity * 100)}%</span>
+                             <input 
+                               type="range" min="0" max="1" step="0.1"
+                               value={overlay.opacity}
+                               onChange={(e) => updateOpacity(overlay.id, parseFloat(e.target.value))}
+                               onMouseUp={() => handleOpacityCommit(overlay.id, overlay.opacity)}
+                               onTouchEnd={() => handleOpacityCommit(overlay.id, overlay.opacity)}
+                               className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                             />
                           </div>
-                          <input 
-                            type="range" min="0" max="1" step="0.1"
-                            value={overlay.opacity}
-                            onChange={(e) => updateOpacity(overlay.id, parseFloat(e.target.value))}
-                            onMouseUp={() => handleOpacityCommit(overlay.id, overlay.opacity)}
-                            onTouchEnd={() => handleOpacityCommit(overlay.id, overlay.opacity)}
-                            className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                          />
+
+                          <div className="space-y-1.5">
+                             <span className="text-[8px] text-gray-500 uppercase font-bold tracking-tighter block">Background</span>
+                             <button 
+                               onClick={() => toggleBlendMode(overlay.id)}
+                               className={`w-full py-1 rounded-md text-[8px] font-black uppercase transition-all ${overlay.blendMode === 'multiply' ? 'bg-indigo-500 text-white' : 'bg-white/5 text-gray-400'}`}
+                             >
+                               {overlay.blendMode === 'multiply' ? 'Transparan' : 'Solid'}
+                             </button>
+                          </div>
                        </div>
                     </div>
                   ))}
