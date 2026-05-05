@@ -197,16 +197,20 @@ export function UploadDatasetPanel() {
         />
       </label>
 
-      {/* Toolbar Analisis */}
-      <div className="bg-muted/30 dark:bg-white/5 p-3 rounded-xl border border-border flex items-center gap-2 flex-wrap">
-        <BufferAnalysisButton />
-        <ClipAnalysisButton />
-        <OverlapAnalysisButton />
-        <UnionAnalysisButton />
-        <DissolveAnalysisButton />
-        <MergeAnalysisButton />
-        <LayoutPetaButton />
-        <DownloadAllResultsButton />
+      {/* Analysis Tools & More (The Grid) */}
+      <div className="flex flex-col gap-3 pt-2 border-t border-border/30">
+        <div className="grid grid-cols-6 gap-1.5 p-1.5 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner">
+          <BufferAnalysisButton />
+          <ClipAnalysisButton />
+          <UnionAnalysisButton />
+          <MergeAnalysisButton />
+          <OverlapAnalysisButton />
+          <DissolveAnalysisButton />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <LayoutPetaButton />
+          <DownloadAllResultsButton />
+        </div>
       </div>
 
       </div>
@@ -567,24 +571,6 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
           )}
 
           <ExportLayerDialog layer={layer} />
-        </div>
-      </div>
-      {/* Bottom Actions: Analysis Tools & More */}
-      <div className="mt-auto pt-4 border-t border-border/30 flex flex-col gap-3">
-        {/* Spatial Analysis Tools Grid */}
-        <div className="grid grid-cols-6 gap-1.5 p-1.5 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner">
-          <BufferAnalysisButton />
-          <ClipAnalysisButton />
-          <UnionAnalysisButton />
-          <MergeAnalysisButton />
-          <OverlapAnalysisButton />
-          <DissolveAnalysisButton />
-        </div>
-
-        {/* Secondary Actions Row */}
-        <div className="grid grid-cols-2 gap-2">
-          <LayoutPetaButton />
-          <DownloadAllResultsButton />
         </div>
       </div>
     </div>
