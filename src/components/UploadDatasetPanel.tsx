@@ -104,7 +104,17 @@ export function UploadDatasetPanel() {
 
         {/* Row 2: Controls */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center bg-black/5 dark:bg-black/40 rounded-xl p-1 gap-1 border border-black/5 dark:border-white/5 shadow-inner grow max-w-[200px]">
+          <div className="relative flex items-center bg-black/5 dark:bg-black/40 rounded-xl p-1 border border-black/5 dark:border-white/5 shadow-inner grow max-w-[200px] overflow-hidden">
+            {/* Animated Background Pill */}
+            <div 
+              className="absolute h-[calc(100%-8px)] bg-white dark:bg-primary shadow-lg shadow-black/5 dark:shadow-primary/30 rounded-lg transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+              style={{ 
+                width: 'calc(33.33% - 5.33px)',
+                left: '4px',
+                transform: `translateX(${areaUnit === 'Ha' ? '0%' : areaUnit === 'm2' ? '108%' : '216%'})`
+              }}
+            />
+
             {(['Ha', 'm2', 'km2'] as const).map((unit) => (
               <button
                 key={unit}
@@ -112,10 +122,10 @@ export function UploadDatasetPanel() {
                   e.stopPropagation();
                   setAreaUnit(unit);
                 }}
-                className={`flex-1 relative px-2.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-300 active:scale-95 ${
+                className={`flex-1 relative z-10 px-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors duration-300 active:scale-95 ${
                   areaUnit === unit
-                    ? 'bg-white dark:bg-primary text-navy dark:text-primary-foreground shadow-lg shadow-black/5 dark:shadow-primary/40'
-                    : 'text-navy/30 dark:text-muted-foreground/40 hover:text-navy dark:hover:text-white'
+                    ? 'text-navy dark:text-primary-foreground'
+                    : 'text-navy/30 dark:text-muted-foreground/40 hover:text-navy/60 dark:hover:text-white'
                 }`}
               >
                 {unit === 'Ha' ? 'Ha' : unit === 'm2' ? 'm²' : 'km²'}
