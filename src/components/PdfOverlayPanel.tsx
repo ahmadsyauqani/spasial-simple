@@ -107,11 +107,18 @@ export function PdfOverlayPanel() {
   const addOverlay = async () => {
     if (!pendingOverlay) return;
     
-    const sw = [parseFloat(bounds.swLat), parseFloat(bounds.swLng)];
-    const ne = [parseFloat(bounds.neLat), parseFloat(bounds.neLng)];
+    const { swLat, swLng, neLat, neLng } = bounds;
+    
+    if (!swLat || !swLng || !neLat || !neLng) {
+      toast.error("Semua koordinat (SW & NE) harus diisi");
+      return;
+    }
+
+    const sw = [parseFloat(swLat), parseFloat(swLng)];
+    const ne = [parseFloat(neLat), parseFloat(neLng)];
 
     if (sw.some(isNaN) || ne.some(isNaN)) {
-      toast.error("Koordinat tidak valid");
+      toast.error("Format koordinat tidak valid (harus angka)");
       return;
     }
 
@@ -179,6 +186,24 @@ export function PdfOverlayPanel() {
     ));
   };
 
+  const captureCurrentMapBounds = () => {
+    if (!mapInstance) {
+      toast.error("Map belum siap");
+      return;
+    }
+    const b = mapInstance.getBounds();
+    const sw = b.getSouthWest();
+    const ne = b.getNorthEast();
+    
+    setBounds({
+      swLat: sw.lat.toFixed(6),
+      swLng: sw.lng.toFixed(6),
+      neLat: ne.lat.toFixed(6),
+      neLng: ne.lng.toFixed(6)
+    });
+    toast.info("Koordinat diambil dari tampilan map saat ini");
+  };
+
   const handleOpacityCommit = async (id: string, opacity: number) => {
     await updatePdfOverlaySettings(id, { opacity });
   };
@@ -231,13 +256,21 @@ export function PdfOverlayPanel() {
                </div>
 
                <div className="space-y-4">
-                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block ml-1">Georeferensi (Bounding Box)</label>
+                  <div className="flex items-center justify-between ml-1">
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Georeferensi (Bounding Box)</label>
+                    <button 
+                      onClick={captureCurrentMapBounds}
+                      className="text-[8px] bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 px-2 py-1 rounded-md transition-colors font-bold uppercase"
+                    >
+                      Ambil dari Map
+                    </button>
+                  </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
+                   <div className="grid grid-cols-2 gap-3">
                      <div className="space-y-1.5">
                         <span className="text-[8px] text-gray-500 uppercase font-bold ml-1">SW Latitude</span>
                         <input 
-                          type="number" placeholder="-6.123" 
+                          type="number" step="any" placeholder="-6.123" 
                           className="w-full bg-[#2a2d31] border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           value={bounds.swLat} onChange={e => setBounds({...bounds, swLat: e.target.value})}
                         />
@@ -245,7 +278,7 @@ export function PdfOverlayPanel() {
                      <div className="space-y-1.5">
                         <span className="text-[8px] text-gray-500 uppercase font-bold ml-1">SW Longitude</span>
                         <input 
-                          type="number" placeholder="106.123" 
+                          type="number" step="any" placeholder="106.123" 
                           className="w-full bg-[#2a2d31] border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           value={bounds.swLng} onChange={e => setBounds({...bounds, swLng: e.target.value})}
                         />
@@ -256,7 +289,7 @@ export function PdfOverlayPanel() {
                      <div className="space-y-1.5">
                         <span className="text-[8px] text-gray-500 uppercase font-bold ml-1">NE Latitude</span>
                         <input 
-                          type="number" placeholder="-6.000" 
+                          type="number" step="any" placeholder="-6.000" 
                           className="w-full bg-[#2a2d31] border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           value={bounds.neLat} onChange={e => setBounds({...bounds, neLat: e.target.value})}
                         />
@@ -264,7 +297,7 @@ export function PdfOverlayPanel() {
                      <div className="space-y-1.5">
                         <span className="text-[8px] text-gray-500 uppercase font-bold ml-1">NE Longitude</span>
                         <input 
-                          type="number" placeholder="106.300" 
+                          type="number" step="any" placeholder="106.300" 
                           className="w-full bg-[#2a2d31] border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           value={bounds.neLng} onChange={e => setBounds({...bounds, neLng: e.target.value})}
                         />
