@@ -59,6 +59,11 @@ export async function uploadLayerToSupabase(projectId: string, layerName: string
   return layer;
 }
 
+export async function saveLayer(layerName: string, geojson: any, type: string) {
+  const project = await getOrCreateDefaultProject();
+  return uploadLayerToSupabase(project.id, layerName, geojson);
+}
+
 export async function fetchActiveLayers() {
   const { data, error } = await supabase
     .from("spatial_layers")
