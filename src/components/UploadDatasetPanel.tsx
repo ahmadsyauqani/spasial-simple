@@ -187,6 +187,8 @@ export function UploadDatasetPanel() {
         <DownloadAllResultsButton />
       </div>
 
+      </div>
+
       {/* DIALOG KONFIRMASI ADAPTIF REPROJECTION */}
       <Dialog open={!!metricPayload} onOpenChange={(open) => !open && !isFixing && setMetricPayload(null)}>
         <DialogContent className="sm:max-w-md bg-card text-card-foreground border-border">

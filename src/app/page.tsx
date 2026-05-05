@@ -24,13 +24,12 @@ export default function Home() {
           </div>
         </div>
 
-          <DigitizePanel />
-          <UploadDatasetPanel />
-        </div>
+        <DigitizePanel />
+        <UploadDatasetPanel />
+      </div>
 
-        <CommandPalette />
-        <GpsTrackingPanel />
-      </main>
-    </MapProvider>
+      <CommandPalette />
+      <GpsTrackingPanel />
+    </main>
   );
 }
