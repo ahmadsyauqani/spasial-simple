@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useMapContext } from "@/lib/MapContext";
-import { FileUp, Map as MapIcon, X, Eye, EyeOff, Trash2, Sliders, ChevronDown, Loader2, Edit, Check } from "lucide-react";
+import { FileUp, Map as MapIcon, X, Eye, EyeOff, Trash2, Sliders, ChevronDown, Loader2, Edit, Check, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
 import { 
@@ -20,7 +20,7 @@ if (typeof window !== 'undefined') {
 export function PdfOverlayPanel() {
   const { 
     pdfOverlays, setPdfOverlays, mapInstance, 
-    editingPdfId, setEditingPdfId 
+    editingPdfId, setEditingPdfId, updatePdfOverlayRotation
   } = useMapContext();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -141,7 +141,8 @@ export function PdfOverlayPanel() {
         bounds: [sw, ne],
         visible: true,
         opacity: 0.7,
-        blendMode: 'multiply' // Default to multiply for maps
+        blendMode: 'multiply',
+        rotation: 0
       };
 
       // 2. Save to DB
@@ -195,7 +196,10 @@ export function PdfOverlayPanel() {
     if (!overlay) return;
     
     try {
-      await updatePdfOverlaySettings(id, { bounds: overlay.bounds });
+      await updatePdfOverlaySettings(id, { 
+        bounds: overlay.bounds,
+        rotation: overlay.rotation || 0
+      });
       setEditingPdfId(null);
       toast.success("Posisi overlay diperbarui secara permanen");
     } catch (err: any) {
@@ -420,13 +424,29 @@ export function PdfOverlayPanel() {
                        </div>
 
                        {editingPdfId === overlay.id && (
-                         <div className="pt-2 animate-in fade-in slide-in-from-top-1">
+                         <div className="space-y-3 pt-2 animate-in fade-in slide-in-from-top-1 border-t border-white/5 mt-2">
+                            <div className="space-y-1.5">
+                               <div className="flex justify-between items-center text-[8px] text-gray-500 uppercase font-bold tracking-tighter">
+                                  <div className="flex items-center gap-1">
+                                     <RotateCw className="w-2.5 h-2.5" />
+                                     <span>Rotasi Peta</span>
+                                  </div>
+                                  <span>{overlay.rotation || 0}°</span>
+                               </div>
+                               <input 
+                                 type="range" min="-180" max="180" step="1"
+                                 value={overlay.rotation || 0}
+                                 onChange={(e) => updatePdfOverlayRotation(overlay.id, parseInt(e.target.value))}
+                                 className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                               />
+                            </div>
+                            
                             <button 
                               onClick={() => saveManualGeoref(overlay.id)}
                               className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] font-black uppercase rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
                             >
                               <Check className="w-3 h-3" />
-                              Simpan Posisi Baru
+                              Simpan Posisi & Rotasi
                             </button>
                          </div>
                        )}

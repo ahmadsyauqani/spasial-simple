@@ -276,7 +276,9 @@ export default function MapArea() {
             bounds={overlay.bounds as any}
             opacity={overlay.opacity || 0.7}
             zIndex={100}
-            className={overlay.blendMode === 'multiply' ? 'mix-blend-multiply' : ''}
+            className={`${overlay.blendMode === 'multiply' ? 'mix-blend-multiply' : ''} pdf-overlay-image`}
+            // Use CSS transform for rotation
+            {...({ style: { transform: `rotate(${overlay.rotation || 0}deg)` } } as any)}
           />
         ))}
 
