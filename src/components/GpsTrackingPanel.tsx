@@ -113,19 +113,19 @@ export function GpsTrackingPanel() {
   };
 
   return (
-    <div className="flex flex-col items-start gap-3 pointer-events-auto">
-      {/* The Floating Toggle Button */}
+    <div className="relative">
+      {/* The Integrated Header Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 border ${isOpen ? 'bg-indigo-500 border-indigo-400 text-white' : 'bg-[#1a1c20]/95 backdrop-blur-md border-white/10 text-gray-400 hover:text-white'}`}
+        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 border ${isOpen ? 'bg-indigo-500 border-indigo-400 text-white shadow-lg shadow-indigo-500/20' : 'bg-white/5 border-white/5 text-gray-400 hover:text-white hover:bg-white/10'}`}
         title="GPS Tracking"
       >
-        <Navigation className={`w-5 h-5 ${isTracking ? 'animate-pulse text-white' : ''}`} />
+        <Navigation className={`w-4 h-4 ${isTracking ? 'animate-pulse text-white' : ''}`} />
       </button>
 
-      {/* The Collapsible Panel */}
+      {/* The Collapsible Panel (Absolute Positioned relative to button) */}
       {isOpen && (
-        <div className="w-[calc(100vw-2rem)] sm:w-80 bg-[#0f1115]/95 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] animate-in zoom-in slide-in-from-bottom-4 duration-300">
+        <div className="absolute top-12 right-0 w-[calc(100vw-4rem)] sm:w-72 bg-[#0f1115]/98 backdrop-blur-2xl border border-white/10 rounded-2xl p-5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.7)] animate-in zoom-in-95 slide-in-from-top-2 duration-300 z-50">
           <div className="space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

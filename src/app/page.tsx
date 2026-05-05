@@ -17,12 +17,9 @@ export default function Home() {
 
         {/* Floating UI Elements */}
         <div className="absolute top-4 left-4 z-10 w-[calc(100vw-2rem)] sm:w-80 flex flex-col gap-2 sm:gap-4 max-h-[85vh] sm:max-h-[calc(100vh-2rem)] overflow-y-auto pr-1">
-          <div className="bg-card/95 backdrop-blur-md text-card-foreground border border-white/10 rounded-xl p-5 shadow-xl flex flex-col gap-3">
-            <h1 className="text-xl font-bold tracking-tight">SAKAGIS</h1>
-          </div>
-
-          <div className="bg-card/95 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-xl">
-             <GpsTrackingPanel />
+          <div className="bg-card/95 backdrop-blur-md text-card-foreground border border-white/10 rounded-xl p-5 shadow-xl flex items-center justify-between gap-3">
+            <h1 className="text-xl font-black tracking-tighter">SAKAGIS</h1>
+            <GpsTrackingPanel />
           </div>
 
           <DigitizePanel />
