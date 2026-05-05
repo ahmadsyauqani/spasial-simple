@@ -100,23 +100,26 @@ export function UploadDatasetPanel() {
           </div>
           <h3 className="text-[11px] font-black uppercase tracking-[0.1em] text-navy dark:text-white">Dataset & Analisis</h3>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-white/30 dark:bg-muted/50 rounded-lg p-0.5 gap-0.5">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-white/20 dark:bg-black/20 rounded-xl p-1 gap-1 border border-white/10 shadow-inner z-50">
             {(['Ha', 'm2', 'km2'] as const).map((unit) => (
               <button
                 key={unit}
-                onClick={() => setAreaUnit(unit)}
-                className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase transition-all ${
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAreaUnit(unit);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 active:scale-90 ${
                   areaUnit === unit
-                    ? 'bg-white dark:bg-primary text-navy dark:text-primary-foreground shadow-sm'
-                    : 'text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground'
+                    ? 'bg-white dark:bg-primary text-navy dark:text-primary-foreground shadow-md'
+                    : 'text-navy/40 dark:text-muted-foreground/50 hover:text-navy dark:hover:text-white hover:bg-white/10'
                 }`}
               >
                 {unit === 'Ha' ? 'Ha' : unit === 'm2' ? 'm²' : 'km²'}
               </button>
             ))}
           </div>
-          <Badge variant="secondary" className="bg-white/20 text-navy dark:bg-muted dark:text-white border-none">{layers.length} Layer</Badge>
+          <Badge variant="secondary" className="bg-white/20 text-navy dark:bg-muted dark:text-white border-none h-7 px-3 rounded-lg font-black text-[10px]">{layers.length} LAYER</Badge>
         </div>
       </div>
 
