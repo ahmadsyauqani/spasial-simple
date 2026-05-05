@@ -569,78 +569,57 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
           <ExportLayerDialog layer={layer} />
         </div>
       </div>
+      {/* Bottom Actions: Analysis Tools & More */}
+      <div className="mt-auto pt-4 border-t border-border/30 flex flex-col gap-3">
+        {/* Spatial Analysis Tools Grid */}
+        <div className="grid grid-cols-6 gap-1.5 p-1.5 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner">
+          <BufferAnalysisButton />
+          <ClipAnalysisButton />
+          <UnionAnalysisButton />
+          <MergeAnalysisButton />
+          <OverlapAnalysisButton />
+          <DissolveAnalysisButton />
+        </div>
+
+        {/* Secondary Actions Row */}
+        <div className="grid grid-cols-2 gap-2">
+          <LayoutPetaButton />
+          <DownloadAllResultsButton />
+        </div>
+      </div>
     </div>
   );
 }
-
-import { LayoutGrid } from "lucide-react";
 
 function LayoutPetaButton() {
   const { setLayoutComposerOpen } = useMapContext();
   return (
     <button
       onClick={() => setLayoutComposerOpen(true)}
-      className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
+      className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest px-3 py-2.5 rounded-xl bg-white/5 dark:bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-navy/70 dark:text-white/80 hover:text-primary transition-all active:scale-95 group shadow-sm"
     >
-      <LayoutGrid className="w-4 h-4" />
-      Layout Peta
+      <LayoutGrid className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+      <span>Layout</span>
     </button>
   );
 }
 
-/**
- * Tombol kompak untuk mengunduh semua hasil analisis (Overlap, Clip, Merge).
- * Selalu tampil agar pengguna tahu fitur ini ada.
- */
 function DownloadAllResultsButton() {
   const { overlapResult, clipResult, mergeResult, bufferResult, unionResult, dissolveResult } = useMapContext();
-
   const results: { geojson: any; filename: string }[] = [];
 
-  if (overlapResult) {
-    results.push({
-      geojson: overlapResult.geojson,
-      filename: `overlap_${overlapResult.layerAName}_x_${overlapResult.layerBName}.geojson`.replace(/\s+/g, "_"),
-    });
-  }
-  if (clipResult) {
-    results.push({
-      geojson: clipResult.geojson,
-      filename: `clip_${clipResult.inputLayerName}_by_${clipResult.clipLayerName}.geojson`.replace(/\s+/g, "_"),
-    });
-  }
-  if (mergeResult) {
-    const names = mergeResult.sourceLayerNames.map((n) => n.replace(/\.[^/.]+$/, "")).join("_");
-    results.push({
-      geojson: mergeResult.geojson,
-      filename: `merge_${names}.geojson`.replace(/\s+/g, "_"),
-    });
-  }
-  if (bufferResult) {
-    results.push({
-      geojson: bufferResult.geojson,
-      filename: `buffer_${bufferResult.inputLayerName}_${bufferResult.distance}${bufferResult.unit}.geojson`.replace(/\s+/g, "_"),
-    });
-  }
-  if (unionResult) {
-    const names = unionResult.sourceLayerNames.map((n) => n.replace(/\.[^/.]+$/, "")).join("_");
-    results.push({
-      geojson: unionResult.geojson,
-      filename: `union_${names}.geojson`.replace(/\s+/g, "_"),
-    });
-  }
-  if (dissolveResult) {
-    results.push({
-      geojson: dissolveResult.geojson,
-      filename: `dissolve_${dissolveResult.inputLayerName}_by_${dissolveResult.dissolveProperty || "all"}.geojson`.replace(/\s+/g, "_"),
-    });
-  }
+  if (overlapResult) results.push({ geojson: overlapResult.geojson, filename: `overlap_${overlapResult.layerAName}_x_${overlapResult.layerBName}.geojson`.replace(/\s+/g, "_") });
+  if (clipResult) results.push({ geojson: clipResult.geojson, filename: `clip_${clipResult.inputLayerName}_by_${clipResult.clipLayerName}.geojson`.replace(/\s+/g, "_") });
+  if (mergeResult) results.push({ geojson: mergeResult.geojson, filename: `merge_${mergeResult.sourceLayerNames.join("_")}.geojson`.replace(/\s+/g, "_") });
+  if (bufferResult) results.push({ geojson: bufferResult.geojson, filename: `buffer_${bufferResult.inputLayerName}_${bufferResult.distance}${bufferResult.unit}.geojson`.replace(/\s+/g, "_") });
+  if (unionResult) results.push({ geojson: unionResult.geojson, filename: `union_${unionResult.sourceLayerNames.join("_")}.geojson`.replace(/\s+/g, "_") });
+  if (dissolveResult) results.push({ geojson: dissolveResult.geojson, filename: `dissolve_${dissolveResult.inputLayerName}.geojson`.replace(/\s+/g, "_") });
 
   const hasResults = results.length > 0;
 
   const handleDownloadAll = () => {
     if (!hasResults) return;
-    for (const result of results) {
+    results.forEach(result => {
       const blob = new Blob([JSON.stringify(result.geojson, null, 2)], { type: "application/geo+json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -650,7 +629,7 @@ function DownloadAllResultsButton() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    }
+    });
     toast.success(`${results.length} file hasil analisis berhasil diunduh!`);
   };
 
@@ -658,17 +637,16 @@ function DownloadAllResultsButton() {
     <button
       onClick={handleDownloadAll}
       disabled={!hasResults}
-      className={`flex items-center gap-2 text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border-2 transition-all active:scale-95 ${
+      className={`flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest px-3 py-2.5 rounded-xl border transition-all active:scale-95 shadow-sm ${
         hasResults
-          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 shadow-lg shadow-emerald-500/10"
-          : "bg-muted/30 text-muted-foreground/30 border-muted/50 cursor-not-allowed"
+          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 shadow-emerald-500/10"
+          : "bg-black/5 dark:bg-white/5 text-navy/20 dark:text-white/10 border-white/5 cursor-not-allowed"
       }`}
-      title={hasResults ? `Unduh ${results.length} hasil analisis` : "Jalankan analisis dulu"}
     >
-      <DownloadCloud className="w-4 h-4" />
+      <DownloadCloud className={`w-3.5 h-3.5 ${hasResults ? 'animate-bounce' : ''}`} />
       <span>Unduh</span>
       {hasResults && (
-        <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-black bg-emerald-500 text-white">
+        <span className="flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full text-[8px] font-black bg-emerald-500 text-white ml-0.5">
           {results.length}
         </span>
       )}
