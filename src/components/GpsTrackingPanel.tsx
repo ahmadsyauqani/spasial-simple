@@ -1,4 +1,6 @@
 
+"use client";
+
 import { useState, useEffect, useRef } from "react";
 import { useMapContext } from "@/lib/MapContext";
 import { Navigation, Play, Square, Trash2, Save, Activity, MapPin, Loader2 } from "lucide-react";
@@ -7,6 +9,7 @@ import * as turf from "@turf/turf";
 import { saveLayer } from "@/lib/database";
 
 export function GpsTrackingPanel() {
+  const [isMounted, setIsMounted] = useState(false);
   const { 
     isTracking, setIsTracking, 
     trackingPath, setTrackingPath,
@@ -17,14 +20,16 @@ export function GpsTrackingPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const watchId = useRef<number | null>(null);
 
-  // Stop tracking on unmount
   useEffect(() => {
+    setIsMounted(true);
     return () => {
       if (watchId.current !== null) {
         navigator.geolocation.clearWatch(watchId.current);
       }
     };
   }, []);
+
+  if (!isMounted) return null;
 
   const startTracking = () => {
     if (!navigator.geolocation) {
