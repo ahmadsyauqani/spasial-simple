@@ -92,6 +92,7 @@ export function UploadDatasetPanel() {
   };
 
   return (
+    <div className="bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl rounded-2xl overflow-hidden flex flex-col transition-all duration-300">
       <div className="bg-cyan-pastel/80 dark:bg-[#25282c]/80 p-4 border-b border-border/50 flex flex-col gap-4">
         {/* Row 1: Title */}
         <div className="flex items-center gap-3">
