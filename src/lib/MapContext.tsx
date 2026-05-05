@@ -182,6 +182,8 @@ interface MapContextType {
   trackingDistance: number;
   setTrackingDistance: (val: number) => void;
   fetchLayers: () => Promise<void>;
+  isGpsPanelOpen: boolean;
+  setIsGpsPanelOpen: (val: boolean) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -280,6 +282,8 @@ export function MapProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const [isGpsPanelOpen, setIsGpsPanelOpen] = useState(false);
+
   return (
     <MapContext.Provider value={{ 
       layers, setLayers, 
@@ -312,7 +316,8 @@ export function MapProvider({ children }: { children: ReactNode }) {
       isTracking, setIsTracking,
       trackingPath, setTrackingPath,
       trackingDistance, setTrackingDistance,
-      fetchLayers
+      fetchLayers,
+      isGpsPanelOpen, setIsGpsPanelOpen
     }}>
       {children}
     </MapContext.Provider>
