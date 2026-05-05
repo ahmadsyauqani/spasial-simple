@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
+import { fetchActiveLayers } from "./database";
 
 type LayerStyle = {
   color: string;
@@ -177,9 +178,10 @@ interface MapContextType {
   isTracking: boolean;
   setIsTracking: (val: boolean) => void;
   trackingPath: [number, number][];
-  setTrackingPath: (path: [number, number][]) => void;
+  setTrackingPath: (path: any) => void;
   trackingDistance: number;
   setTrackingDistance: (val: number) => void;
+  fetchLayers: () => Promise<void>;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -269,6 +271,15 @@ export function MapProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const fetchLayers = async () => {
+    try {
+      const data = await fetchActiveLayers();
+      setLayers(data);
+    } catch (err) {
+      console.error("Gagal refresh layers:", err);
+    }
+  };
+
   return (
     <MapContext.Provider value={{ 
       layers, setLayers, 
@@ -300,7 +311,8 @@ export function MapProvider({ children }: { children: ReactNode }) {
       updatePdfOverlayMargins,
       isTracking, setIsTracking,
       trackingPath, setTrackingPath,
-      trackingDistance, setTrackingDistance
+      trackingDistance, setTrackingDistance,
+      fetchLayers
     }}>
       {children}
     </MapContext.Provider>

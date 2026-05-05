@@ -21,9 +21,9 @@ export default function Home() {
             <h1 className="text-xl font-bold tracking-tight">SAKAGIS</h1>
           </div>
 
-          {/* <div className="bg-card/95 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-xl">
+          <div className="bg-card/95 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-xl">
              <GpsTrackingPanel />
-          </div> */}
+          </div>
 
           <DigitizePanel />
           <UploadDatasetPanel />

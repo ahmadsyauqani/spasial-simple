@@ -35,7 +35,7 @@ export function PdfOverlayPanel() {
   }, []);
 
   // Temporary state for georeferencing
-  const [pendingOverlay, setPendingOverlay] = useState<{ url: string, name: string } | null>(null);
+  const [pendingOverlay, setPendingOverlay] = useState<{ url: string, name: string, nativeZoom?: number } | null>(null);
   const [bounds, setBounds] = useState({
     swLat: "", swLng: "",
     neLat: "", neLng: ""

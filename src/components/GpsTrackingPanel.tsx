@@ -47,7 +47,7 @@ export function GpsTrackingPanel() {
         const { latitude, longitude } = position.coords;
         const newPoint: [number, number] = [latitude, longitude];
 
-        setTrackingPath(prev => {
+        setTrackingPath((prev: any[]) => {
           const newPath = [...prev, newPoint];
           if (newPath.length > 1) {
             const line = turf.lineString(newPath.map(p => [p[1], p[0]]));

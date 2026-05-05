@@ -85,7 +85,7 @@ export function BufferAnalysisButton() {
         }
 
         // Jalankan buffer
-        const buffered = turf.buffer(geojson, bufferDistance, { units: bufferUnit });
+        const buffered: any = turf.buffer(geojson, bufferDistance, { units: bufferUnit });
         
         if (!buffered) {
           throw new Error("Gagal membuat zona buffer.");

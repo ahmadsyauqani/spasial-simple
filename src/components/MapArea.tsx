@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap, ImageOverlay, Polyline } from "react-leaflet";
+import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap, ImageOverlay, Polyline, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import * as turf from "@turf/turf";
 import proj4 from "proj4";
 import { useMapContext, BASEMAP_OPTIONS, BasemapType } from "@/lib/MapContext";
-import { Layers, LocateFixed, Loader2, Lock, Magnet } from "lucide-react";
+import { Layers, LocateFixed, Loader2, Lock, Unlock, Magnet, MousePointer2, Settings2, Crosshair, Activity, Maximize, Compass } from "lucide-react";
 
 // Fix for default Leaflet markers in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -133,7 +133,10 @@ function MapController() {
 }
 
 export default function MapArea() {
-  const { activeFeatureToZoom, layers, activeBasemap, setActiveBasemap, pdfOverlays } = useMapContext();
+  const { 
+    activeFeatureToZoom, layers, activeBasemap, setActiveBasemap, pdfOverlays,
+    isTracking, trackingPath
+  } = useMapContext();
   const currentBasemap = BASEMAP_OPTIONS[activeBasemap];
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -819,7 +822,10 @@ function PdfEditMarkers() {
 // ──────────────────────────────────────────────────────
 function CursorCoordinates() {
   const map = useMap();
-  const { layers, layerGeojsonCache } = useMapContext();
+  const { 
+    layers, layerGeojsonCache, 
+    isTracking, trackingPath 
+  } = useMapContext();
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [isLocked, setIsLocked] = useState(false);
   const [isSnapEnabled, setIsSnapEnabled] = useState(false);
