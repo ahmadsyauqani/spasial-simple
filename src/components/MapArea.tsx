@@ -258,9 +258,7 @@ export default function MapArea() {
         </button>
 
         {/* Offline Map Manager */}
-        <div className="bg-card text-card-foreground border rounded-full p-0.5 shadow-md flex items-center justify-center overflow-hidden">
-           <OfflineMapManager />
-        </div>
+        <OfflineMapManager />
       </div>
 
       <MapContainer

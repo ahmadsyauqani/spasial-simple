@@ -118,10 +118,10 @@ export function OfflineMapManager() {
     <div className="relative">
       <button 
         onClick={() => setIsPanelOpen(!isPanelOpen)}
-        className={`p-2 rounded-lg border transition-all ${isPanelOpen ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-white/5 border-white/5 text-gray-400 hover:text-white'}`}
+        className={`w-10 h-10 rounded-full border transition-all flex items-center justify-center ${isPanelOpen ? 'bg-orange-500/20 border-orange-500/50 text-orange-500' : 'bg-card text-card-foreground border-white/10 hover:bg-muted text-orange-500/70 hover:text-orange-500'}`}
         title="Offline Map Manager"
       >
-        <Database className="w-4 h-4" />
+        <Database className="w-5 h-5" />
       </button>
 
       {isPanelOpen && (
