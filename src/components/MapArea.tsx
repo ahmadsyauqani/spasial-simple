@@ -824,7 +824,7 @@ function CursorCoordinates() {
   const [isLocked, setIsLocked] = useState(false);
   const [isSnapEnabled, setIsSnapEnabled] = useState(false);
   const [snapPoint, setSnapPoint] = useState<{lat: number, lng: number} | null>(null);
-  const [zoom, setZoom] = useState(map.getZoom());
+  const [zoom, setZoom] = useState(13); // Default safely
   const [scale, setScale] = useState(0);
 
   const calculateScale = (z: number, l: number) => {
