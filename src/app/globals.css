@@ -69,24 +69,24 @@
 }
 
 .dark {
-  /* Dark Mode (Original Steel Style) */
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
+  /* Dark Mode (Softer Steel Style) */
+  --background: 240 10% 6%;
+  --foreground: 0 0% 90%;
+  --card: 240 10% 6%;
+  --card-foreground: 0 0% 90%;
+  --popover: 240 10% 6%;
+  --popover-foreground: 0 0% 90%;
   --primary: 32 95% 44%; /* Steel Orange */
   --primary-foreground: 240 5.9% 10%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
+  --secondary: 240 3.7% 12%;
+  --secondary-foreground: 0 0% 90%;
+  --muted: 240 3.7% 12%;
+  --muted-foreground: 240 5% 55%;
+  --accent: 240 3.7% 12%;
+  --accent-foreground: 0 0% 90%;
   --destructive: 0 62.8% 30.6%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
+  --border: 240 3.7% 12%;
+  --input: 240 3.7% 12%;
   --ring: 32 95% 44%;
 }
 

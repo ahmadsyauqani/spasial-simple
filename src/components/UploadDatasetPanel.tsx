@@ -106,10 +106,10 @@ export function UploadDatasetPanel() {
 
         {/* Row 2: Controls */}
         <div className="flex items-center justify-between gap-2">
-          <div className="relative flex items-center bg-black/5 dark:bg-black/40 rounded-xl p-1 border border-black/5 dark:border-white/5 shadow-inner grow max-w-[200px] overflow-hidden">
+          <div className="relative flex items-center bg-black/10 dark:bg-black/40 rounded-xl p-1 border border-black/5 dark:border-white/5 shadow-inner grow max-w-[200px] overflow-hidden">
             {/* Animated Background Pill */}
             <div 
-              className="absolute h-[calc(100%-8px)] bg-white dark:bg-primary shadow-lg shadow-black/5 dark:shadow-primary/30 rounded-lg transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+              className="absolute h-[calc(100%-8px)] bg-white dark:bg-orange-500/80 shadow-lg shadow-black/5 dark:shadow-orange-500/20 rounded-lg transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
               style={{ 
                 width: 'calc(33.33% - 5.33px)',
                 left: '4px',
@@ -126,8 +126,8 @@ export function UploadDatasetPanel() {
                 }}
                 className={`flex-1 relative z-10 px-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors duration-300 active:scale-95 ${
                   areaUnit === unit
-                    ? 'text-navy dark:text-primary-foreground'
-                    : 'text-navy/30 dark:text-muted-foreground/40 hover:text-navy/60 dark:hover:text-white'
+                    ? 'text-navy dark:text-white'
+                    : 'text-navy/30 dark:text-white/30 hover:text-navy/60 dark:hover:text-white/60'
                 }`}
               >
                 {unit === 'Ha' ? 'Ha' : unit === 'm2' ? 'm²' : 'km²'}
@@ -135,9 +135,9 @@ export function UploadDatasetPanel() {
             ))}
           </div>
           
-          <div className="flex items-center gap-1.5 bg-white/30 dark:bg-muted/30 px-3 py-2 rounded-xl border border-white/30 shadow-sm shrink-0">
-             <span className="text-[11px] font-black text-navy dark:text-white">{layers.length}</span>
-             <span className="text-[8px] font-black text-navy/40 dark:text-muted-foreground/60 tracking-widest uppercase">Layer</span>
+          <div className="flex items-center gap-1.5 bg-white/30 dark:bg-white/5 px-3 py-2 rounded-xl border border-white/30 dark:border-white/10 shadow-sm shrink-0">
+             <span className="text-[11px] font-black text-navy dark:text-white/80">{layers.length}</span>
+             <span className="text-[8px] font-black text-navy/40 dark:text-white/30 tracking-widest uppercase">Layer</span>
           </div>
         </div>
       </div>
@@ -425,7 +425,7 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
           className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-sm" 
           style={{ backgroundColor: style.fillColor }} 
         />
-        <span className="flex-1 font-bold text-[11px] text-navy dark:text-white truncate" title={layer.name}>
+        <span className="flex-1 font-bold text-[11px] text-navy dark:text-white/90 truncate" title={layer.name}>
           {layer.name}
         </span>
         <button onClick={onDelete} className="p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
