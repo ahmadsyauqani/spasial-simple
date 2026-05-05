@@ -8,6 +8,8 @@ import * as turf from "@turf/turf";
 import proj4 from "proj4";
 import { useMapContext, BASEMAP_OPTIONS, BasemapType } from "@/lib/MapContext";
 import { Layers, LocateFixed, Loader2, Lock, Unlock, Magnet, MousePointer2, Settings2, Crosshair, Activity, Maximize, Compass } from "lucide-react";
+import { createOfflineTileLayer } from "@/lib/OfflineTileLayer";
+import { OfflineMapManager } from "./OfflineMapManager";
 
 // Fix for default Leaflet markers in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -132,6 +134,23 @@ function MapController() {
   return null;
 }
 
+function TileLayerWithOffline({ url, attribution }: { url: string, attribution: string }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    const layer = createOfflineTileLayer(url, {
+      attribution,
+      maxZoom: 20,
+    });
+    layer.addTo(map);
+    return () => {
+      map.removeLayer(layer);
+    };
+  }, [map, url, attribution]);
+
+  return null;
+}
+
 export default function MapArea() {
   const { 
     activeFeatureToZoom, layers, activeBasemap, setActiveBasemap, pdfOverlays,
@@ -237,6 +256,11 @@ export default function MapArea() {
             <LocateFixed className={`w-5 h-5 transition-colors ${locationActive ? 'text-blue-400' : 'text-primary'}`} />
           )}
         </button>
+
+        {/* Offline Map Manager */}
+        <div className="bg-card text-card-foreground border rounded-full p-0.5 shadow-md flex items-center justify-center overflow-hidden">
+           <OfflineMapManager />
+        </div>
       </div>
 
       <MapContainer
@@ -246,11 +270,10 @@ export default function MapArea() {
         className="w-full h-full"
         style={{ background: "transparent" }}
       >
-        <TileLayer
+        <TileLayerWithOffline 
           key={activeBasemap}
-          attribution={currentBasemap.attribution}
-          url={currentBasemap.url}
-          maxZoom={20}
+          url={currentBasemap.url} 
+          attribution={currentBasemap.attribution} 
         />
         <ZoomControl position="bottomright" />
         <MapController />

@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { fetchActiveLayers } from "./database";
+import { db } from "./offlineDb";
+import { useEffect } from "react";
 
 type LayerStyle = {
   color: string;
@@ -181,9 +183,10 @@ interface MapContextType {
   setTrackingPath: (path: any) => void;
   trackingDistance: number;
   setTrackingDistance: (val: number) => void;
-  fetchLayers: () => Promise<void>;
   isGpsPanelOpen: boolean;
   setIsGpsPanelOpen: (val: boolean) => void;
+  fetchLayers: () => Promise<void>;
+  BASEMAP_OPTIONS: Record<BasemapType, { name: string; url: string; attribution: string }>;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -203,6 +206,26 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [unionResult, setUnionResult] = useState<UnionResult>(null);
   const [dissolveResult, setDissolveResult] = useState<DissolveResult>(null);
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
+
+  // Load cached layers from IndexedDB on startup
+  useEffect(() => {
+    const loadOfflineData = async () => {
+      try {
+        const cachedLayers = await db.layers.toArray();
+        if (cachedLayers.length > 0) {
+          const newCache: Record<string, any> = {};
+          cachedLayers.forEach(l => {
+            newCache[l.id] = l.geojson;
+          });
+          setLayerGeojsonCache(prev => ({ ...prev, ...newCache }));
+          console.log(`Loaded ${cachedLayers.length} layers from offline cache.`);
+        }
+      } catch (err) {
+        console.error("Gagal memuat data offline:", err);
+      }
+    };
+    loadOfflineData();
+  }, []);
   const [mapViewState, setMapViewState] = useState<MapViewState>({ center: [-0.789275, 113.921327], zoom: 5 });
   const [activeBasemap, setActiveBasemap] = useState<BasemapType>("dark");
   const [activeDigitizingLayerId, setActiveDigitizingLayerId] = useState<string | null>(null);
@@ -240,6 +263,17 @@ export function MapProvider({ children }: { children: ReactNode }) {
 
   const cacheLayerGeojson = (id: string, geojson: any) => {
     setLayerGeojsonCache((prev) => ({ ...prev, [id]: geojson }));
+    
+    // Save to Offline DB
+    const layer = layers.find(l => l.id === id);
+    if (layer) {
+      db.layers.put({
+        id,
+        name: layer.name,
+        geojson,
+        lastUpdated: Date.now()
+      }).catch(err => console.error("Gagal simpan cache offline:", err));
+    }
   };
 
   const setZoomFeature = (geojson: any) => {
@@ -317,7 +351,8 @@ export function MapProvider({ children }: { children: ReactNode }) {
       trackingPath, setTrackingPath,
       trackingDistance, setTrackingDistance,
       fetchLayers,
-      isGpsPanelOpen, setIsGpsPanelOpen
+      isGpsPanelOpen, setIsGpsPanelOpen,
+      BASEMAP_OPTIONS
     }}>
       {children}
     </MapContext.Provider>
