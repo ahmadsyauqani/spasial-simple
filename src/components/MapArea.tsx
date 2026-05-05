@@ -1212,9 +1212,6 @@ function LayerFeature({ layer }: { layer: any }) {
         } catch (e) {
           console.warn("Gagal menghitung luas Turf:", e);
         }
-      } else if (error) {
-        console.error("Fetch Geometry Error:", JSON.stringify(error, null, 2));
-        toast.error("Gagal memuat geometri: " + (error.message || JSON.stringify(error)));
       }
     }
     
