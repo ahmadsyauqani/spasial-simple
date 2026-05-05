@@ -93,15 +93,16 @@ export function UploadDatasetPanel() {
 
   return (
     <div className="bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl rounded-2xl overflow-hidden flex flex-col transition-all duration-300">
-      <div className="bg-cyan-pastel/80 dark:bg-[#25282c]/80 px-4 py-3.5 border-b border-border/50 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="p-1.5 bg-white/20 dark:bg-orange-500/20 rounded-lg shadow-sm">
+      <div className="bg-cyan-pastel/80 dark:bg-[#25282c]/80 px-4 py-4 border-b border-border/50 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="p-2 bg-white/30 dark:bg-orange-500/20 rounded-xl shadow-sm border border-white/20">
             <UploadCloud className="w-4 h-4 text-navy dark:text-orange-500" />
           </div>
-          <h3 className="text-[11px] font-black uppercase tracking-[0.1em] text-navy dark:text-white">Dataset & Analisis</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-navy dark:text-white whitespace-nowrap">Dataset & Analisis</h3>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-white/20 dark:bg-black/20 rounded-xl p-1 gap-1 border border-white/10 shadow-inner z-50">
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center bg-black/5 dark:bg-black/40 rounded-xl p-1 gap-1 border border-black/5 dark:border-white/5 shadow-inner">
             {(['Ha', 'm2', 'km2'] as const).map((unit) => (
               <button
                 key={unit}
@@ -109,17 +110,23 @@ export function UploadDatasetPanel() {
                   e.stopPropagation();
                   setAreaUnit(unit);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-200 active:scale-90 ${
+                className={`relative px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-300 active:scale-90 ${
                   areaUnit === unit
-                    ? 'bg-white dark:bg-primary text-navy dark:text-primary-foreground shadow-md'
-                    : 'text-navy/40 dark:text-muted-foreground/50 hover:text-navy dark:hover:text-white hover:bg-white/10'
+                    ? 'bg-white dark:bg-primary text-navy dark:text-primary-foreground shadow-[0_2px_10px_rgba(0,0,0,0.1)] dark:shadow-primary/40'
+                    : 'text-navy/30 dark:text-muted-foreground/40 hover:text-navy dark:hover:text-white'
                 }`}
               >
                 {unit === 'Ha' ? 'Ha' : unit === 'm2' ? 'm²' : 'km²'}
+                {areaUnit === unit && (
+                  <span className="absolute inset-0 rounded-lg ring-1 ring-black/5 dark:ring-white/10 pointer-events-none" />
+                )}
               </button>
             ))}
           </div>
-          <Badge variant="secondary" className="bg-white/20 text-navy dark:bg-muted dark:text-white border-none h-7 px-3 rounded-lg font-black text-[10px]">{layers.length} LAYER</Badge>
+          <div className="hidden sm:flex items-center gap-1 bg-white/20 dark:bg-muted/30 px-2.5 py-1.5 rounded-xl border border-white/20">
+             <span className="text-[10px] font-black text-navy dark:text-white">{layers.length}</span>
+             <span className="text-[8px] font-black text-navy/40 dark:text-muted-foreground/60 tracking-widest uppercase">Layer</span>
+          </div>
         </div>
       </div>
 
