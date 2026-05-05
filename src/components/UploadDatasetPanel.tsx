@@ -399,7 +399,8 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
     return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
   };
 
-  retur    <div 
+  return (
+    <div 
       className="flex flex-col gap-2 bg-white/50 dark:bg-white/5 p-3 rounded-xl border border-border/50 shadow-sm hover:shadow-md hover:border-primary/30 transition-all group cursor-pointer"
       onDoubleClick={() => {
         if (layer.id) triggerZoomToLayer(layer.id);
