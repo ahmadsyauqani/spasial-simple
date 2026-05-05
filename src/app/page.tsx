@@ -3,10 +3,10 @@
 import dynamic from "next/dynamic";
 import MapWrapper from "@/components/MapWrapper";
 import { CommandPalette } from "@/components/CommandPalette";
-import { UploadDatasetPanel } from "@/components/UploadDatasetPanel";
-import { DigitizePanel } from "@/components/DigitizePanel";
-import { GpsTrackingPanel } from "@/components/GpsTrackingPanel";
 import { MapProvider } from "@/lib/MapContext";
+const GpsTrackingPanel = dynamic(() => import("@/components/GpsTrackingPanel").then(mod => mod.GpsTrackingPanel), { ssr: false });
+const DigitizePanel = dynamic(() => import("@/components/DigitizePanel").then(mod => mod.DigitizePanel), { ssr: false });
+const UploadDatasetPanel = dynamic(() => import("@/components/UploadDatasetPanel").then(mod => mod.UploadDatasetPanel), { ssr: false });
 
 export default function Home() {
   return (
