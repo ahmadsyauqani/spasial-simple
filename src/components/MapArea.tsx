@@ -220,10 +220,10 @@ export default function MapArea() {
       <div className="absolute bottom-28 sm:bottom-6 left-4 sm:left-6 z-[1000] flex items-end gap-2">
         {/* Basemap Selector */}
         <div className="flex flex-col gap-2 group">
-          <button className="bg-card text-card-foreground border rounded-full p-2.5 shadow-md hover:bg-muted transition-colors flex items-center justify-center">
+          <button className="bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 rounded-full p-2.5 shadow-2xl hover:bg-muted/80 transition-colors flex items-center justify-center">
             <Layers className="w-5 h-5 text-primary" />
           </button>
-          <div className="absolute bottom-full left-0 mb-2 bg-card/95 backdrop-blur-md border rounded-xl p-2 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col gap-1 min-w-[150px]">
+          <div className="absolute bottom-full left-0 mb-2 bg-card/70 backdrop-blur-xl border border-border/50 rounded-xl p-2 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col gap-1 min-w-[150px]">
             <div className="text-xs font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider mb-1">Peta Dasar</div>
             {(Object.keys(BASEMAP_OPTIONS) as BasemapType[]).map((key) => (
               <button
@@ -241,12 +241,12 @@ export default function MapArea() {
         <button
           onClick={handleLocateMe}
           disabled={isLocating}
-          className={`bg-card text-card-foreground border rounded-full p-2.5 shadow-md transition-all flex items-center justify-center ${
+          className={`bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 rounded-full p-2.5 shadow-2xl transition-all flex items-center justify-center ${
             isLocating
               ? 'animate-pulse border-blue-500/50'
               : locationActive
                 ? 'border-blue-500/70 bg-blue-500/15 shadow-blue-500/20 shadow-lg'
-                : 'hover:bg-muted'
+                : 'hover:bg-muted/80'
           }`}
           title={locationActive ? "Nonaktifkan lokasi" : "Temukan lokasi saya"}
         >
@@ -1028,7 +1028,7 @@ function CursorCoordinates() {
       {isLocked && coords && (
         <Marker position={[coords.lat, coords.lng]} icon={customIcon} />
       )}
-      <div className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/95 border-primary/50 shadow-primary/20' : 'bg-card/90 border-border/50'} backdrop-blur-md border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
+      <div className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/80 border-primary/50 shadow-primary/20' : 'bg-card/70 border-border/50'} backdrop-blur-xl border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-2xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
         <div className="absolute -top-10 left-0 flex gap-2 sm:static sm:mr-4">
           <button 
             onClick={() => setIsSnapEnabled(!isSnapEnabled)}

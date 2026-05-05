@@ -189,10 +189,10 @@ export function DigitizePanel() {
 
   return (
     <>
-      <div className="bg-card text-card-foreground border border-border rounded-2xl shadow-xl overflow-hidden flex flex-col transition-all duration-300">
-        {/* Sidebar Header - Colorful Lavender */}
+      <div className="bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300">
+        {/* Sidebar Header - Colorful Lavender Glass */}
         <div 
-          className="bg-lavender dark:bg-[#25282c] px-4 py-3.5 border-b border-border flex items-center justify-between cursor-pointer hover:opacity-90 transition-all"
+          className="bg-lavender/80 dark:bg-[#25282c]/80 px-4 py-3.5 border-b border-border/50 flex items-center justify-between cursor-pointer hover:opacity-90 transition-all"
           onClick={() => setIsMainExpanded(!isMainExpanded)}
         >
            <div className="flex items-center gap-2.5">

@@ -92,8 +92,8 @@ export function UploadDatasetPanel() {
   };
 
   return (
-    <div className="bg-card text-card-foreground border border-border shadow-xl rounded-2xl overflow-hidden flex flex-col transition-all duration-300">
-      <div className="bg-cyan-pastel dark:bg-[#25282c] px-4 py-3.5 border-b border-border flex items-center justify-between">
+    <div className="bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl rounded-2xl overflow-hidden flex flex-col transition-all duration-300">
+      <div className="bg-cyan-pastel/80 dark:bg-[#25282c]/80 px-4 py-3.5 border-b border-border/50 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 bg-white/20 dark:bg-orange-500/20 rounded-lg shadow-sm">
             <UploadCloud className="w-4 h-4 text-navy dark:text-orange-500" />

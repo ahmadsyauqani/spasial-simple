@@ -128,37 +128,37 @@ export function OfflineMapManager() {
     <div className="relative">
       <button 
         onClick={() => setIsPanelOpen(!isPanelOpen)}
-        className={`w-10 h-10 rounded-full border transition-all flex items-center justify-center ${isPanelOpen ? 'bg-orange-500/20 border-orange-500/50 text-orange-500' : 'bg-card text-card-foreground border-white/10 hover:bg-muted text-orange-500/70 hover:text-orange-500'}`}
+        className={`w-10 h-10 rounded-full border transition-all flex items-center justify-center shadow-2xl ${isPanelOpen ? 'bg-orange-500/20 border-orange-500/50 text-orange-500' : 'bg-card/70 backdrop-blur-xl text-card-foreground border-border/50 hover:bg-muted/80 text-orange-500/70 hover:text-orange-500'}`}
         title="Offline Map Manager"
       >
         <Database className="w-5 h-5" />
       </button>
 
       {isPanelOpen && (
-        <div className="absolute bottom-12 left-0 w-64 bg-[#0f1115] border border-white/10 rounded-xl p-4 shadow-2xl z-[2000] animate-in slide-in-from-bottom-2">
+        <div className="absolute bottom-12 left-0 w-64 bg-card/70 backdrop-blur-xl border border-border/50 rounded-xl p-4 shadow-2xl z-[2000] animate-in slide-in-from-bottom-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[10px] font-black text-white uppercase tracking-widest">Offline Manager</h3>
-            <button onClick={() => setIsPanelOpen(false)}><X className="w-3 h-3 text-gray-500" /></button>
+            <h3 className="text-[10px] font-black text-navy dark:text-white uppercase tracking-widest">Offline Manager</h3>
+            <button onClick={() => setIsPanelOpen(false)}><X className="w-3 h-3 text-muted-foreground" /></button>
           </div>
 
           <div className="space-y-4">
-            <div className="bg-white/5 rounded-lg p-3">
-              <div className="flex items-center justify-between text-[8px] font-bold text-gray-500 uppercase mb-1">
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="flex items-center justify-between text-[8px] font-bold text-muted-foreground uppercase mb-1">
                 <span>Storage Use</span>
-                <span className="text-amber-400">{stats.tileCount} Tiles</span>
+                <span className="text-amber-500 font-black">{stats.tileCount} Tiles</span>
               </div>
-              <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                 <div className="h-full bg-amber-500" style={{ width: `${Math.min(100, stats.tileCount / 10)}%` }}></div>
               </div>
             </div>
 
             {isDownloading ? (
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-[9px] text-amber-400 animate-pulse">
+                <div className="flex items-center gap-2 text-[9px] text-amber-500 animate-pulse">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   <span>Downloading Tiles... {progress}/{total}</span>
                 </div>
-                <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                   <div className="h-full bg-amber-500 transition-all" style={{ width: `${(progress/total)*100}%` }}></div>
                 </div>
               </div>
@@ -166,14 +166,14 @@ export function OfflineMapManager() {
               <div className="grid grid-cols-2 gap-2">
                 <button 
                   onClick={downloadCurrentView}
-                  className="flex flex-col items-center justify-center gap-2 p-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-all"
+                  className="flex flex-col items-center justify-center gap-2 p-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-all shadow-lg shadow-indigo-500/20"
                 >
                   <DownloadCloud className="w-4 h-4" />
                   <span className="text-[8px] font-black uppercase">Simpan Area</span>
                 </button>
                 <button 
                   onClick={clearCache}
-                  className="flex flex-col items-center justify-center gap-2 p-3 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 rounded-lg transition-all"
+                  className="flex flex-col items-center justify-center gap-2 p-3 bg-muted/50 hover:bg-red-500/20 text-muted-foreground hover:text-red-500 rounded-lg transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span className="text-[8px] font-black uppercase">Hapus Cache</span>
