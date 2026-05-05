@@ -531,7 +531,6 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
         </div>
       </div>
     </div>
-    </div>
   );
 }
 
