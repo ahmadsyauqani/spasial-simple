@@ -156,7 +156,8 @@ export async function savePdfOverlay(projectId: string, overlay: any) {
       url: overlay.url,
       bounds: overlay.bounds,
       opacity: overlay.opacity,
-      visible: overlay.visible
+      visible: overlay.visible,
+      native_zoom: overlay.native_zoom
     }])
     .select()
     .single();

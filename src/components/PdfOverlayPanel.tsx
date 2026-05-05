@@ -104,7 +104,7 @@ export function PdfOverlayPanel() {
       const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
       const page = await pdf.getPage(1);
       
-      const viewport = page.getViewport({ scale: 2.0 });
+      const viewport = page.getViewport({ scale: 4.0 });
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
       canvas.height = viewport.height;
@@ -113,7 +113,18 @@ export function PdfOverlayPanel() {
       if (context) {
         await (page as any).render({ canvasContext: context, viewport }).promise;
         const imageUrl = canvas.toDataURL("image/png");
-        setPendingOverlay({ url: imageUrl, name: file.name });
+        
+        // Hitung "Native Zoom" ideal berdasarkan rentang koordinat
+        let nativeZoom = 18;
+        if (autoCoords) {
+          const latDiff = Math.abs(parseFloat(autoCoords.neLat) - parseFloat(autoCoords.swLat));
+          if (latDiff < 0.001) nativeZoom = 19;
+          else if (latDiff < 0.01) nativeZoom = 17;
+          else if (latDiff < 0.1) nativeZoom = 15;
+          else nativeZoom = 12;
+        }
+
+        setPendingOverlay({ url: imageUrl, name: file.name, nativeZoom });
         toast.success("PDF berhasil di-render. Silakan masukkan koordinat.");
       }
     } catch (err: any) {
@@ -160,7 +171,8 @@ export function PdfOverlayPanel() {
         blendMode: 'multiply',
         rotation: 0,
         scale: 1,
-        margins: { top: 0, right: 0, bottom: 0, left: 0 }
+        margins: { top: 0, right: 0, bottom: 0, left: 0 },
+        native_zoom: pendingOverlay.nativeZoom || 18
       };
 
       // 2. Save to DB
@@ -173,6 +185,9 @@ export function PdfOverlayPanel() {
 
       if (mapInstance) {
         mapInstance.fitBounds(savedOverlay.bounds as any);
+        if (savedOverlay.native_zoom) {
+          mapInstance.setZoom(savedOverlay.native_zoom);
+        }
       }
     } catch (err: any) {
       toast.error("Gagal menyimpan overlay: " + err.message);
