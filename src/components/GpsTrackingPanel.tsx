@@ -123,9 +123,12 @@ export function GpsTrackingPanel() {
         <Navigation className={`w-4 h-4 ${isTracking ? 'animate-pulse text-white' : ''}`} />
       </button>
 
-      {/* The Collapsible Panel (Fixed at Top-Right) */}
+      {/* The Collapsible Panel (Forced at Top-Right) */}
       {isOpen && (
-        <div className="fixed top-4 right-4 w-[calc(100vw-2rem)] sm:w-80 bg-[#0f1115]/98 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] animate-in slide-in-from-right-4 fade-in duration-300 z-[1002]">
+        <div 
+          className="fixed top-4 bg-[#0f1115]/98 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] animate-in slide-in-from-right-4 fade-in duration-300 z-[9999]"
+          style={{ right: '1rem', width: '320px' }}
+        >
           <div className="space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
