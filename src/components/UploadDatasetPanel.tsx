@@ -399,188 +399,137 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
     return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
   };
 
-  return (
-    <div 
-      className="flex items-start gap-2 text-sm bg-card p-2 rounded-md border shadow-xs group cursor-pointer hover:border-primary/50 transition-colors relative"
+  retur    <div 
+      className="flex flex-col gap-2 bg-white/50 dark:bg-white/5 p-3 rounded-xl border border-border/50 shadow-sm hover:shadow-md hover:border-primary/30 transition-all group cursor-pointer"
       onDoubleClick={() => {
         if (layer.id) triggerZoomToLayer(layer.id);
       }}
-      title="Double klik untuk Zoom (Extend) ke layer ini"
+      title="Double klik untuk Zoom ke layer ini"
     >
-      <div 
-        className="w-3 h-3 rounded-full shrink-0 border mt-1" 
-        style={{ backgroundColor: style.fillColor, opacity: Math.max(0.2, Number(style.fillOpacity) || 0.2) }} 
-      />
-      <span className="flex-1 font-medium break-all whitespace-normal text-xs leading-relaxed">{layer.name}</span>
-      
-      <div className="flex items-start gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2 bg-card/90 backdrop-blur pl-2 rounded-l-md shadow-[0_0_10px_theme(colors.card)]">
-        <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "up"); setTimeout(syncOrder, 100); }} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground">
-          <ArrowUp className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "down"); setTimeout(syncOrder, 100); }} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground">
-          <ArrowDown className="w-3.5 h-3.5" />
-        </button>
-        
-        <Popover>
-          <PopoverTrigger className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground outline-none">
-            <Info className="w-3.5 h-3.5" />
-          </PopoverTrigger>
-          <PopoverContent className="w-72 p-4 flex flex-col gap-3 bg-popover text-popover-foreground border shadow-lg z-50 rounded-lg">
-            <h4 className="font-semibold text-sm border-b pb-2">Informasi Layer</h4>
-            <div className="flex flex-col gap-1.5 text-xs">
-              <div className="flex justify-between items-start gap-2">
-                <span className="text-muted-foreground shrink-0">Nama File:</span>
-                <span className="font-mono text-right break-all">{layer.name}</span>
-              </div>
-
-              <div className="flex flex-col gap-1 pt-2 border-t border-border mt-1">
-                 <span className="text-[10px] uppercase font-bold text-muted-foreground/80 mb-1 tracking-wider">Perbandingan Luas Area</span>
-                 <div className="flex justify-between items-center gap-2">
-                   <span className="text-muted-foreground shrink-0">WGS 84 (Sferis)</span>
-                   <span className="font-mono font-bold text-primary text-right">{metrics ? formatUnit(metrics.wgs84_sqm) : "Menghitung..."}</span>
-                 </div>
-                 {metrics && (
-                   <>
-                     <div className="flex justify-between items-center gap-2">
-                       <span className="text-muted-foreground shrink-0" title={`UTM Planar Zone: EPSG ${metrics.utm_epsg}`}>UTM ({metrics.utm_epsg})</span>
-                       <span className="font-mono text-right font-medium">{metrics.utm_sqm ? formatUnit(metrics.utm_sqm) : "N/A"}</span>
-                     </div>
-                     {metrics.tm3_epsg && (
-                       <div className="flex justify-between items-center gap-2">
-                         <span className="text-muted-foreground shrink-0" title={`TM-3 Cartesian Zone: EPSG ${metrics.tm3_epsg}`}>BPN TM-3 ({metrics.tm3_epsg})</span>
-                         <span className="font-mono text-right font-medium">{metrics.tm3_sqm ? formatUnit(metrics.tm3_sqm) : "N/A"}</span>
-                       </div>
-                     )}
-                   </>
-                 )}
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Tipe Data:</span>
-                <span className="font-medium text-primary">{layer.geometry_type || 'Custom Vektor'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Proyeksi (CRS):</span>
-                <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded text-foreground">EPSG:4326 (WGS 84)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Waktu Unggah:</span>
-                <span className="text-right">{new Date(layer.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-            </div>
-            
-            <div className="pt-2 border-t flex flex-col gap-2">
-              <span className="text-xs font-semibold text-muted-foreground">Kolom Atribut ({availableKeys.length}):</span>
-              <div className="flex flex-wrap gap-1">
-                {availableKeys.length > 0 ? availableKeys.map(k => (
-                  <Badge key={k} variant="secondary" className="text-[9px] px-1.5 py-0 font-mono tracking-tight">{k}</Badge>
-                )) : <span className="text-[10px] italic text-muted-foreground">Tidak memiliki atribut.</span>}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-        
-        <Popover>
-          <PopoverTrigger className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground outline-none">
-            <Palette className="w-3.5 h-3.5" />
-          </PopoverTrigger>
-          <PopoverContent className="w-56 p-4 flex flex-col gap-4 bg-popover text-popover-foreground border shadow-lg z-50">
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold">Warna Layer</label>
-              <div className="flex items-center gap-2">
-                <input 
-                  type="color" 
-                  value={style.color} 
-                  onChange={handleColorChange} 
-                  className="w-8 h-8 rounded shrink-0 cursor-pointer p-0 border-0 bg-transparent"
-                />
-                <span className="text-xs text-muted-foreground uppercase font-mono">{style.color}</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold">Transparansi ({Math.round(style.fillOpacity * 100)}%)</label>
-              <Slider 
-                value={[Number(style.fillOpacity) * 100 || 20]} 
-                max={100} 
-                step={5}
-                onValueChange={(val: any) => {
-                  const numVal = Array.isArray(val) ? val[0] : val;
-                  updateLayerStyle(layer.id, { ...style, fillOpacity: (numVal || 0) / 100 });
-                }}
-                onPointerUp={() => handleOpacityChange([style.fillOpacity * 100])}
-                onTouchEnd={() => handleOpacityChange([style.fillOpacity * 100])}
-              />
-            </div>
-            {availableKeys.length > 0 && (
-              <div className="flex flex-col gap-2 pt-2 border-t border-border">
-                <label className="text-xs font-semibold">Gabungkan Berdasarkan (Dissolve)</label>
-                <select 
-                  value={style.dissolve_key || 'none'} 
-                  onChange={handleDissolveChange}
-                  className="w-full text-xs p-2 rounded bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="none">-- Tampilkan Normal (Patahan) --</option>
-                  {availableKeys.map(k => <option key={k} value={k}>{k}</option>)}
-                </select>
-                <span className="text-[10px] text-muted-foreground leading-tight">Menyatukan seluruh patahan kotak map ke dalam bentuk 1 wilayah jika atributnya bernilai sama.</span>
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
-
-        {availableKeys.length > 0 && (
-          <Popover>
-            <PopoverTrigger className={`p-1 hover:bg-muted rounded outline-none transition-colors ${layer.style?.definition_query ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'}`} title="Definition Query (Filter)">
-              <Filter className="w-3.5 h-3.5" />
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-4 flex flex-col gap-3 bg-popover text-popover-foreground border shadow-lg z-50">
-              <h4 className="text-sm font-semibold border-b pb-1">Definition Query</h4>
-              <p className="text-[10px] text-muted-foreground leading-tight mb-1">
-                Filter fitur yang tampil di peta berdasarkan atribut.
-              </p>
-              
-              <div className="flex flex-col gap-2">
-                <select value={defField} onChange={e => setDefField(e.target.value)} className="w-full text-xs p-2 rounded bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-primary">
-                  <option value="">-- Pilih Field --</option>
-                  {availableKeys.map(k => <option key={k} value={k}>{k}</option>)}
-                </select>
-                <select value={defOperator} onChange={e => setDefOperator(e.target.value)} className="w-full text-xs p-2 rounded bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-primary">
-                  <option value="=">Sama Dengan (=)</option>
-                  <option value="!=">Tidak Sama (!=)</option>
-                  <option value=">">Lebih Besar {'>'}</option>
-                  <option value="<">Lebih Kecil {'<'}</option>
-                  <option value=">=">Lebih/Sama {'>='}</option>
-                  <option value="<=">Kurang/Sama {'<='}</option>
-                  <option value="LIKE">Berisi Teks (LIKE)</option>
-                </select>
-                <input 
-                  type="text" 
-                  value={defValue} 
-                  onChange={e => setDefValue(e.target.value)} 
-                  placeholder="Nilai kriteria..." 
-                  className="w-full text-xs p-2 rounded bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              <div className="flex gap-2 mt-1">
-                <Button size="sm" onClick={handleApplyDefinitionQuery} disabled={!defField || !defValue} className="w-full h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Terapkan
-                </Button>
-                {layer.style?.definition_query && (
-                  <Button size="sm" variant="destructive" onClick={handleClearDefinitionQuery} className="h-8 px-2 text-xs">
-                    Hapus
-                  </Button>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
-
-        <ExportLayerDialog layer={layer} />
-
-        <button onClick={onDelete} className="p-1 hover:bg-red-500/10 rounded text-muted-foreground hover:text-red-500">
+      <div className="flex items-center gap-3">
+        <div 
+          className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-sm" 
+          style={{ backgroundColor: style.fillColor }} 
+        />
+        <span className="flex-1 font-bold text-[11px] text-navy dark:text-white truncate" title={layer.name}>
+          {layer.name}
+        </span>
+        <button onClick={onDelete} className="p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
+      
+      <div className="flex items-center justify-between pt-2 border-t border-border/30">
+        <div className="flex items-center bg-muted/30 dark:bg-black/20 rounded-lg p-0.5">
+          <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "up"); setTimeout(syncOrder, 100); }} className="p-1.5 hover:bg-white dark:hover:bg-muted rounded-md text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
+            <ArrowUp className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "down"); setTimeout(syncOrder, 100); }} className="p-1.5 hover:bg-white dark:hover:bg-muted rounded-md text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
+            <ArrowDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Popover>
+            <PopoverTrigger className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none">
+              <Info className="w-3.5 h-3.5" />
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-4 flex flex-col gap-3 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
+              <h4 className="font-black text-[11px] uppercase tracking-widest border-b border-border/50 pb-2 text-navy dark:text-white">Informasi Layer</h4>
+              <div className="flex flex-col gap-1.5 text-[11px]">
+                <div className="flex justify-between items-start gap-2">
+                  <span className="text-muted-foreground shrink-0">Nama File:</span>
+                  <span className="font-bold text-navy dark:text-white text-right break-all">{layer.name}</span>
+                </div>
+
+                <div className="flex flex-col gap-1 pt-2 border-t border-border/50 mt-1">
+                   <span className="text-[9px] uppercase font-black text-muted-foreground/60 mb-1 tracking-wider">Metrik Area</span>
+                   <div className="flex justify-between items-center gap-2">
+                     <span className="text-muted-foreground shrink-0">WGS 84</span>
+                     <span className="font-black text-primary text-right">{metrics ? formatUnit(metrics.wgs84_sqm) : "..."}</span>
+                   </div>
+                   {metrics && (
+                     <>
+                       <div className="flex justify-between items-center gap-2">
+                         <span className="text-muted-foreground shrink-0 text-[9px]">UTM ({metrics.utm_epsg})</span>
+                         <span className="font-bold text-navy dark:text-white text-right">{metrics.utm_sqm ? formatUnit(metrics.utm_sqm) : "-"}</span>
+                       </div>
+                       {metrics.tm3_epsg && (
+                         <div className="flex justify-between items-center gap-2">
+                           <span className="text-muted-foreground shrink-0 text-[9px]">TM-3 ({metrics.tm3_epsg})</span>
+                           <span className="font-bold text-navy dark:text-white text-right">{metrics.tm3_sqm ? formatUnit(metrics.tm3_sqm) : "-"}</span>
+                         </div>
+                       )}
+                     </>
+                   )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          <Popover>
+            <PopoverTrigger className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none">
+              <Palette className="w-3.5 h-3.5" />
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-4 flex flex-col gap-4 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warna Vektor</label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="color" 
+                    value={style.color} 
+                    onChange={handleColorChange} 
+                    className="w-8 h-8 rounded-lg shrink-0 cursor-pointer p-0 border-0 bg-transparent"
+                  />
+                  <span className="text-xs text-navy dark:text-white font-black">{style.color}</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transparansi ({Math.round(style.fillOpacity * 100)}%)</label>
+                <Slider 
+                  value={[Number(style.fillOpacity) * 100 || 20]} 
+                  max={100} 
+                  step={5}
+                  onValueChange={(val: any) => {
+                    const numVal = Array.isArray(val) ? val[0] : val;
+                    updateLayerStyle(layer.id, { ...style, fillOpacity: (numVal || 0) / 100 });
+                  }}
+                  onPointerUp={() => handleOpacityChange([style.fillOpacity * 100])}
+                  onTouchEnd={() => handleOpacityChange([style.fillOpacity * 100])}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {availableKeys.length > 0 && (
+            <Popover>
+              <PopoverTrigger className={`p-1.5 hover:bg-muted rounded-lg transition-all outline-none ${layer.style?.definition_query ? 'text-primary bg-primary/10' : 'text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground'}`} title="Filter Layer">
+                <Filter className="w-3.5 h-3.5" />
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-4 flex flex-col gap-3 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
+                <h4 className="text-[11px] font-black uppercase tracking-widest border-b border-border/50 pb-2 text-navy dark:text-white">Filter Layer</h4>
+                <div className="flex flex-col gap-2">
+                  <select value={defField} onChange={e => setDefField(e.target.value)} className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white outline-none focus:ring-1 focus:ring-primary">
+                    <option value="">-- Pilih Kolom --</option>
+                    {availableKeys.map(k => <option key={k} value={k}>{k}</option>)}
+                  </select>
+                  <input 
+                    type="text" 
+                    value={defValue} 
+                    onChange={e => setDefValue(e.target.value)} 
+                    placeholder="Masukkan Nilai..." 
+                    className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <Button size="sm" onClick={handleApplyDefinitionQuery} className="bg-primary text-primary-foreground font-bold h-8 rounded-lg">Terapkan Filter</Button>
+              </PopoverContent>
+            </Popover>
+          )}
+
+          <ExportLayerDialog layer={layer} />
+        </div>
+      </div>
+    </div>
     </div>
   );
 }
@@ -592,9 +541,9 @@ function LayoutPetaButton() {
   return (
     <button
       onClick={() => setLayoutComposerOpen(true)}
-      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30 transition-colors"
+      className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
     >
-      <LayoutGrid className="w-3.5 h-3.5" />
+      <LayoutGrid className="w-4 h-4" />
       Layout Peta
     </button>
   );
@@ -670,17 +619,17 @@ function DownloadAllResultsButton() {
     <button
       onClick={handleDownloadAll}
       disabled={!hasResults}
-      className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${
+      className={`flex items-center gap-2 text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border-2 transition-all active:scale-95 ${
         hasResults
-          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/25 cursor-pointer"
-          : "bg-muted/30 text-muted-foreground/40 border-border/30 cursor-not-allowed"
+          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 shadow-lg shadow-emerald-500/10"
+          : "bg-muted/30 text-muted-foreground/30 border-muted/50 cursor-not-allowed"
       }`}
       title={hasResults ? `Unduh ${results.length} hasil analisis` : "Jalankan analisis dulu"}
     >
-      <DownloadCloud className="w-3.5 h-3.5" />
+      <DownloadCloud className="w-4 h-4" />
       <span>Unduh</span>
       {hasResults && (
-        <span className="flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold bg-emerald-500/30 text-emerald-300">
+        <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-black bg-emerald-500 text-white">
           {results.length}
         </span>
       )}

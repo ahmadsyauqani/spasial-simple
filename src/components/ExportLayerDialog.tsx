@@ -147,16 +147,16 @@ export function ExportLayerDialog({ layer }: { layer: any }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground outline-none transition-colors" title="Export & Unduh Peta">
+      <DialogTrigger className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground outline-none transition-all" title="Export & Unduh Peta">
         <DownloadCloud className="w-3.5 h-3.5" />
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md bg-card text-card-foreground border-border">
+      <DialogContent className="sm:max-w-md bg-card/70 backdrop-blur-xl text-card-foreground border-border/50 shadow-2xl rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 font-black uppercase tracking-widest text-navy dark:text-white">
             <DownloadCloud className="w-5 h-5 text-primary" />
-            Export & Reprojection Studio
+            Export Studio
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-navy/60 dark:text-muted-foreground text-xs leading-relaxed">
             Ubah proyeksi data Anda dari standar satelit (WGS84) menjadi format metrik teknis (UTM / TM-3 BPN) untuk keperluan pengukuran akurat.
           </DialogDescription>
         </DialogHeader>
@@ -167,27 +167,27 @@ export function ExportLayerDialog({ layer }: { layer: any }) {
             <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
               <PopoverTrigger
                 aria-expanded={popoverOpen}
-                className="w-full flex justify-between items-center text-sm font-normal text-left truncate overflow-hidden h-10 px-3 py-2 rounded-md bg-background border border-border text-foreground hover:bg-accent hover:text-accent-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm"
+                className="w-full flex justify-between items-center text-xs font-bold text-left truncate overflow-hidden h-11 px-4 py-2 rounded-xl bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white hover:bg-white/80 dark:hover:bg-white/5 outline-none focus:ring-2 focus:ring-primary shadow-sm transition-all"
               >
                 <span className="truncate">{selectedLabel || "Pilih Proyeksi..."}</span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </PopoverTrigger>
-              <PopoverContent className="w-[380px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Cari Proyeksi... (Misal: 32748 atau Jabar)" />
+              <PopoverContent className="w-[380px] p-0 bg-card/95 backdrop-blur-xl border-border/50 shadow-2xl rounded-xl overflow-hidden" align="start">
+                <Command className="bg-transparent">
+                  <CommandInput placeholder="Cari Proyeksi... (Misal: 32748 atau Jabar)" className="text-xs h-12 border-none focus:ring-0" />
                   <CommandList className="max-h-[300px]">
                     <CommandEmpty>EPSG Code Kosong.</CommandEmpty>
                     {PROJECTIONS.map((group) => (
-                      <CommandGroup key={group.group} heading={group.group}>
+                      <CommandGroup key={group.group} heading={<span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{group.group}</span>}>
                         {group.items.map((item) => (
                           <CommandItem
                             key={item.value}
-                            value={item.label} // Kita taruh isi di value supaya bisa diSearch lewat filter cmdk
+                            value={item.label}
                             onSelect={() => {
                               setSelectedProjection(item.value);
                               setPopoverOpen(false);
                             }}
-                            className="cursor-pointer"
+                            className="cursor-pointer text-xs py-2.5 px-3 aria-selected:bg-primary/10 aria-selected:text-primary transition-colors"
                           >
                             <Check
                               className={cn(
@@ -207,25 +207,25 @@ export function ExportLayerDialog({ layer }: { layer: any }) {
           </div>
 
           {selectedProjection === "custom" && (
-            <div className="flex flex-col gap-2 mt-2 p-3 bg-muted/50 border rounded-md">
-              <label className="text-xs font-semibold text-muted-foreground">Ketik Kode EPSG Custom</label>
+            <div className="flex flex-col gap-2 mt-2 p-3 bg-primary/5 dark:bg-white/5 border border-primary/20 rounded-xl">
+              <label className="text-[10px] font-black uppercase tracking-widest text-primary/70">Ketik Kode EPSG Custom</label>
               <Input 
                 value={customEpsg} 
                 onChange={(e) => setCustomEpsg(e.target.value)}
                 placeholder="Contoh: 32648"
-                className="bg-background"
+                className="h-10 bg-white/50 dark:bg-black/20 border-border/50 rounded-lg text-navy dark:text-white font-bold"
                 autoFocus
               />
-              <span className="text-[10px] text-muted-foreground">Parameter proyeksi akan ditarik otomatis dari satelit epsg.io</span>
+              <span className="text-[9px] text-muted-foreground italic">Parameter proyeksi akan ditarik otomatis dari satelit epsg.io</span>
             </div>
           )}
         </div>
 
-        <DialogFooter className="border-t pt-4">
-          <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isExporting}>
+        <DialogFooter className="border-t border-border/30 pt-4 gap-2">
+          <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isExporting} className="rounded-xl text-xs font-bold hover:bg-muted/50">
             Tutup
           </Button>
-          <Button onClick={handleExport} disabled={isExporting || (!activeEpsg)} className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]">
+          <Button onClick={handleExport} disabled={isExporting || (!activeEpsg)} className="bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-[11px] h-10 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95">
             {isExporting ? <span className="flex items-center"><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menghitung...</span> : <span className="flex items-center"><DownloadCloud className="w-4 h-4 mr-2" /> Konversi & Unduh</span>}
           </Button>
         </DialogFooter>
