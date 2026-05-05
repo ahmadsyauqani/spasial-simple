@@ -42,21 +42,27 @@ export function OfflineMapManager() {
         const nw = bounds.getNorthWest();
         const se = bounds.getSouthEast();
         
-        // Simple tile calculation
+        // Accurate tile calculation with padding
         const xMin = long2tile(nw.lng, z);
         const xMax = long2tile(se.lng, z);
         const yMin = lat2tile(nw.lat, z);
         const yMax = lat2tile(se.lat, z);
 
-        for (let x = xMin; x <= xMax; x++) {
-          for (let y = yMin; y <= yMax; y++) {
+        for (let x = Math.min(xMin, xMax); x <= Math.max(xMin, xMax); x++) {
+          for (let y = Math.min(yMin, yMax); y <= Math.max(yMin, yMax); y++) {
             tilesToDownload.push({ z, x, y });
           }
         }
       });
 
-      if (tilesToDownload.length > 500) {
-        if (!confirm(`Area ini mengandung ${tilesToDownload.length} kepingan peta. Lanjutkan download?`)) {
+      if (tilesToDownload.length === 0) {
+        toast.error("Tidak ada kepingan peta yang ditemukan di area ini.");
+        setIsDownloading(false);
+        return;
+      }
+
+      if (tilesToDownload.length > 800) {
+        if (!window.confirm(`Area ini mengandung ${tilesToDownload.length} kepingan peta. Lanjutkan download?`)) {
           setIsDownloading(false);
           return;
         }
@@ -74,19 +80,23 @@ export function OfflineMapManager() {
             .replace('{z}', t.z.toString())
             .replace('{x}', t.x.toString())
             .replace('{y}', t.y.toString())
-            .replace('{s}', 'a') // default subdomain
+            .replace('{s}', 'a')
             .replace('{r}', '');
 
           try {
-            const resp = await fetch(url);
-            const blob = await resp.blob();
-            await db.tiles.put({
-              id: tileId,
-              tile: blob,
-              expires: Date.now() + 1000 * 60 * 60 * 24 * 30 // 30 days
-            });
+            // Use 'no-cors' if standard fetch fails, but for blobs we usually need CORS
+            // Some servers allow this, others don't.
+            const resp = await fetch(url, { mode: 'cors', credentials: 'omit' });
+            if (resp.ok) {
+              const blob = await resp.blob();
+              await db.tiles.put({
+                id: tileId,
+                tile: blob,
+                expires: Date.now() + 1000 * 60 * 60 * 24 * 30
+              });
+            }
           } catch (e) {
-            console.error("Gagal download tile:", tileId);
+            console.warn("Gagal simpan tile:", tileId, e);
           }
         }
         count++;
