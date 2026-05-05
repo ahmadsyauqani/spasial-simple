@@ -216,20 +216,20 @@ export default function MapArea() {
 
   return (
     <div className="w-full h-full bg-background absolute inset-0 z-0">
-      {/* Bottom-left controls: Basemap + My Location */}
-      <div className="absolute bottom-28 sm:bottom-6 left-4 sm:left-6 z-[1000] flex items-end gap-2">
+      {/* Bottom-left controls: Basemap + My Location (Moved to clear sidebar) */}
+      <div className="absolute bottom-28 sm:bottom-6 left-4 sm:left-[340px] z-[1000] flex items-end gap-2 transition-all duration-300">
         {/* Basemap Selector */}
         <div className="flex flex-col gap-2 group">
           <button className="bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 rounded-full p-2.5 shadow-2xl hover:bg-muted/80 transition-colors flex items-center justify-center">
             <Layers className="w-5 h-5 text-primary" />
           </button>
-          <div className="absolute bottom-full left-0 mb-2 bg-card/70 backdrop-blur-xl border border-border/50 rounded-xl p-2 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col gap-1 min-w-[150px]">
-            <div className="text-xs font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider mb-1">Peta Dasar</div>
+          <div className="absolute bottom-full left-0 mb-3 bg-card/70 backdrop-blur-xl border border-border/50 rounded-xl p-1.5 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col gap-0.5 min-w-[140px]">
+            <div className="text-[9px] font-black text-muted-foreground px-2 py-1 uppercase tracking-widest mb-1 opacity-50">Peta Dasar</div>
             {(Object.keys(BASEMAP_OPTIONS) as BasemapType[]).map((key) => (
               <button
                 key={key}
                 onClick={() => setActiveBasemap(key)}
-                className={`text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeBasemap === key ? 'bg-primary/20 text-primary font-medium' : 'hover:bg-white/10 text-card-foreground'}`}
+                className={`text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeBasemap === key ? 'bg-primary/20 text-primary' : 'hover:bg-muted/80 text-card-foreground/80 hover:text-card-foreground'}`}
               >
                 {BASEMAP_OPTIONS[key].name}
               </button>
