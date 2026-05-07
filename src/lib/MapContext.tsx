@@ -338,7 +338,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   };
 
   const [isGpsPanelOpen, setIsGpsPanelOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   return (
     <MapContext.Provider value={{ 
