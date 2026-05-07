@@ -37,6 +37,14 @@ export function registerProjections() {
     proj4.defs(`EPSG:${z.epsg}`, def);
     proj4.defs(`TM3_ZONA_${z.zone}`, def);
   });
+
+  // UTM Zones for Indonesia (46 to 54)
+  for (let i = 46; i <= 54; i++) {
+    // North
+    proj4.defs(`EPSG:${32600 + i}`, `+proj=utm +zone=${i} +datum=WGS84 +units=m +no_defs`);
+    // South
+    proj4.defs(`EPSG:${32700 + i}`, `+proj=utm +zone=${i} +south +datum=WGS84 +units=m +no_defs`);
+  }
 }
 
 /**

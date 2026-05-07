@@ -187,6 +187,20 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
                       <option value="EPSG:4326">WGS 84 (Geografis)</option>
                       <option value="EPSG:3857">Web Mercator (Meter)</option>
                     </optgroup>
+                    <optgroup label="WGS 84 / UTM (Utara)" className="bg-slate-950">
+                      {[46, 47, 48, 49, 50, 51, 52, 53, 54].map(z => (
+                        <option key={`utm-n-${z}`} value={`EPSG:${32600 + z}`}>
+                          UTM Zone {z}N (EPSG:{32600 + z})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="WGS 84 / UTM (Selatan)" className="bg-slate-950">
+                      {[46, 47, 48, 49, 50, 51, 52, 53, 54].map(z => (
+                        <option key={`utm-s-${z}`} value={`EPSG:${32700 + z}`}>
+                          UTM Zone {z}S (EPSG:{32700 + z})
+                        </option>
+                      ))}
+                    </optgroup>
                     <optgroup label="TM-3 Indonesia (BPN)" className="bg-slate-950">
                       {TM3_ZONES.map((z) => (
                         <option key={z.epsg} value={`EPSG:${z.epsg}`}>
