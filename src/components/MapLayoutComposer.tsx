@@ -91,7 +91,12 @@ export default function MapLayoutComposer() {
   };
 
   return typeof document !== "undefined" && createPortal(
-    <div className="layout-composer-overlay">
+    <>
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] animate-in fade-in duration-300" 
+        onClick={() => setLayoutComposerOpen(false)}
+      />
+      <div className="layout-composer-overlay">
       {/* ── HEADER ── */}
       <div className="layout-header">
         <div className="layout-header-left">
