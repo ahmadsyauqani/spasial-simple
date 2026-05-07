@@ -222,7 +222,8 @@ export default function MapLayoutComposer() {
           <span>Mengekspor layout peta...</span>
         </div>
       )}
-    </div>,
+    </div>
+    </>,
     document.body
   );
 }
