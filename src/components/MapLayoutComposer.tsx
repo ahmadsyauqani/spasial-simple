@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useRef, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
+import "@/app/layout-composer.css";
 import {
   X, Map, LayoutGrid, Download, FileImage, FileText, Plus,
   Compass, Ruler, Type, Info, Square, Minus, ZoomIn, ZoomOut,
@@ -88,7 +90,7 @@ export default function MapLayoutComposer() {
     }
   };
 
-  return (
+  return typeof document !== "undefined" && createPortal(
     <div className="layout-composer-overlay">
       {/* ── HEADER ── */}
       <div className="layout-header">
@@ -215,7 +217,8 @@ export default function MapLayoutComposer() {
           <span>Mengekspor layout peta...</span>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
 
