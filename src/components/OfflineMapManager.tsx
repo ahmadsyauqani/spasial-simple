@@ -135,7 +135,10 @@ export function OfflineMapManager() {
       </button>
 
       {isPanelOpen && (
-        <div className="absolute bottom-12 left-0 w-64 bg-card/70 backdrop-blur-xl border border-border/50 rounded-xl p-4 shadow-2xl z-[2000] animate-in slide-in-from-bottom-2">
+        <div 
+          className="absolute left-0 w-[280px] bg-card/70 backdrop-blur-xl border border-border/50 rounded-xl p-4 shadow-2xl animate-in slide-in-from-bottom-2"
+          style={{ bottom: '85px', zIndex: 9999 }}
+        >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[10px] font-black text-navy dark:text-white uppercase tracking-widest">Offline Manager</h3>
             <button onClick={() => setIsPanelOpen(false)}><X className="w-3 h-3 text-muted-foreground" /></button>

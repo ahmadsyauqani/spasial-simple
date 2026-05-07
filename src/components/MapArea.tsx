@@ -217,7 +217,10 @@ export default function MapArea() {
   return (
     <div className="w-full h-full bg-background absolute inset-0 z-0">
       {/* Bottom-left controls: Basemap + My Location (Moved to clear sidebar) */}
-      <div className="absolute bottom-28 sm:bottom-6 left-4 sm:left-[340px] z-[1000] flex items-end gap-2 transition-all duration-300">
+      <div 
+        className="absolute bottom-28 sm:bottom-6 left-4 sm:left-[340px] flex items-end gap-2 transition-all duration-300"
+        style={{ zIndex: 9999 }}
+      >
         {/* Basemap Selector */}
         <div className="flex flex-col gap-2 group">
           <button className="bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 rounded-full p-2.5 shadow-2xl hover:bg-muted/80 transition-colors flex items-center justify-center">
@@ -1028,7 +1031,7 @@ function CursorCoordinates() {
       {isLocked && coords && (
         <Marker position={[coords.lat, coords.lng]} icon={customIcon} />
       )}
-      <div className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/80 border-primary/50 shadow-primary/20' : 'bg-card/70 border-border/50'} backdrop-blur-xl border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-2xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
+      <div className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[400] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/80 border-primary/50 shadow-primary/20' : 'bg-card/70 border-border/50'} backdrop-blur-xl border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-2xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
         <div className="absolute -top-10 left-0 flex gap-2 sm:static sm:mr-4">
           <button 
             onClick={() => setIsSnapEnabled(!isSnapEnabled)}
