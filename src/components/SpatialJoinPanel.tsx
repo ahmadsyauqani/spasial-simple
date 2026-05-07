@@ -101,9 +101,9 @@ export function SpatialJoinButton() {
           let resultValue = count;
 
           if (joinType === 'sum' && numericField) {
-            resultValue = internalFeatures.reduce((acc, f) => acc + (Number(f.properties?.[numericField]) || 0), 0);
+            resultValue = internalFeatures.reduce((acc: number, f: any) => acc + (Number(f.properties?.[numericField]) || 0), 0);
           } else if (joinType === 'avg' && numericField) {
-            const sum = internalFeatures.reduce((acc, f) => acc + (Number(f.properties?.[numericField]) || 0), 0);
+            const sum = internalFeatures.reduce((acc: number, f: any) => acc + (Number(f.properties?.[numericField]) || 0), 0);
             resultValue = count > 0 ? sum / count : 0;
           }
 

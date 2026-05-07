@@ -614,7 +614,7 @@ function LayoutPetaButton() {
 }
 
 function DownloadAllResultsButton() {
-  const { overlapResult, clipResult, mergeResult, bufferResult, unionResult, dissolveResult } = useMapContext();
+  const { overlapResult, clipResult, mergeResult, bufferResult, unionResult, dissolveResult, spatialJoinResult } = useMapContext();
   const results: { geojson: any; filename: string }[] = [];
 
   if (overlapResult) results.push({ geojson: overlapResult.geojson, filename: `overlap_${overlapResult.layerAName}_x_${overlapResult.layerBName}.geojson`.replace(/\s+/g, "_") });
