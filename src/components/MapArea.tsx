@@ -290,6 +290,7 @@ export default function MapArea() {
         <UnionLayer />
         <DissolveLayer />
         <SpatialJoinLayer />
+        <SearchResultMarker />
 
         {/* User Location Marker */}
         {userLocation && locationActive && (
@@ -1465,3 +1466,58 @@ function SpatialJoinLayer() {
     />
   );
 }
+
+// Komponen penanda hasil pencarian
+function SearchResultMarker() {
+  const { searchResult, setSearchResult } = useMapContext();
+  const map = useMap();
+
+  useEffect(() => {
+    if (searchResult) {
+      map.flyTo([searchResult.lat, searchResult.lng], 16, {
+        duration: 2,
+        easeLinearity: 0.25
+      });
+    }
+  }, [searchResult, map]);
+
+  if (!searchResult) return null;
+
+  const searchIcon = L.divIcon({
+    html: `
+      <div class="relative flex items-center justify-center pointer-events-none">
+        <div class="absolute w-10 h-10 bg-indigo-500/30 rounded-full animate-ping"></div>
+        <div class="relative z-10 p-2 bg-indigo-600 rounded-full shadow-2xl border-2 border-white">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+        </div>
+      </div>
+    `,
+    className: '',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+  });
+
+  return (
+    <Marker 
+      position={[searchResult.lat, searchResult.lng]} 
+      icon={searchIcon}
+    >
+      <Popup className="custom-popup-dark">
+        <div className="p-2 min-w-[150px]">
+          <h4 className="text-[10px] font-black uppercase text-indigo-400 tracking-widest mb-1">Lokasi Ditemukan</h4>
+          <p className="text-xs text-white leading-relaxed mb-3">{searchResult.label}</p>
+          <button 
+            onClick={() => setSearchResult(null)}
+            className="w-full py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-bold text-white transition-colors border border-white/10"
+          >
+            Hapus Penanda
+          </button>
+        </div>
+      </Popup>
+    </Marker>
+  );
+}
+

@@ -7,12 +7,16 @@ import { UploadDatasetPanel } from "@/components/UploadDatasetPanel";
 import { DigitizePanel } from "@/components/DigitizePanel";
 import { GpsTrackingTrigger, GpsTrackingPanel } from "@/components/GpsTrackingPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SearchControl } from "@/components/SearchControl";
 
 export default function Home() {
   return (
     <main className="relative w-full h-screen overflow-hidden">
       {/* Background Map: Fills 100% of viewport */}
       <MapWrapper />
+
+      {/* Search Control - Top Center */}
+      <SearchControl />
 
       {/* Floating UI Elements */}
       <div className="absolute top-4 left-4 z-10 w-[calc(100vw-2rem)] sm:w-80 flex flex-col gap-2 sm:gap-4 max-h-[85vh] sm:max-h-[calc(100vh-2rem)] overflow-y-auto pr-1">
@@ -50,3 +54,4 @@ export default function Home() {
     </main>
   );
 }
+

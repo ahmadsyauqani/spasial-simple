@@ -114,6 +114,11 @@ export type DissolveResult = {
   dissolveProperty: string | null;
   featureCount: number;
 } | null;
+export type SearchResult = {
+  lat: number;
+  lng: number;
+  label: string;
+} | null;
 
 export type SpatialJoinResult = {
   geojson: any; // FeatureCollection of target polygons with new attribute
@@ -157,6 +162,8 @@ interface MapContextType {
   setDissolveResult: (result: DissolveResult) => void;
   spatialJoinResult: SpatialJoinResult;
   setSpatialJoinResult: (result: SpatialJoinResult) => void;
+  searchResult: SearchResult;
+  setSearchResult: (result: SearchResult) => void;
   isLayoutComposerOpen: boolean;
   setLayoutComposerOpen: (open: boolean) => void;
   mapViewState: MapViewState;
@@ -218,6 +225,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [unionResult, setUnionResult] = useState<UnionResult>(null);
   const [dissolveResult, setDissolveResult] = useState<DissolveResult>(null);
   const [spatialJoinResult, setSpatialJoinResult] = useState<SpatialJoinResult>(null);
+  const [searchResult, setSearchResult] = useState<SearchResult>(null);
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
 
   // Load cached layers from IndexedDB on startup
@@ -348,6 +356,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
       unionResult, setUnionResult, 
       dissolveResult, setDissolveResult, 
       spatialJoinResult, setSpatialJoinResult,
+      searchResult, setSearchResult,
       isLayoutComposerOpen, setLayoutComposerOpen, 
       mapViewState, setMapViewState, 
       activeBasemap, setActiveBasemap,
