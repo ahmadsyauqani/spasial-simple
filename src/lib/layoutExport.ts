@@ -25,57 +25,33 @@ export async function exportToPNG(
              el.classList?.contains("element-controls");
     },
     onclone: (clonedDoc) => {
-      // html2canvas fails on modern CSS color functions like lab() or oklch()
-      
-      // 1. Remove Vercel Toolbar
-      clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar]').forEach(el => el.remove());
+      // THE "ABSOLUTE ZERO" ISOLATION STRATEGY
+      const paper = clonedDoc.querySelector('.layout-paper');
+      if (!paper) return;
 
-      // 2. Sanitize all stylesheets if possible
-      for (let i = 0; i < clonedDoc.styleSheets.length; i++) {
-        try {
-          const sheet = clonedDoc.styleSheets[i];
-          const rules = sheet.cssRules || sheet.rules;
-          if (rules) {
-            // If we can access rules, we can't easily edit them but we can disable the sheet 
-            // if it contains problematic content and replace it with a sanitized version.
-            // However, cross-origin prevents this.
-          }
-        } catch (e) {
-          // Cross-origin stylesheet, we can't read rules.
-          // Let's just remove Next.js static CSS as it's the most likely source of lab()
-          const link = clonedDoc.styleSheets[i].ownerNode as HTMLLinkElement;
-          if (link && link.tagName === 'LINK' && link.href.includes('_next/static/css')) {
-             link.remove();
-          }
-        }
-      }
+      clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar], script').forEach(el => el.remove());
 
-      // 3. Sanitize ALL existing style tags (which are same-origin)
-      const styles = clonedDoc.getElementsByTagName("style");
-      for (let i = 0; i < styles.length; i++) {
-        try {
-          const s = styles[i];
-          if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
-            s.innerHTML = s.innerHTML
-              .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
-              .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
-          }
-        } catch (e) { }
-      }
+      const styles = Array.from(clonedDoc.getElementsByTagName("style"));
+      const links = Array.from(clonedDoc.getElementsByTagName("link"));
 
-      // 4. Sanitize inline styles on all elements
-      clonedDoc.querySelectorAll("*").forEach((el: any) => {
-        if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
-          el.style.cssText = el.style.cssText
+      styles.forEach(s => {
+        if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
+          s.innerHTML = s.innerHTML
             .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
             .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
         }
       });
-      
-      // 5. Injeksi style darurat untuk elemen layout agar tetap terlihat meski CSS utama dihapus
-      const emergencyStyle = clonedDoc.createElement('style');
-      emergencyStyle.innerHTML = `
-        .layout-paper { background: white !important; color: black !important; }
+
+      links.forEach(l => {
+        if (l.rel === 'stylesheet' && (l.href.includes('_next') || l.href.includes('vercel'))) {
+          l.remove();
+        }
+      });
+
+      const style = clonedDoc.createElement('style');
+      style.innerHTML = `
+        .layout-paper { background: white !important; color: black !important; position: relative !important; display: block !important; margin: 0 !important; }
+        .layout-element { position: absolute !important; }
         .bg-white { background-color: white !important; }
         .text-black { color: black !important; }
         .border { border: 1px solid #ccc !important; }
@@ -83,8 +59,19 @@ export async function exportToPNG(
         .h-full { height: 100% !important; }
         table { border-collapse: collapse !important; width: 100% !important; }
         td { border: 1px solid #eee !important; padding: 2px !important; }
+        .text-center { text-align: center !important; }
+        .font-bold { font-weight: bold !important; }
+        * { color-scheme: light !important; color: black; }
       `;
-      clonedDoc.head.appendChild(emergencyStyle);
+      clonedDoc.head.appendChild(style);
+
+      paper.querySelectorAll("*").forEach((el: any) => {
+        if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
+          el.style.cssText = el.style.cssText
+            .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
+            .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
+        }
+      });
     }
   });
 
@@ -120,51 +107,41 @@ export async function exportToPDF(
              el.classList?.contains("element-controls");
     },
     onclone: (clonedDoc) => {
-      // html2canvas fails on modern CSS color functions like lab() or oklch()
+      // THE "ABSOLUTE ZERO" ISOLATION STRATEGY
       
-      // 1. Remove Vercel Toolbar
-      clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar]').forEach(el => el.remove());
+      // 1. Give the paper a unique identifier if it doesn't have one
+      const paper = clonedDoc.querySelector('.layout-paper');
+      if (!paper) return;
 
-      // 2. Sanitize all stylesheets if possible
-      for (let i = 0; i < clonedDoc.styleSheets.length; i++) {
-        try {
-          const sheet = clonedDoc.styleSheets[i];
-          const rules = sheet.cssRules || sheet.rules;
-          if (rules) { }
-        } catch (e) {
-          const link = clonedDoc.styleSheets[i].ownerNode as HTMLLinkElement;
-          if (link && link.tagName === 'LINK' && link.href.includes('_next/static/css')) {
-             link.remove();
-          }
-        }
-      }
+      // 2. Remove Vercel Toolbar and other intrusive UI elements
+      clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar], script').forEach(el => el.remove());
 
-      // 3. Sanitize ALL existing style tags
-      const styles = clonedDoc.getElementsByTagName("style");
-      for (let i = 0; i < styles.length; i++) {
-        try {
-          const s = styles[i];
-          if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
-            s.innerHTML = s.innerHTML
-              .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
-              .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
-          }
-        } catch (e) { }
-      }
+      // 3. NUCLEAR: Remove all link tags and style tags that are not essential
+      // We keep styles that DON'T contain lab/oklch
+      const styles = Array.from(clonedDoc.getElementsByTagName("style"));
+      const links = Array.from(clonedDoc.getElementsByTagName("link"));
 
-      // 4. Sanitize inline styles on all elements
-      clonedDoc.querySelectorAll("*").forEach((el: any) => {
-        if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
-          el.style.cssText = el.style.cssText
+      styles.forEach(s => {
+        if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
+          // If it has problematic colors, sanitize it aggressively
+          s.innerHTML = s.innerHTML
             .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
             .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
         }
       });
-      
-      // 5. Injeksi style darurat untuk elemen layout agar tetap terlihat meski CSS utama dihapus
-      const emergencyStyle = clonedDoc.createElement('style');
-      emergencyStyle.innerHTML = `
-        .layout-paper { background: white !important; color: black !important; }
+
+      links.forEach(l => {
+        if (l.rel === 'stylesheet' && (l.href.includes('_next') || l.href.includes('vercel'))) {
+          // These are the most likely sources. We REMOVE them.
+          l.remove();
+        }
+      });
+
+      // 4. Injeksi style darurat yang SANGAT LENGKAP agar layout tetap berfungsi
+      const style = clonedDoc.createElement('style');
+      style.innerHTML = `
+        .layout-paper { background: white !important; color: black !important; position: relative !important; display: block !important; margin: 0 !important; }
+        .layout-element { position: absolute !important; }
         .bg-white { background-color: white !important; }
         .text-black { color: black !important; }
         .border { border: 1px solid #ccc !important; }
@@ -172,8 +149,21 @@ export async function exportToPDF(
         .h-full { height: 100% !important; }
         table { border-collapse: collapse !important; width: 100% !important; }
         td { border: 1px solid #eee !important; padding: 2px !important; }
+        .text-center { text-align: center !important; }
+        .font-bold { font-weight: bold !important; }
+        /* Reset any inherit lab() colors */
+        * { color-scheme: light !important; color: black; }
       `;
-      clonedDoc.head.appendChild(emergencyStyle);
+      clonedDoc.head.appendChild(style);
+
+      // 5. Sanitize all elements in the paper
+      paper.querySelectorAll("*").forEach((el: any) => {
+        if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
+          el.style.cssText = el.style.cssText
+            .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
+            .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
+        }
+      });
     }
   });
 
