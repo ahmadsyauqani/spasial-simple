@@ -70,7 +70,7 @@ export function SearchControl() {
   };
 
   return (
-    <div className="absolute top-4 right-4 z-[9999] w-[calc(100vw-6rem)] sm:w-[350px]">
+    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-[450px]">
       <form 
         onSubmit={handleSearch}
         className="relative group"
@@ -89,7 +89,7 @@ export function SearchControl() {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => query.length > 0 && setShowResults(true)}
           placeholder="Cari alamat atau koordinat..."
-          className="block w-full pl-10 pr-12 py-2.5 bg-card/60 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl text-sm text-white placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/30 transition-all"
+          className="block w-full pl-10 pr-12 py-2.5 bg-card/80 backdrop-blur-3xl border border-white/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] shadow-indigo-500/10 text-sm text-white placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40 transition-all hover:border-white/30"
         />
 
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
