@@ -584,7 +584,7 @@ function LayoutPetaButton() {
       onClick={() => setLayoutComposerOpen(true)}
       className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest px-3 py-2.5 rounded-xl bg-white/5 dark:bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-navy/70 dark:text-white/80 hover:text-primary transition-all active:scale-95 group shadow-sm"
     >
-      <LayoutGrid className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+      <img src="/logo-sakagis.png" alt="S" className="w-4 h-4 object-contain mix-blend-multiply dark:invert dark:mix-blend-screen group-hover:scale-110 transition-transform" />
       <span>Layout</span>
     </button>
   );

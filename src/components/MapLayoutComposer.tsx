@@ -100,7 +100,9 @@ export default function MapLayoutComposer() {
       {/* ── HEADER ── */}
       <div className="layout-header">
         <div className="layout-header-left">
-          <LayoutGrid className="w-5 h-5 text-orange-400" />
+          <div className="p-0.5 bg-orange-500/10 rounded-lg overflow-hidden">
+            <img src="/logo-sakagis.png" alt="S" className="w-7 h-7 object-contain dark:invert dark:mix-blend-screen" />
+          </div>
           <span className="layout-header-title">Map Layout Composer</span>
           <span className="layout-header-subtitle">
             {PAPER_SIZES[state.paperSize]?.label ?? `Custom (${state.customWidth}×${state.customHeight} mm)`}
