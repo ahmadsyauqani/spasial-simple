@@ -115,6 +115,14 @@ export type DissolveResult = {
   featureCount: number;
 } | null;
 
+export type SpatialJoinResult = {
+  geojson: any; // FeatureCollection of target polygons with new attribute
+  targetLayerName: string;
+  sourceLayerName: string;
+  joinType: 'count' | 'sum' | 'avg';
+  featureCount: number;
+} | null;
+
 export type MapViewState = {
   center: [number, number]; // [lat, lng]
   zoom: number;
@@ -147,6 +155,8 @@ interface MapContextType {
   setUnionResult: (result: UnionResult) => void;
   dissolveResult: DissolveResult;
   setDissolveResult: (result: DissolveResult) => void;
+  spatialJoinResult: SpatialJoinResult;
+  setSpatialJoinResult: (result: SpatialJoinResult) => void;
   isLayoutComposerOpen: boolean;
   setLayoutComposerOpen: (open: boolean) => void;
   mapViewState: MapViewState;
@@ -207,6 +217,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [bufferResult, setBufferResult] = useState<BufferResult>(null);
   const [unionResult, setUnionResult] = useState<UnionResult>(null);
   const [dissolveResult, setDissolveResult] = useState<DissolveResult>(null);
+  const [spatialJoinResult, setSpatialJoinResult] = useState<SpatialJoinResult>(null);
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
 
   // Load cached layers from IndexedDB on startup
@@ -336,6 +347,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
       bufferResult, setBufferResult, 
       unionResult, setUnionResult, 
       dissolveResult, setDissolveResult, 
+      spatialJoinResult, setSpatialJoinResult,
       isLayoutComposerOpen, setLayoutComposerOpen, 
       mapViewState, setMapViewState, 
       activeBasemap, setActiveBasemap,

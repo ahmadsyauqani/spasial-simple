@@ -25,6 +25,7 @@ import { MergeAnalysisButton } from "./MergeAnalysisPanel";
 import { BufferAnalysisButton } from "./BufferAnalysisPanel";
 import { UnionAnalysisButton } from "./UnionAnalysisPanel";
 import { DissolveAnalysisButton } from "./DissolveAnalysisPanel";
+import { SpatialJoinButton } from "./SpatialJoinPanel";
 
 const PdfOverlayPanel = dynamic(() => import("./PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
 
@@ -199,13 +200,14 @@ export function UploadDatasetPanel() {
 
       {/* Analysis Tools & More (The Grid) */}
       <div className="flex flex-col gap-3 pt-2 border-t border-border/30">
-        <div className="grid grid-cols-6 gap-1.5 p-1.5 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner">
+        <div className="grid grid-cols-4 gap-1.5 p-1.5 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner">
           <BufferAnalysisButton />
           <ClipAnalysisButton />
           <UnionAnalysisButton />
           <MergeAnalysisButton />
           <OverlapAnalysisButton />
           <DissolveAnalysisButton />
+          <SpatialJoinButton />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <LayoutPetaButton />
@@ -600,6 +602,7 @@ function DownloadAllResultsButton() {
   if (bufferResult) results.push({ geojson: bufferResult.geojson, filename: `buffer_${bufferResult.inputLayerName}_${bufferResult.distance}${bufferResult.unit}.geojson`.replace(/\s+/g, "_") });
   if (unionResult) results.push({ geojson: unionResult.geojson, filename: `union_${unionResult.sourceLayerNames.join("_")}.geojson`.replace(/\s+/g, "_") });
   if (dissolveResult) results.push({ geojson: dissolveResult.geojson, filename: `dissolve_${dissolveResult.inputLayerName}.geojson`.replace(/\s+/g, "_") });
+  if (spatialJoinResult) results.push({ geojson: spatialJoinResult.geojson, filename: `spatial_join_${spatialJoinResult.targetLayerName}_with_${spatialJoinResult.sourceLayerName}.geojson`.replace(/\s+/g, "_") });
 
   const hasResults = results.length > 0;
 

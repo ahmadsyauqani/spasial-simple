@@ -289,6 +289,7 @@ export default function MapArea() {
         <BufferLayer />
         <UnionLayer />
         <DissolveLayer />
+        <SpatialJoinLayer />
 
         {/* User Location Marker */}
         {userLocation && locationActive && (
@@ -1386,6 +1387,81 @@ function LayerFeature({ layer }: { layer: any }) {
         return L.circleMarker(latlng, style);
       }}
       onEachFeature={onEachFeature}
+    />
+  );
+}
+// Komponen render hasil Spatial Join di peta
+function SpatialJoinLayer() {
+  const { spatialJoinResult } = useMapContext();
+  const map = useMap();
+
+  useEffect(() => {
+    if (spatialJoinResult?.geojson) {
+      try {
+        const bounds = L.geoJSON(spatialJoinResult.geojson).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } catch(e) {}
+    }
+  }, [spatialJoinResult, map]);
+
+  if (!spatialJoinResult?.geojson) return null;
+
+  const joinStyle = {
+    color: '#6366f1',
+    fillColor: '#6366f1',
+    fillOpacity: 0.4,
+    weight: 3,
+    dashArray: '10, 5'
+  };
+
+  const onEachJoin = (feature: any, mapLayer: any) => {
+    let html = `<div class="p-2 min-w-[200px]">`;
+    html += `<h4 class="font-bold text-base border-b border-indigo-400/30 pb-1 mb-2 text-indigo-300">🔗 Hasil Spatial Join</h4>`;
+    
+    // Tampilkan properti baru (hasil join)
+    const props = feature.properties || {};
+    const joinKey = Object.keys(props).find(k => k.startsWith('join_') && k !== 'join_details');
+    
+    if (joinKey) {
+      const label = joinKey === 'join_count' ? 'Jumlah Objek' : `Total ${joinKey.replace('join_sum_', '')}`;
+      html += `
+        <div class="mb-3 bg-indigo-900/30 p-2 rounded border border-indigo-500/20">
+          <span class="text-[10px] uppercase font-bold text-indigo-400/60 block tracking-widest mb-1">Hasil Analisis</span>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-300 text-xs">${label}</span>
+            <span class="font-mono text-white font-black text-lg">${props[joinKey]}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Tampilkan properti asli poligon
+    html += `<div class="max-h-40 overflow-y-auto text-xs">`;
+    html += `<table class="w-full text-left border-collapse"><tbody>`;
+    for (const key in props) {
+      if (key === "db_id" || key === "FID" || key.startsWith('join_')) continue;
+      const value = props[key];
+      html += `
+        <tr class="border-b border-white/10 last:border-0 hover:bg-white/5">
+          <td class="py-1.5 pr-2 font-medium text-gray-400 w-1/3 align-top">${key}</td>
+          <td class="py-1.5 text-white font-mono break-words">${value === null ? "null" : value}</td>
+        </tr>
+      `;
+    }
+    html += `</tbody></table></div>`;
+    
+    html += `<div class="text-[9px] text-gray-500 mt-3 pt-2 border-t border-white/5 uppercase tracking-tighter">Target: ${spatialJoinResult.targetLayerName} <br/> Source: ${spatialJoinResult.sourceLayerName}</div>`;
+    html += `</div>`;
+
+    mapLayer.bindPopup(html, { className: 'custom-popup-dark', maxWidth: 320 });
+  };
+
+  return (
+    <GeoJSON
+      data={spatialJoinResult.geojson}
+      key={`spatial-join-${Date.now()}`}
+      style={() => joinStyle}
+      onEachFeature={onEachJoin}
     />
   );
 }
