@@ -26,13 +26,31 @@ export async function exportToPNG(
     },
     onclone: (clonedDoc) => {
       // html2canvas fails on modern CSS color functions like lab() or oklch()
-      // common in Tailwind 4 and the Vercel Toolbar.
       
-      // 1. Remove Vercel Toolbar which is a known source of this error
-      const vercelElements = clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar]');
-      vercelElements.forEach(el => el.remove());
+      // 1. Remove Vercel Toolbar
+      clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar]').forEach(el => el.remove());
 
-      // 2. Sanitize ALL style tags in the cloned document
+      // 2. Sanitize all stylesheets if possible
+      for (let i = 0; i < clonedDoc.styleSheets.length; i++) {
+        try {
+          const sheet = clonedDoc.styleSheets[i];
+          const rules = sheet.cssRules || sheet.rules;
+          if (rules) {
+            // If we can access rules, we can't easily edit them but we can disable the sheet 
+            // if it contains problematic content and replace it with a sanitized version.
+            // However, cross-origin prevents this.
+          }
+        } catch (e) {
+          // Cross-origin stylesheet, we can't read rules.
+          // Let's just remove Next.js static CSS as it's the most likely source of lab()
+          const link = clonedDoc.styleSheets[i].ownerNode as HTMLLinkElement;
+          if (link && link.tagName === 'LINK' && link.href.includes('_next/static/css')) {
+             link.remove();
+          }
+        }
+      }
+
+      // 3. Sanitize ALL existing style tags (which are same-origin)
       const styles = clonedDoc.getElementsByTagName("style");
       for (let i = 0; i < styles.length; i++) {
         try {
@@ -42,12 +60,10 @@ export async function exportToPNG(
               .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
               .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
           }
-        } catch (e) {
-          // Some style tags might be restricted or empty
-        }
+        } catch (e) { }
       }
 
-      // 3. Sanitize inline styles on all elements
+      // 4. Sanitize inline styles on all elements
       clonedDoc.querySelectorAll("*").forEach((el: any) => {
         if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
           el.style.cssText = el.style.cssText
@@ -55,6 +71,20 @@ export async function exportToPNG(
             .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
         }
       });
+      
+      // 5. Injeksi style darurat untuk elemen layout agar tetap terlihat meski CSS utama dihapus
+      const emergencyStyle = clonedDoc.createElement('style');
+      emergencyStyle.innerHTML = `
+        .layout-paper { background: white !important; color: black !important; }
+        .bg-white { background-color: white !important; }
+        .text-black { color: black !important; }
+        .border { border: 1px solid #ccc !important; }
+        .w-full { width: 100% !important; }
+        .h-full { height: 100% !important; }
+        table { border-collapse: collapse !important; width: 100% !important; }
+        td { border: 1px solid #eee !important; padding: 2px !important; }
+      `;
+      clonedDoc.head.appendChild(emergencyStyle);
     }
   });
 
@@ -90,11 +120,26 @@ export async function exportToPDF(
              el.classList?.contains("element-controls");
     },
     onclone: (clonedDoc) => {
-      // 1. Remove Vercel Toolbar which is a known source of this error
-      const vercelElements = clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar]');
-      vercelElements.forEach(el => el.remove());
+      // html2canvas fails on modern CSS color functions like lab() or oklch()
+      
+      // 1. Remove Vercel Toolbar
+      clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar]').forEach(el => el.remove());
 
-      // 2. Sanitize ALL style tags in the cloned document
+      // 2. Sanitize all stylesheets if possible
+      for (let i = 0; i < clonedDoc.styleSheets.length; i++) {
+        try {
+          const sheet = clonedDoc.styleSheets[i];
+          const rules = sheet.cssRules || sheet.rules;
+          if (rules) { }
+        } catch (e) {
+          const link = clonedDoc.styleSheets[i].ownerNode as HTMLLinkElement;
+          if (link && link.tagName === 'LINK' && link.href.includes('_next/static/css')) {
+             link.remove();
+          }
+        }
+      }
+
+      // 3. Sanitize ALL existing style tags
       const styles = clonedDoc.getElementsByTagName("style");
       for (let i = 0; i < styles.length; i++) {
         try {
@@ -107,7 +152,7 @@ export async function exportToPDF(
         } catch (e) { }
       }
 
-      // 3. Sanitize inline styles on all elements
+      // 4. Sanitize inline styles on all elements
       clonedDoc.querySelectorAll("*").forEach((el: any) => {
         if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
           el.style.cssText = el.style.cssText
@@ -115,6 +160,20 @@ export async function exportToPDF(
             .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
         }
       });
+      
+      // 5. Injeksi style darurat untuk elemen layout agar tetap terlihat meski CSS utama dihapus
+      const emergencyStyle = clonedDoc.createElement('style');
+      emergencyStyle.innerHTML = `
+        .layout-paper { background: white !important; color: black !important; }
+        .bg-white { background-color: white !important; }
+        .text-black { color: black !important; }
+        .border { border: 1px solid #ccc !important; }
+        .w-full { width: 100% !important; }
+        .h-full { height: 100% !important; }
+        table { border-collapse: collapse !important; width: 100% !important; }
+        td { border: 1px solid #eee !important; padding: 2px !important; }
+      `;
+      clonedDoc.head.appendChild(emergencyStyle);
     }
   });
 
