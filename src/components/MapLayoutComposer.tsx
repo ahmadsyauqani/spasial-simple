@@ -124,6 +124,14 @@ export default function MapLayoutComposer() {
           </div>
           <button
             className="layout-export-btn"
+            onClick={() => composer.resetToDefault()}
+            title="Reset Layout ke Default"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>Reset</span>
+          </button>
+          <button
+            className="layout-export-btn"
             onClick={handleExportPNG}
             disabled={isExporting}
           >
@@ -1158,10 +1166,10 @@ function ElementConfigEditor({ element, composer }: { element: LayoutElement; co
           </div>
 
           <label className="layout-props-label mt-2">Latitude Pusat</label>
-          <input type="number" value={cfg.centerLat || -6.2} onChange={(e) => updateElementConfig(element.id, { centerLat: Number(e.target.value) })} className="layout-props-input" step={0.01} />
+          <input type="number" value={Number((cfg.centerLat || -6.2).toFixed(6))} onChange={(e) => updateElementConfig(element.id, { centerLat: Number(e.target.value) })} className="layout-props-input" step={0.000001} />
           
           <label className="layout-props-label">Longitude Pusat</label>
-          <input type="number" value={cfg.centerLng || 106.8} onChange={(e) => updateElementConfig(element.id, { centerLng: Number(e.target.value) })} className="layout-props-input" step={0.01} />
+          <input type="number" value={Number((cfg.centerLng || 106.8).toFixed(6))} onChange={(e) => updateElementConfig(element.id, { centerLng: Number(e.target.value) })} className="layout-props-input" step={0.000001} />
           
           <label className="layout-props-label">Zoom Level (Leaflet)</label>
           <input type="number" value={Number((cfg.zoom || 12).toFixed(2))} onChange={(e) => updateElementConfig(element.id, { zoom: Number(e.target.value) })} className="layout-props-input" min={1} max={20} step={0.1} />

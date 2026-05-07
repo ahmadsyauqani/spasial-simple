@@ -183,15 +183,14 @@
 
 .layout-canvas-area {
   flex: 1;
-  background: #111;
-  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background: #0a0a0c;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
   background-size: 20px 20px;
   overflow: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 100px;
   position: relative;
+  display: block;
 }
 
 .layout-zoom-controls {
@@ -228,9 +227,10 @@
 
 .layout-paper {
   background: white;
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), 0 0 2px rgba(255,255,255,0.2);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05);
   position: relative;
-  transform-origin: center;
+  margin: 60px auto;
+  flex-shrink: 0;
 }
 
 .layout-element {
