@@ -128,3 +128,16 @@
   color: white !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
+
+/* Fix for native Select/Option/Optgroup in Dark Mode */
+.dark select, 
+.dark option, 
+.dark optgroup {
+  background-color: #111111 !important;
+  color: #ffffff !important;
+}
+
+/* Ensure consistent font across all inputs */
+input, select, textarea, button {
+  font-family: inherit;
+}
