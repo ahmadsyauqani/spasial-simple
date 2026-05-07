@@ -6,8 +6,6 @@ export type ExportDPI = 72 | 150 | 300;
 
 /**
  * Helper: convert any oklch/lab color string to a safe RGB fallback.
- * getComputedStyle already resolves oklch to rgb in most browsers,
- * but if it doesn't (or html2canvas re-parses the string), we catch it.
  */
 function safeColor(c: string): string {
   if (!c) return c;
@@ -16,14 +14,11 @@ function safeColor(c: string): string {
 }
 
 /**
- * Deep-copy ALL computed styles from one element to another's inline style.
- * This is the nuclear option: we bake every visual property so html2canvas
- * doesn't need to understand ANY CSS (oklch, Tailwind classes, etc).
+ * Deep-copy key computed styles from src to dst inline style.
  */
 function copyComputedStyles(src: Element, dst: HTMLElement) {
   try {
     const cs = window.getComputedStyle(src);
-    // List of properties that matter for visual rendering
     const props = [
       "color", "backgroundColor", "borderColor",
       "borderTopColor", "borderRightColor", "borderBottomColor", "borderLeftColor",
@@ -32,7 +27,6 @@ function copyComputedStyles(src: Element, dst: HTMLElement) {
       "fontSize", "fontWeight", "fontFamily", "fontStyle",
       "lineHeight", "letterSpacing", "textAlign", "textTransform", "textDecoration",
       "padding", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
-      "margin", "marginTop", "marginRight", "marginBottom", "marginLeft",
       "display", "flexDirection", "alignItems", "justifyContent", "flexWrap",
       "gap", "rowGap", "columnGap",
       "position", "top", "left", "right", "bottom",
@@ -46,9 +40,7 @@ function copyComputedStyles(src: Element, dst: HTMLElement) {
     ];
     for (const prop of props) {
       try {
-        const val = cs.getPropertyValue(
-          prop.replace(/([A-Z])/g, "-$1").toLowerCase()
-        );
+        const val = cs.getPropertyValue(prop.replace(/([A-Z])/g, "-$1").toLowerCase());
         if (val) {
           (dst.style as any)[prop] = safeColor(val);
         }
@@ -58,39 +50,108 @@ function copyComputedStyles(src: Element, dst: HTMLElement) {
 }
 
 /**
- * Capture all Leaflet map canvases inside the paper element as images.
- * Returns a Map of leaflet-container element -> dataURL of the rendered map.
+ * Capture a Leaflet map as a static image using manual canvas compositing.
+ * Reads existing loaded tile images and draws them; no html2canvas involved.
  */
-async function captureLeafletMaps(paper: HTMLElement): Promise<Map<Element, string>> {
-  const result = new Map<Element, string>();
-  const mapContainers = paper.querySelectorAll(".leaflet-container");
+async function captureLeafletMapAsDataUrl(container: HTMLElement): Promise<string | null> {
+  try {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    if (w === 0 || h === 0) return null;
 
-  for (const container of Array.from(mapContainers)) {
-    try {
-      // Use html2canvas on the specific Leaflet container at scale 1
-      // to get a flat rasterized image of the current map view
-      const mapCanvas = await html2canvas(container as HTMLElement, {
-        scale: 2, // Good quality
-        useCORS: true,
-        backgroundColor: null,
-        logging: false,
-        allowTaint: true,
-      });
-      result.set(container, mapCanvas.toDataURL("image/png"));
-    } catch (e) {
-      console.warn("Failed to capture Leaflet map:", e);
+    const canvas = document.createElement("canvas");
+    canvas.width = w * 2;
+    canvas.height = h * 2;
+    const ctx = canvas.getContext("2d")!;
+    ctx.scale(2, 2);
+
+    // Background
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(0, 0, w, h);
+
+    // Get map pane offset
+    const mapPane = container.querySelector(".leaflet-map-pane") as HTMLElement;
+    let mapOx = 0, mapOy = 0;
+    if (mapPane) {
+      const t = window.getComputedStyle(mapPane).transform;
+      if (t && t !== "none") {
+        const m = t.match(/matrix\(([^)]+)\)/);
+        if (m) { const v = m[1].split(",").map(Number); mapOx = v[4] || 0; mapOy = v[5] || 0; }
+      }
     }
-  }
 
-  return result;
+    // Draw tiles
+    const tilePane = container.querySelector(".leaflet-tile-pane") as HTMLElement;
+    if (tilePane) {
+      tilePane.querySelectorAll("img").forEach((tile) => {
+        if (!tile.complete || tile.naturalWidth === 0) return;
+        try {
+          const parent = tile.parentElement;
+          let tx = 0, ty = 0;
+          if (parent) {
+            const pt = window.getComputedStyle(parent).transform;
+            if (pt && pt !== "none") {
+              const pm = pt.match(/matrix\(([^)]+)\)/);
+              if (pm) { const pv = pm[1].split(",").map(Number); tx = pv[4] || 0; ty = pv[5] || 0; }
+            }
+          }
+          const tt = window.getComputedStyle(tile).transform;
+          if (tt && tt !== "none") {
+            const tm = tt.match(/matrix\(([^)]+)\)/);
+            if (tm) { const tv = tm[1].split(",").map(Number); tx += tv[4] || 0; ty += tv[5] || 0; }
+          }
+          if (tx === 0 && ty === 0 && parent) {
+            tx = tile.offsetLeft + (parent.offsetLeft || 0);
+            ty = tile.offsetTop + (parent.offsetTop || 0);
+          }
+          ctx.drawImage(tile, tx + mapOx, ty + mapOy, tile.width || 256, tile.height || 256);
+        } catch (e) {}
+      });
+    }
+
+    // Draw SVG overlays (GeoJSON layers)
+    const svg = container.querySelector(".leaflet-overlay-pane svg") as SVGSVGElement;
+    if (svg) {
+      try {
+        const svgData = new XMLSerializer().serializeToString(svg);
+        const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        await new Promise<void>((resolve) => {
+          img.onload = () => {
+            const sr = svg.getBoundingClientRect();
+            const cr = container.getBoundingClientRect();
+            ctx.drawImage(img, sr.left - cr.left, sr.top - cr.top, sr.width, sr.height);
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+          img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+          img.src = url;
+        });
+      } catch (e) {}
+    }
+
+    // Draw canvas overlays
+    container.querySelectorAll(".leaflet-overlay-pane canvas").forEach((c) => {
+      try {
+        const el = c as HTMLCanvasElement;
+        const r = el.getBoundingClientRect();
+        const cr = container.getBoundingClientRect();
+        ctx.drawImage(el, r.left - cr.left, r.top - cr.top, r.width, r.height);
+      } catch (e) {}
+    });
+
+    return canvas.toDataURL("image/png");
+  } catch (e) {
+    console.warn("Failed to capture Leaflet map:", e);
+    return null;
+  }
 }
 
 /**
- * The main onclone handler that fixes all rendering issues.
- * Strategy:
- * 1. Replace Leaflet map containers with pre-captured images
- * 2. Deep-copy computed styles to resolve oklch colors
- * 3. Minimal CSS overrides
+ * The onclone handler for html2canvas.
+ * 1. Replaces Leaflet containers with pre-captured static images
+ * 2. Deep-copies computed styles to resolve oklch colors
  */
 function createOnCloneHandler(
   canvasElement: HTMLElement,
@@ -105,8 +166,7 @@ function createOnCloneHandler(
       .querySelectorAll("#__vercel-toolbar, [data-vercel-toolbar], script")
       .forEach((el) => el.remove());
 
-    // ─── 1. Replace Leaflet maps with captured images ───
-    // Find the original map containers and their corresponding clones
+    // 1. Replace Leaflet maps with captured images
     const originalMaps = Array.from(canvasElement.querySelectorAll(".leaflet-container"));
     const clonedMaps = Array.from(paper.querySelectorAll(".leaflet-container"));
 
@@ -115,21 +175,19 @@ function createOnCloneHandler(
       const clonedMap = clonedMaps[idx];
       if (dataUrl && clonedMap && clonedMap.parentElement) {
         const parent = clonedMap.parentElement;
-        // Create an img that fills the parent
         const img = clonedDoc.createElement("img");
         img.src = dataUrl;
         img.style.width = "100%";
         img.style.height = "100%";
         img.style.objectFit = "cover";
         img.style.display = "block";
-        // Replace the Leaflet container with the image
         parent.innerHTML = "";
         parent.appendChild(img);
         parent.style.overflow = "hidden";
       }
     });
 
-    // ─── 2. Deep-copy computed styles for ALL tagged layout elements ───
+    // 2. Deep-copy computed styles for tagged layout elements
     const originalElements = Array.from(
       canvasElement.querySelectorAll("[data-layout-id]")
     );
@@ -142,15 +200,11 @@ function createOnCloneHandler(
       ) as HTMLElement;
       if (!clonedEl) return;
 
-      // Copy styles for the element itself
       copyComputedStyles(origEl, clonedEl);
-      // Force overflow visible for text elements to prevent clipping
       clonedEl.style.overflow = "visible";
 
-      // Copy styles for ALL children
       const origChildren = Array.from(origEl.querySelectorAll("*"));
       const clonedChildren = Array.from(clonedEl.querySelectorAll("*"));
-
       clonedChildren.forEach((child, i) => {
         const origChild = origChildren[i];
         if (origChild && (child as HTMLElement).style) {
@@ -159,7 +213,7 @@ function createOnCloneHandler(
       });
     });
 
-    // ─── 3. Copy styles for the paper itself ───
+    // 3. Copy paper styles
     copyComputedStyles(canvasElement, paper);
     paper.style.backgroundColor = "white";
     paper.style.position = "relative";
@@ -167,7 +221,7 @@ function createOnCloneHandler(
     paper.style.margin = "0";
     paper.style.transform = "none";
 
-    // ─── 4. Minimal global CSS reset ───
+    // 4. Minimal CSS reset
     const style = clonedDoc.createElement("style");
     style.innerHTML = `
       * { box-sizing: border-box !important; }
@@ -188,38 +242,57 @@ export async function exportToPNG(
   customHeight?: number,
   dpi: ExportDPI = 300
 ): Promise<Blob> {
-  // Step 1: Pre-capture all Leaflet maps as images
-  const mapCaptures = await captureLeafletMaps(canvasElement);
+  // Step 1: Pre-capture Leaflet maps
+  const mapCaptures = new Map<Element, string>();
+  const containers = canvasElement.querySelectorAll(".leaflet-container");
+  for (const c of Array.from(containers)) {
+    const url = await captureLeafletMapAsDataUrl(c as HTMLElement);
+    if (url) mapCaptures.set(c, url);
+  }
 
-  const scale = dpi / 96;
+  // Step 2: Hide Leaflet tiles via CSS (prevents html2canvas from processing them)
+  const hideStyle = document.createElement("style");
+  hideStyle.id = "export-hide-leaflet";
+  hideStyle.textContent = `
+    .leaflet-tile-pane, .leaflet-map-pane, .leaflet-control-container,
+    .leaflet-overlay-pane, .leaflet-shadow-pane, .leaflet-marker-pane,
+    .leaflet-tooltip-pane, .leaflet-popup-pane { display: none !important; }
+  `;
+  document.head.appendChild(hideStyle);
 
-  const canvas = await html2canvas(canvasElement, {
-    scale,
-    useCORS: true,
-    backgroundColor: "#ffffff",
-    logging: false,
-    allowTaint: true,
-    ignoreElements: (el) => {
-      return (
-        el.classList?.contains("layout-handle") ||
-        el.classList?.contains("layout-toolbar-overlay") ||
-        el.classList?.contains("element-controls") ||
-        el.classList?.contains("layout-element-selected") === false && el.classList?.contains("layout-element-dragging") === true
-      );
-    },
-    onclone: createOnCloneHandler(canvasElement, mapCaptures),
-  });
+  try {
+    const scale = dpi / 96;
 
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error("Gagal mengkonversi canvas ke PNG."));
+    const canvas = await html2canvas(canvasElement, {
+      scale,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      allowTaint: true,
+      ignoreElements: (el) => {
+        return (
+          el.classList?.contains("layout-handle") ||
+          el.classList?.contains("layout-toolbar-overlay") ||
+          el.classList?.contains("element-controls")
+        );
       },
-      "image/png",
-      1.0
-    );
-  });
+      onclone: createOnCloneHandler(canvasElement, mapCaptures),
+    });
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Gagal mengkonversi canvas ke PNG."));
+        },
+        "image/png",
+        1.0
+      );
+    });
+  } finally {
+    // Step 3: Always restore Leaflet tiles
+    hideStyle.remove();
+  }
 }
 
 /**
@@ -233,52 +306,70 @@ export async function exportToPDF(
   customHeight?: number,
   dpi: ExportDPI = 300
 ): Promise<Blob> {
-  // Step 1: Pre-capture all Leaflet maps as images
-  const mapCaptures = await captureLeafletMaps(canvasElement);
-
-  const scale = dpi / 96;
-
-  const canvas = await html2canvas(canvasElement, {
-    scale,
-    useCORS: true,
-    backgroundColor: "#ffffff",
-    logging: false,
-    allowTaint: true,
-    ignoreElements: (el) => {
-      return (
-        el.classList?.contains("layout-handle") ||
-        el.classList?.contains("layout-toolbar-overlay") ||
-        el.classList?.contains("element-controls")
-      );
-    },
-    onclone: createOnCloneHandler(canvasElement, mapCaptures),
-  });
-
-  // Get paper dimensions in mm
-  const size = PAPER_SIZES[paperSize] || {
-    width: customWidth || 210,
-    height: customHeight || 297,
-  };
-  let pdfWidth: number, pdfHeight: number;
-
-  if (orientation === "landscape") {
-    pdfWidth = Math.max(size.width, size.height);
-    pdfHeight = Math.min(size.width, size.height);
-  } else {
-    pdfWidth = Math.min(size.width, size.height);
-    pdfHeight = Math.max(size.width, size.height);
+  // Step 1: Pre-capture Leaflet maps
+  const mapCaptures = new Map<Element, string>();
+  const containers = canvasElement.querySelectorAll(".leaflet-container");
+  for (const c of Array.from(containers)) {
+    const url = await captureLeafletMapAsDataUrl(c as HTMLElement);
+    if (url) mapCaptures.set(c, url);
   }
 
-  const pdf = new jsPDF({
-    orientation: orientation === "landscape" ? "l" : "p",
-    unit: "mm",
-    format: [pdfWidth, pdfHeight],
-  });
+  // Step 2: Hide Leaflet tiles via CSS
+  const hideStyle = document.createElement("style");
+  hideStyle.id = "export-hide-leaflet-pdf";
+  hideStyle.textContent = `
+    .leaflet-tile-pane, .leaflet-map-pane, .leaflet-control-container,
+    .leaflet-overlay-pane, .leaflet-shadow-pane, .leaflet-marker-pane,
+    .leaflet-tooltip-pane, .leaflet-popup-pane { display: none !important; }
+  `;
+  document.head.appendChild(hideStyle);
 
-  const imgData = canvas.toDataURL("image/png", 1.0);
-  pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+  try {
+    const scale = dpi / 96;
 
-  return pdf.output("blob");
+    const canvas = await html2canvas(canvasElement, {
+      scale,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      allowTaint: true,
+      ignoreElements: (el) => {
+        return (
+          el.classList?.contains("layout-handle") ||
+          el.classList?.contains("layout-toolbar-overlay") ||
+          el.classList?.contains("element-controls")
+        );
+      },
+      onclone: createOnCloneHandler(canvasElement, mapCaptures),
+    });
+
+    const size = PAPER_SIZES[paperSize] || {
+      width: customWidth || 210,
+      height: customHeight || 297,
+    };
+    let pdfWidth: number, pdfHeight: number;
+
+    if (orientation === "landscape") {
+      pdfWidth = Math.max(size.width, size.height);
+      pdfHeight = Math.min(size.width, size.height);
+    } else {
+      pdfWidth = Math.min(size.width, size.height);
+      pdfHeight = Math.max(size.width, size.height);
+    }
+
+    const pdf = new jsPDF({
+      orientation: orientation === "landscape" ? "l" : "p",
+      unit: "mm",
+      format: [pdfWidth, pdfHeight],
+    });
+
+    const imgData = canvas.toDataURL("image/png", 1.0);
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+
+    return pdf.output("blob");
+  } finally {
+    hideStyle.remove();
+  }
 }
 
 /**

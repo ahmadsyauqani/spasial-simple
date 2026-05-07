@@ -560,6 +560,9 @@ function MapFaceController({ element, composer }: { element: LayoutElement; comp
   }, [map, element.config.zoom, element.config.centerLat, element.config.centerLng]);
 
   // 2. Sync Leaflet map -> Composer config (when user drags/zooms map)
+  const updateConfigRef = React.useRef(composer.updateElementConfig);
+  updateConfigRef.current = composer.updateElementConfig;
+
   useEffect(() => {
     const onMoveEnd = () => {
       const center = map.getCenter();
@@ -572,7 +575,7 @@ function MapFaceController({ element, composer }: { element: LayoutElement; comp
       if (Math.abs(cfgZoom - zoom) > 0.01 ||
           Math.abs(cfgLat - center.lat) > 0.0001 ||
           Math.abs(cfgLng - center.lng) > 0.0001) {
-         composer.updateElementConfig(element.id, {
+         updateConfigRef.current(element.id, {
            zoom,
            centerLat: center.lat,
            centerLng: center.lng
@@ -582,18 +585,21 @@ function MapFaceController({ element, composer }: { element: LayoutElement; comp
     map.on('moveend', onMoveEnd);
     map.on('zoomend', onMoveEnd);
     return () => { map.off('moveend', onMoveEnd); map.off('zoomend', onMoveEnd); };
-  }, [map, element.id, element.config.zoom, element.config.centerLat, element.config.centerLng, composer]);
+  }, [map, element.id, element.config.zoom, element.config.centerLat, element.config.centerLng]);
 
   // 3. Always compute real mpp for the Scale Bar
+  const setMppRef = React.useRef(composer.setMapMetersPerPixel);
+  setMppRef.current = composer.setMapMetersPerPixel;
+
   useEffect(() => {
     const updateScale = () => {
       try {
         const y = map.getSize().y / 2;
         const p1 = map.containerPointToLatLng([0, y]);
-        const p2 = map.containerPointToLatLng([100, y]); // Use 100px reference
+        const p2 = map.containerPointToLatLng([100, y]);
         const dist = map.distance(p1, p2);
         const mpp = dist / 100;
-        composer.setMapMetersPerPixel(mpp);
+        setMppRef.current(mpp);
       } catch (e) {}
     };
     
@@ -605,7 +611,7 @@ function MapFaceController({ element, composer }: { element: LayoutElement; comp
       map.off('move', updateScale);
       map.off('zoom', updateScale);
     };
-  }, [map, composer]);
+  }, [map]); // Only depend on map, not composer
 
   return null;
 }
