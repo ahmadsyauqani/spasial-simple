@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useMapContext } from "@/lib/MapContext";
 import { DownloadCloud, Trash2, Database, Loader2, Check, X } from "lucide-react";
 import { db } from "@/lib/offlineDb";
@@ -134,12 +135,10 @@ export function OfflineMapManager() {
         <Database className="w-5 h-5" />
       </button>
 
-      {isPanelOpen && (
-        <div 
-          className="absolute left-0 w-[280px] bg-card/70 backdrop-blur-xl border border-border/50 rounded-xl p-4 shadow-2xl animate-in slide-in-from-bottom-2"
-          style={{ bottom: '85px', zIndex: 9999 }}
-        >
-          <div className="flex items-center justify-between mb-4">
+      {isPanelOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-[320px] bg-card/90 backdrop-blur-xl border border-border/50 rounded-xl p-5 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-4">
             <h3 className="text-[10px] font-black text-navy dark:text-white uppercase tracking-widest">Offline Manager</h3>
             <button onClick={() => setIsPanelOpen(false)}><X className="w-3 h-3 text-muted-foreground" /></button>
           </div>
@@ -189,7 +188,7 @@ export function OfflineMapManager() {
             </p>
           </div>
         </div>
-      )}
+      </div>, document.body)}
     </div>
   );
 }
