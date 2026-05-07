@@ -24,6 +24,19 @@ export async function exportToPNG(
              el.classList?.contains("layout-toolbar-overlay") ||
              el.classList?.contains("element-controls");
     },
+    onclone: (clonedDoc) => {
+      // html2canvas fails on modern CSS color functions like lab() or oklch()
+      // which are common in Tailwind 4. We strip them in the clone.
+      const styles = clonedDoc.getElementsByTagName("style");
+      for (let i = 0; i < styles.length; i++) {
+        const s = styles[i];
+        if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
+          s.innerHTML = s.innerHTML
+            .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
+            .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
+        }
+      }
+    }
   });
 
   return new Promise((resolve, reject) => {
@@ -57,6 +70,18 @@ export async function exportToPDF(
              el.classList?.contains("layout-toolbar-overlay") ||
              el.classList?.contains("element-controls");
     },
+    onclone: (clonedDoc) => {
+      // Fix for Tailwind 4 / modern CSS colors crashing html2canvas
+      const styles = clonedDoc.getElementsByTagName("style");
+      for (let i = 0; i < styles.length; i++) {
+        const s = styles[i];
+        if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
+          s.innerHTML = s.innerHTML
+            .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
+            .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
+        }
+      }
+    }
   });
 
   // Get paper dimensions in mm
