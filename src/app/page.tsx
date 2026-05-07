@@ -23,7 +23,7 @@ export default function Home() {
               <img 
                 src="/logo-sakagis.png" 
                 alt="Logo" 
-                className="relative w-10 h-10 object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-110" 
+                className="relative w-10 h-10 object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-110 mix-blend-multiply dark:invert dark:mix-blend-screen" 
               />
             </div>
             <div className="flex flex-col -gap-1">
