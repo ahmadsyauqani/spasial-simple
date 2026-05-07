@@ -200,14 +200,35 @@ export function UploadDatasetPanel() {
 
       {/* Analysis Tools & More (The Grid) */}
       <div className="flex flex-col gap-3 pt-2 border-t border-border/30">
-        <div className="grid grid-cols-4 gap-1.5 p-1.5 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner">
-          <BufferAnalysisButton />
-          <ClipAnalysisButton />
-          <UnionAnalysisButton />
-          <MergeAnalysisButton />
-          <OverlapAnalysisButton />
-          <DissolveAnalysisButton />
-          <SpatialJoinButton />
+        <div className="flex flex-wrap gap-2 p-2 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner justify-center">
+          <div className="flex flex-col items-center gap-1">
+            <BufferAnalysisButton />
+            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Buffer</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <ClipAnalysisButton />
+            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Clip</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <UnionAnalysisButton />
+            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Union</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <MergeAnalysisButton />
+            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Merge</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <OverlapAnalysisButton />
+            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Overlap</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <DissolveAnalysisButton />
+            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Dissolve</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <SpatialJoinButton />
+            <span className="text-[7px] font-bold uppercase text-indigo-400">Join</span>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <LayoutPetaButton />
