@@ -98,8 +98,8 @@ export function UploadDatasetPanel() {
       <div className="bg-cyan-pastel/80 dark:bg-[#25282c]/80 p-4 border-b border-border/50 flex flex-col gap-4">
         {/* Row 1: Title */}
         <div className="flex items-center gap-3">
-          <div className="p-0.5 bg-white/40 dark:bg-orange-500/10 rounded-xl shadow-sm border border-white/30 overflow-hidden">
-            <img src="/logo-sakagis.png" alt="S" className="w-6 h-6 object-contain mix-blend-multiply dark:invert dark:mix-blend-screen" />
+          <div className="p-2 bg-white/40 dark:bg-orange-500/20 rounded-xl shadow-sm border border-white/30">
+            <UploadCloud className="w-5 h-5 text-navy dark:text-orange-500" />
           </div>
           <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-navy dark:text-white leading-none">Dataset & Analisis</h3>
         </div>
