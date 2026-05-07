@@ -196,8 +196,8 @@ export function DigitizePanel() {
           onClick={() => setIsMainExpanded(!isMainExpanded)}
         >
            <div className="flex items-center gap-2.5">
-             <div className="p-1.5 bg-white/20 dark:bg-orange-500/20 rounded-lg shadow-sm">
-               <Database className="w-4 h-4 text-navy dark:text-orange-500" />
+             <div className="p-0.5 bg-white/20 dark:bg-orange-500/10 rounded-lg overflow-hidden">
+               <img src="/logo-sakagis.png" alt="S" className="w-6 h-6 object-contain mix-blend-multiply dark:invert dark:mix-blend-screen" />
              </div>
              <h2 className="text-[11px] font-black uppercase tracking-[0.1em] text-navy dark:text-white">Digitasi Data</h2>
            </div>
@@ -385,8 +385,8 @@ export function DigitizePanel() {
             <div className="inspector-handle bg-[#25282c] px-4 py-3.5 flex items-center justify-between border-b border-white/10 cursor-grab active:cursor-grabbing">
               <div className="flex items-center gap-2.5">
                 <GripVertical className="w-3.5 h-3.5 text-gray-600" />
-                <div className="p-1 bg-orange-500/20 rounded">
-                  <Pencil className="w-3 h-3 text-orange-500" />
+                <div className="p-0.5 bg-white/40 dark:bg-orange-500/10 rounded-xl shadow-sm border border-white/30 overflow-hidden">
+                  <img src="/logo-sakagis.png" alt="S" className="w-6 h-6 object-contain mix-blend-multiply dark:invert dark:mix-blend-screen" />
                 </div>
                 <span className="text-[10px] font-black uppercase text-white tracking-[0.2em]">Attribute Inspector</span>
               </div>

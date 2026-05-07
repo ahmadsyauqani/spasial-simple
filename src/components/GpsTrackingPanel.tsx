@@ -116,8 +116,8 @@ export function GpsTrackingPanel() {
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-500/20 rounded-lg">
-              <Activity className="w-4 h-4 text-indigo-400" />
+            <div className="p-0.5 bg-indigo-500/10 rounded-lg overflow-hidden">
+              <img src="/logo-sakagis.png" alt="S" className="w-6 h-6 object-contain mix-blend-multiply dark:invert dark:mix-blend-screen" />
             </div>
             <div>
               <h3 className="text-xs font-black text-white uppercase tracking-wider">Field Tracker</h3>

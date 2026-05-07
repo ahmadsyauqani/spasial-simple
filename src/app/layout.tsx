@@ -28,7 +28,8 @@ export default function RootLayout({
         <meta name="theme-color" content="#6366f1" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="icon" href="/logo-sakagis.png" />
+        <link rel="apple-touch-icon" href="/logo-sakagis.png" />
       </head>
       <body className="min-h-full flex flex-col overflow-hidden" suppressHydrationWarning>
         <ThemeProvider
