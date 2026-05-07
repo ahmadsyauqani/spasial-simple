@@ -26,16 +26,35 @@ export async function exportToPNG(
     },
     onclone: (clonedDoc) => {
       // html2canvas fails on modern CSS color functions like lab() or oklch()
-      // which are common in Tailwind 4. We strip them in the clone.
+      // common in Tailwind 4 and the Vercel Toolbar.
+      
+      // 1. Remove Vercel Toolbar which is a known source of this error
+      const vercelElements = clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar]');
+      vercelElements.forEach(el => el.remove());
+
+      // 2. Sanitize ALL style tags in the cloned document
       const styles = clonedDoc.getElementsByTagName("style");
       for (let i = 0; i < styles.length; i++) {
-        const s = styles[i];
-        if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
-          s.innerHTML = s.innerHTML
+        try {
+          const s = styles[i];
+          if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
+            s.innerHTML = s.innerHTML
+              .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
+              .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
+          }
+        } catch (e) {
+          // Some style tags might be restricted or empty
+        }
+      }
+
+      // 3. Sanitize inline styles on all elements
+      clonedDoc.querySelectorAll("*").forEach((el: any) => {
+        if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
+          el.style.cssText = el.style.cssText
             .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
             .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
         }
-      }
+      });
     }
   });
 
@@ -71,16 +90,31 @@ export async function exportToPDF(
              el.classList?.contains("element-controls");
     },
     onclone: (clonedDoc) => {
-      // Fix for Tailwind 4 / modern CSS colors crashing html2canvas
+      // 1. Remove Vercel Toolbar which is a known source of this error
+      const vercelElements = clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar]');
+      vercelElements.forEach(el => el.remove());
+
+      // 2. Sanitize ALL style tags in the cloned document
       const styles = clonedDoc.getElementsByTagName("style");
       for (let i = 0; i < styles.length; i++) {
-        const s = styles[i];
-        if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
-          s.innerHTML = s.innerHTML
+        try {
+          const s = styles[i];
+          if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
+            s.innerHTML = s.innerHTML
+              .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
+              .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
+          }
+        } catch (e) { }
+      }
+
+      // 3. Sanitize inline styles on all elements
+      clonedDoc.querySelectorAll("*").forEach((el: any) => {
+        if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
+          el.style.cssText = el.style.cssText
             .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
             .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
         }
-      }
+      });
     }
   });
 
