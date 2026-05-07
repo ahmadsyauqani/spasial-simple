@@ -58,7 +58,14 @@ export default function MapLayoutComposer() {
     setIsExporting(true);
     try {
       toast.info("Mengekspor layout ke PNG...");
-      const blob = await exportToPNG(printableRef.current, exportDpi);
+      const blob = await exportToPNG(
+        printableRef.current,
+        state.paperSize,
+        state.orientation,
+        state.customWidth,
+        state.customHeight,
+        exportDpi
+      );
       downloadBlob(blob, `${state.layoutTitle.replace(/\s+/g, "_")}_layout.png`);
       toast.success("Layout berhasil diekspor sebagai PNG!");
     } catch (err: any) {
@@ -375,9 +382,13 @@ function DraggableElement({
     <div
       ref={ref}
       className={`layout-element ${isSelected ? "layout-element-selected" : ""} ${isDragging ? "layout-element-dragging" : ""}`}
+      data-layout-id={element.id}
       style={{
         position: "absolute",
-        left, top, width, height,
+        left: element.x + "%",
+        top: element.y + "%",
+        width: element.width + "%",
+        height: element.height + "%",
         zIndex: element.zIndex,
         cursor: element.locked ? "default" : "move",
       }}
@@ -450,7 +461,7 @@ function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, h
 
   // Only render map if has minimum size
   if (width < 30 || height < 30) {
-    return <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs text-slate-400 border border-slate-300">Peta (terlalu kecil)</div>;
+    return <div style={{ width: "100%", height: "100%", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", color: "#94a3b8", border: "1px solid #cbd5e1" }}>Peta (terlalu kecil)</div>;
   }
 
   // Collect all available geojson for fitting bounds
@@ -463,7 +474,7 @@ function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, h
   const initialZoom = mapViewState.zoom;
 
   return (
-    <div className="w-full h-full overflow-hidden border border-slate-300" style={{ pointerEvents: "auto" }}>
+    <div className="map-face-container" style={{ width: "100%", height: "100%", overflow: "hidden", border: "1px solid #cbd5e1", pointerEvents: "auto" }}>
       <MapContainer
         center={initialCenter}
         zoom={initialZoom}
@@ -773,23 +784,22 @@ function MapGridOverlay({ element }: { element: LayoutElement }) {
 function LegendElement({ element, layers }: { element: LayoutElement; layers: any[] }) {
   const cfg = element.config;
   return (
-    <div className="w-full h-full bg-white border border-slate-300 p-2 overflow-hidden flex flex-col">
-      <div className="font-bold text-center border-b border-slate-200 pb-1 mb-1" style={{ fontSize: cfg.fontSize || 10, color: "#1a1a2e" }}>
+    <div style={{ width: "100%", height: "100%", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", padding: "8px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontWeight: "bold", textAlign: "center", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px", marginBottom: "4px", fontSize: cfg.fontSize || 10, color: "#1a1a2e" }}>
         {cfg.title || "LEGENDA"}
       </div>
-      <div className="flex flex-col gap-1 overflow-auto flex-1">
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px", overflow: "auto", flex: 1 }}>
         {layers.length === 0 ? (
-          <span className="text-[9px] text-gray-400 italic">Tidak ada layer</span>
+          <span style={{ fontSize: "9px", color: "#9ca3af", fontStyle: "italic" }}>Tidak ada layer</span>
         ) : (
           layers.map((layer) => {
             const style = layer.style || { fillColor: "#3b82f6" };
             return (
-              <div key={layer.id} className="flex items-center gap-1.5">
+              <div key={layer.id} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <div
-                  className="w-4 h-3 rounded-sm border border-black/20 shrink-0"
-                  style={{ backgroundColor: style.fillColor, opacity: style.fillOpacity ?? 0.6 }}
+                  style={{ width: "16px", height: "12px", borderRadius: "2px", border: "1px solid rgba(0,0,0,0.2)", flexShrink: 0, backgroundColor: style.fillColor, opacity: style.fillOpacity ?? 0.6 }}
                 />
-                <span className="text-[9px] text-slate-700 truncate leading-tight">{layer.name?.replace(/\.[^/.]+$/, "")}</span>
+                <span style={{ fontSize: "9px", color: "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.25 }}>{layer.name?.replace(/\.[^/.]+$/, "")}</span>
               </div>
             );
           })
@@ -810,7 +820,7 @@ function ScaleBarElement({ element, composer, width }: { element: LayoutElement;
       const formattedScale = scaleValue > 0 ? `1 : ${scaleValue.toLocaleString("id-ID")}` : "1 : -";
       
       return (
-        <div className="w-full h-full bg-white border border-slate-300 flex items-center justify-center p-1">
+        <div style={{ width: "100%", height: "100%", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px" }}>
            <span style={{ fontSize: cfg.fontSize || 14, fontWeight: "bold", color: "#1a1a2e", fontFamily: "monospace" }}>
                {formattedScale}
            </span>
@@ -849,24 +859,25 @@ function ScaleBarElement({ element, composer, width }: { element: LayoutElement;
   }
 
   return (
-    <div className="w-full h-full bg-white border border-slate-300 flex flex-col items-center justify-center p-1">
-      <div className="flex items-end" style={{ width: finalBarWidth }}>
+    <div style={{ width: "100%", height: "100%", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4px" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", width: finalBarWidth }}>
         {Array.from({ length: segments }).map((_, i) => (
           <div
             key={i}
-            className="h-2 border border-black/80"
             style={{
+              height: "8px",
+              border: "1px solid rgba(0,0,0,0.8)",
               width: `${100 / segments}%`,
               backgroundColor: i % 2 === 0 ? "#1a1a2e" : "#ffffff",
             }}
           />
         ))}
       </div>
-      <div className="flex justify-between mt-0.5 px-1" style={{ width: finalBarWidth }}>
-        <span className="text-[8px] text-slate-600 font-mono">0</span>
-        <span className="text-[8px] text-slate-600 font-mono">{displayVal} {unit}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "2px", padding: "0 4px", width: finalBarWidth }}>
+        <span style={{ fontSize: "8px", color: "#475569", fontFamily: "monospace" }}>0</span>
+        <span style={{ fontSize: "8px", color: "#475569", fontFamily: "monospace" }}>{displayVal} {unit}</span>
       </div>
-      <div className="text-[7px] text-slate-400 mt-0.5">Skala Grafis</div>
+      <div style={{ fontSize: "7px", color: "#94a3b8", marginTop: "2px" }}>Skala Grafis</div>
     </div>
   );
 }
@@ -875,7 +886,7 @@ function ScaleBarElement({ element, composer, width }: { element: LayoutElement;
 function NorthArrowElement({ element, width, height }: { element: LayoutElement; width: number; height: number }) {
   const size = Math.min(width, height) * 0.8;
   return (
-    <div className="w-full h-full bg-white border border-slate-300 flex items-center justify-center">
+    <div style={{ width: "100%", height: "100%", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <svg width={size} height={size} viewBox="0 0 100 100" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.2))" }}>
         {/* Outer circle */}
         <circle cx="50" cy="50" r="46" fill="none" stroke="#1a1a2e" strokeWidth="1.5" />
@@ -910,15 +921,28 @@ function InfoBlockElement({ element }: { element: LayoutElement }) {
   ].filter((r) => r.value);
 
   return (
-    <div className="w-full h-full bg-white border border-slate-300 overflow-hidden">
-      <table className="w-full h-full border-collapse text-[9px]">
+    <div style={{ width: "100%", height: "100%", backgroundColor: "#ffffff", border: "1px solid #cbd5e1", overflow: "hidden" }}>
+      <table style={{ width: "100%", height: "100%", borderCollapse: "collapse", fontSize: "9px" }}>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-b border-slate-200 last:border-0">
-              <td className="px-1.5 py-0.5 font-semibold text-slate-500 bg-slate-50 whitespace-nowrap align-top border-r border-slate-200 w-20">
+            <tr key={i} style={{ borderBottom: i < rows.length - 1 ? "1px solid #e2e8f0" : "none" }}>
+              <td style={{
+                padding: "2px 6px",
+                fontWeight: 600,
+                color: "#64748b",
+                backgroundColor: "#f8fafc",
+                whiteSpace: "nowrap",
+                verticalAlign: "top",
+                borderRight: "1px solid #e2e8f0",
+                width: "80px",
+              }}>
                 {row.label}
               </td>
-              <td className="px-1.5 py-0.5 text-slate-800 align-top">
+              <td style={{
+                padding: "2px 6px",
+                color: "#1e293b",
+                verticalAlign: "top",
+              }}>
                 {row.value}
               </td>
             </tr>
@@ -966,8 +990,12 @@ function TextElement({ element }: { element: LayoutElement }) {
   const cfg = element.config;
   return (
     <div
-      className="w-full h-full flex items-center overflow-hidden"
       style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        overflow: "visible",
         justifyContent: cfg.textAlign === "center" ? "center" : cfg.textAlign === "right" ? "flex-end" : "flex-start",
       }}
     >

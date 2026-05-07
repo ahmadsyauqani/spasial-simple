@@ -5,142 +5,220 @@ import { PAPER_SIZES, type PaperSize, type Orientation } from "./useLayoutCompos
 export type ExportDPI = 72 | 150 | 300;
 
 /**
+ * Helper: convert any oklch/lab color string to a safe RGB fallback.
+ * getComputedStyle already resolves oklch to rgb in most browsers,
+ * but if it doesn't (or html2canvas re-parses the string), we catch it.
+ */
+function safeColor(c: string): string {
+  if (!c) return c;
+  if (c.includes("oklch") || c.includes("lab(")) return "rgb(248, 250, 252)";
+  return c;
+}
+
+/**
+ * Deep-copy ALL computed styles from one element to another's inline style.
+ * This is the nuclear option: we bake every visual property so html2canvas
+ * doesn't need to understand ANY CSS (oklch, Tailwind classes, etc).
+ */
+function copyComputedStyles(src: Element, dst: HTMLElement) {
+  try {
+    const cs = window.getComputedStyle(src);
+    // List of properties that matter for visual rendering
+    const props = [
+      "color", "backgroundColor", "borderColor",
+      "borderTopColor", "borderRightColor", "borderBottomColor", "borderLeftColor",
+      "borderWidth", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth",
+      "borderStyle", "borderTopStyle", "borderRightStyle", "borderBottomStyle", "borderLeftStyle",
+      "fontSize", "fontWeight", "fontFamily", "fontStyle",
+      "lineHeight", "letterSpacing", "textAlign", "textTransform", "textDecoration",
+      "padding", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+      "margin", "marginTop", "marginRight", "marginBottom", "marginLeft",
+      "display", "flexDirection", "alignItems", "justifyContent", "flexWrap",
+      "gap", "rowGap", "columnGap",
+      "position", "top", "left", "right", "bottom",
+      "width", "height", "minWidth", "minHeight", "maxWidth", "maxHeight",
+      "overflow", "overflowX", "overflowY",
+      "opacity", "visibility",
+      "boxSizing", "verticalAlign", "whiteSpace",
+      "fill", "stroke",
+      "gridTemplateColumns", "gridTemplateRows", "gridColumn", "gridRow",
+      "tableLayout",
+    ];
+    for (const prop of props) {
+      try {
+        const val = cs.getPropertyValue(
+          prop.replace(/([A-Z])/g, "-$1").toLowerCase()
+        );
+        if (val) {
+          (dst.style as any)[prop] = safeColor(val);
+        }
+      } catch (_) {}
+    }
+  } catch (_) {}
+}
+
+/**
+ * Capture all Leaflet map canvases inside the paper element as images.
+ * Returns a Map of leaflet-container element -> dataURL of the rendered map.
+ */
+async function captureLeafletMaps(paper: HTMLElement): Promise<Map<Element, string>> {
+  const result = new Map<Element, string>();
+  const mapContainers = paper.querySelectorAll(".leaflet-container");
+
+  for (const container of Array.from(mapContainers)) {
+    try {
+      // Use html2canvas on the specific Leaflet container at scale 1
+      // to get a flat rasterized image of the current map view
+      const mapCanvas = await html2canvas(container as HTMLElement, {
+        scale: 2, // Good quality
+        useCORS: true,
+        backgroundColor: null,
+        logging: false,
+        allowTaint: true,
+      });
+      result.set(container, mapCanvas.toDataURL("image/png"));
+    } catch (e) {
+      console.warn("Failed to capture Leaflet map:", e);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * The main onclone handler that fixes all rendering issues.
+ * Strategy:
+ * 1. Replace Leaflet map containers with pre-captured images
+ * 2. Deep-copy computed styles to resolve oklch colors
+ * 3. Minimal CSS overrides
+ */
+function createOnCloneHandler(
+  canvasElement: HTMLElement,
+  mapCaptures: Map<Element, string>
+) {
+  return (clonedDoc: Document) => {
+    const paper = clonedDoc.querySelector(".layout-paper") as HTMLElement;
+    if (!paper) return;
+
+    // Remove intrusive elements
+    clonedDoc
+      .querySelectorAll("#__vercel-toolbar, [data-vercel-toolbar], script")
+      .forEach((el) => el.remove());
+
+    // ─── 1. Replace Leaflet maps with captured images ───
+    // Find the original map containers and their corresponding clones
+    const originalMaps = Array.from(canvasElement.querySelectorAll(".leaflet-container"));
+    const clonedMaps = Array.from(paper.querySelectorAll(".leaflet-container"));
+
+    originalMaps.forEach((origMap, idx) => {
+      const dataUrl = mapCaptures.get(origMap);
+      const clonedMap = clonedMaps[idx];
+      if (dataUrl && clonedMap && clonedMap.parentElement) {
+        const parent = clonedMap.parentElement;
+        // Create an img that fills the parent
+        const img = clonedDoc.createElement("img");
+        img.src = dataUrl;
+        img.style.width = "100%";
+        img.style.height = "100%";
+        img.style.objectFit = "cover";
+        img.style.display = "block";
+        // Replace the Leaflet container with the image
+        parent.innerHTML = "";
+        parent.appendChild(img);
+        parent.style.overflow = "hidden";
+      }
+    });
+
+    // ─── 2. Deep-copy computed styles for ALL tagged layout elements ───
+    const originalElements = Array.from(
+      canvasElement.querySelectorAll("[data-layout-id]")
+    );
+
+    originalElements.forEach((origEl) => {
+      const id = origEl.getAttribute("data-layout-id");
+      if (!id) return;
+      const clonedEl = paper.querySelector(
+        `[data-layout-id="${id}"]`
+      ) as HTMLElement;
+      if (!clonedEl) return;
+
+      // Copy styles for the element itself
+      copyComputedStyles(origEl, clonedEl);
+      // Force overflow visible for text elements to prevent clipping
+      clonedEl.style.overflow = "visible";
+
+      // Copy styles for ALL children
+      const origChildren = Array.from(origEl.querySelectorAll("*"));
+      const clonedChildren = Array.from(clonedEl.querySelectorAll("*"));
+
+      clonedChildren.forEach((child, i) => {
+        const origChild = origChildren[i];
+        if (origChild && (child as HTMLElement).style) {
+          copyComputedStyles(origChild, child as HTMLElement);
+        }
+      });
+    });
+
+    // ─── 3. Copy styles for the paper itself ───
+    copyComputedStyles(canvasElement, paper);
+    paper.style.backgroundColor = "white";
+    paper.style.position = "relative";
+    paper.style.overflow = "hidden";
+    paper.style.margin = "0";
+    paper.style.transform = "none";
+
+    // ─── 4. Minimal global CSS reset ───
+    const style = clonedDoc.createElement("style");
+    style.innerHTML = `
+      * { box-sizing: border-box !important; }
+      table { border-collapse: collapse !important; }
+    `;
+    clonedDoc.head.appendChild(style);
+  };
+}
+
+/**
  * Export the layout canvas DOM element to a PNG blob
  */
 export async function exportToPNG(
   canvasElement: HTMLElement,
+  paperSize: PaperSize,
+  orientation: Orientation,
+  customWidth?: number,
+  customHeight?: number,
   dpi: ExportDPI = 300
 ): Promise<Blob> {
-  const scale = dpi / 96; // html2canvas uses 96dpi as base
+  // Step 1: Pre-capture all Leaflet maps as images
+  const mapCaptures = await captureLeafletMaps(canvasElement);
+
+  const scale = dpi / 96;
 
   const canvas = await html2canvas(canvasElement, {
     scale,
     useCORS: true,
     backgroundColor: "#ffffff",
     logging: false,
-    // Ignore interactive controls
+    allowTaint: true,
     ignoreElements: (el) => {
-      return el.classList?.contains("layout-handle") ||
-             el.classList?.contains("layout-toolbar-overlay") ||
-             el.classList?.contains("element-controls");
+      return (
+        el.classList?.contains("layout-handle") ||
+        el.classList?.contains("layout-toolbar-overlay") ||
+        el.classList?.contains("element-controls") ||
+        el.classList?.contains("layout-element-selected") === false && el.classList?.contains("layout-element-dragging") === true
+      );
     },
-    onclone: (clonedDoc) => {
-      // THE "ABSOLUTE ZERO" ISOLATION STRATEGY REFINED
-      const paper = clonedDoc.querySelector('.layout-paper');
-      if (!paper) return;
-
-      clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar], script').forEach(el => el.remove());
-
-      // 1. Collect all safe CSS rules from the original document
-      let safeCss = "";
-      try {
-        for (let i = 0; i < document.styleSheets.length; i++) {
-          const sheet = document.styleSheets[i];
-          try {
-            const rules = sheet.cssRules || sheet.rules;
-            if (rules) {
-              for (let j = 0; j < rules.length; j++) {
-                const ruleText = rules[j].cssText;
-                if (ruleText) {
-                  if (ruleText.includes("oklch(") || ruleText.includes("lab(")) {
-                    safeCss += ruleText
-                      .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
-                      .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)") + "\n";
-                  } else {
-                    safeCss += ruleText + "\n";
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            // Ignore cross-origin stylesheets
-          }
-        }
-      } catch (e) {}
-
-      // 2. Remove all external links and style tags from clone to prevent html2canvas parsing errors
-      const links = Array.from(clonedDoc.getElementsByTagName("link"));
-      links.forEach(l => {
-        if (l.rel === 'stylesheet') {
-          l.remove();
-        }
-      });
-      const styles = Array.from(clonedDoc.getElementsByTagName("style"));
-      styles.forEach(s => s.remove());
-
-      // 3. Inject the sanitized CSS from the original document
-      if (safeCss) {
-        const injectedStyle = clonedDoc.createElement('style');
-        injectedStyle.innerHTML = safeCss;
-        clonedDoc.head.appendChild(injectedStyle);
-      }
-
-      // 4. Inject fallback essential Tailwind classes just in case
-      const fallbackStyle = clonedDoc.createElement('style');
-      fallbackStyle.innerHTML = `
-        .layout-paper { background: white !important; color: black !important; position: relative !important; display: block !important; margin: 0 !important; overflow: hidden !important; }
-        .layout-element { position: absolute !important; }
-        .bg-white { background-color: white !important; }
-        .text-black { color: black !important; }
-        .border { border: 1px solid #ccc !important; }
-        .border-b { border-bottom: 1px solid #ccc !important; }
-        .border-slate-300 { border-color: #cbd5e1 !important; }
-        .border-slate-200 { border-color: #e2e8f0 !important; }
-        .w-full { width: 100% !important; }
-        .h-full { height: 100% !important; }
-        .overflow-hidden { overflow: hidden !important; }
-        .overflow-auto { overflow: auto !important; }
-        .flex { display: flex !important; }
-        .flex-col { flex-direction: column !important; }
-        .items-center { align-items: center !important; }
-        .justify-center { justify-content: center !important; }
-        .justify-between { justify-content: space-between !important; }
-        .gap-1 { gap: 0.25rem !important; }
-        .gap-1\\.5 { gap: 0.375rem !important; }
-        .gap-2 { gap: 0.5rem !important; }
-        .p-2 { padding: 0.5rem !important; }
-        .pb-1 { padding-bottom: 0.25rem !important; }
-        .mb-1 { margin-bottom: 0.25rem !important; }
-        .mt-1 { margin-top: 0.25rem !important; }
-        .shrink-0 { flex-shrink: 0 !important; }
-        .flex-1 { flex: 1 1 0% !important; }
-        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .leading-tight { line-height: 1.25 !important; }
-        .rounded-sm { border-radius: 0.125rem !important; }
-        .grid { display: grid !important; }
-        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-        .col-span-2 { grid-column: span 2 / span 2 !important; }
-        table { border-collapse: collapse !important; width: 100% !important; }
-        td, th { border: 1px solid #ccc !important; padding: 4px !important; }
-        .text-center { text-align: center !important; }
-        .text-left { text-align: left !important; }
-        .text-right { text-align: right !important; }
-        .font-bold { font-weight: bold !important; }
-        .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
-        .text-sm { font-size: 0.875rem !important; line-height: 1.25rem !important; }
-        .text-\\[9px\\] { font-size: 9px !important; }
-        .text-\\[10px\\] { font-size: 10px !important; }
-        .italic { font-style: italic !important; }
-        * { color-scheme: light !important; }
-      `;
-      clonedDoc.head.appendChild(fallbackStyle);
-
-      // 5. Sanitize inline styles inside paper
-      paper.querySelectorAll("*").forEach((el: any) => {
-        if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
-          el.style.cssText = el.style.cssText
-            .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
-            .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
-        }
-      });
-    }
+    onclone: createOnCloneHandler(canvasElement, mapCaptures),
   });
 
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error("Gagal mengkonversi canvas ke PNG."));
-    }, "image/png", 1.0);
+    canvas.toBlob(
+      (blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Gagal mengkonversi canvas ke PNG."));
+      },
+      "image/png",
+      1.0
+    );
   });
 }
 
@@ -155,6 +233,9 @@ export async function exportToPDF(
   customHeight?: number,
   dpi: ExportDPI = 300
 ): Promise<Blob> {
+  // Step 1: Pre-capture all Leaflet maps as images
+  const mapCaptures = await captureLeafletMaps(canvasElement);
+
   const scale = dpi / 96;
 
   const canvas = await html2canvas(canvasElement, {
@@ -162,128 +243,22 @@ export async function exportToPDF(
     useCORS: true,
     backgroundColor: "#ffffff",
     logging: false,
+    allowTaint: true,
     ignoreElements: (el) => {
-      return el.classList?.contains("layout-handle") ||
-             el.classList?.contains("layout-toolbar-overlay") ||
-             el.classList?.contains("element-controls");
+      return (
+        el.classList?.contains("layout-handle") ||
+        el.classList?.contains("layout-toolbar-overlay") ||
+        el.classList?.contains("element-controls")
+      );
     },
-    onclone: (clonedDoc) => {
-      // THE "ABSOLUTE ZERO" ISOLATION STRATEGY REFINED
-      
-      // 1. Give the paper a unique identifier if it doesn't have one
-      const paper = clonedDoc.querySelector('.layout-paper');
-      if (!paper) return;
-
-      // 2. Remove Vercel Toolbar and other intrusive UI elements
-      clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar], script').forEach(el => el.remove());
-
-      // 3. Collect all safe CSS rules from the original document
-      let safeCss = "";
-      try {
-        for (let i = 0; i < document.styleSheets.length; i++) {
-          const sheet = document.styleSheets[i];
-          try {
-            const rules = sheet.cssRules || sheet.rules;
-            if (rules) {
-              for (let j = 0; j < rules.length; j++) {
-                const ruleText = rules[j].cssText;
-                if (ruleText) {
-                  if (ruleText.includes("oklch(") || ruleText.includes("lab(")) {
-                    safeCss += ruleText
-                      .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
-                      .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)") + "\n";
-                  } else {
-                    safeCss += ruleText + "\n";
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            // Ignore cross-origin stylesheets
-          }
-        }
-      } catch (e) {}
-
-      // 4. Remove all external links and style tags from clone to prevent html2canvas parsing errors
-      const links = Array.from(clonedDoc.getElementsByTagName("link"));
-      links.forEach(l => {
-        if (l.rel === 'stylesheet') {
-          l.remove();
-        }
-      });
-      const styles = Array.from(clonedDoc.getElementsByTagName("style"));
-      styles.forEach(s => s.remove());
-
-      // 5. Inject the sanitized CSS from the original document
-      if (safeCss) {
-        const injectedStyle = clonedDoc.createElement('style');
-        injectedStyle.innerHTML = safeCss;
-        clonedDoc.head.appendChild(injectedStyle);
-      }
-
-      // 6. Injeksi style darurat yang SANGAT LENGKAP agar layout tetap berfungsi
-      const fallbackStyle = clonedDoc.createElement('style');
-      fallbackStyle.innerHTML = `
-        .layout-paper { background: white !important; color: black !important; position: relative !important; display: block !important; margin: 0 !important; overflow: hidden !important; }
-        .layout-element { position: absolute !important; }
-        .bg-white { background-color: white !important; }
-        .text-black { color: black !important; }
-        .border { border: 1px solid #ccc !important; }
-        .border-b { border-bottom: 1px solid #ccc !important; }
-        .border-slate-300 { border-color: #cbd5e1 !important; }
-        .border-slate-200 { border-color: #e2e8f0 !important; }
-        .w-full { width: 100% !important; }
-        .h-full { height: 100% !important; }
-        .overflow-hidden { overflow: hidden !important; }
-        .overflow-auto { overflow: auto !important; }
-        .flex { display: flex !important; }
-        .flex-col { flex-direction: column !important; }
-        .items-center { align-items: center !important; }
-        .justify-center { justify-content: center !important; }
-        .justify-between { justify-content: space-between !important; }
-        .gap-1 { gap: 0.25rem !important; }
-        .gap-1\\.5 { gap: 0.375rem !important; }
-        .gap-2 { gap: 0.5rem !important; }
-        .p-2 { padding: 0.5rem !important; }
-        .pb-1 { padding-bottom: 0.25rem !important; }
-        .mb-1 { margin-bottom: 0.25rem !important; }
-        .mt-1 { margin-top: 0.25rem !important; }
-        .shrink-0 { flex-shrink: 0 !important; }
-        .flex-1 { flex: 1 1 0% !important; }
-        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .leading-tight { line-height: 1.25 !important; }
-        .rounded-sm { border-radius: 0.125rem !important; }
-        .grid { display: grid !important; }
-        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-        .col-span-2 { grid-column: span 2 / span 2 !important; }
-        table { border-collapse: collapse !important; width: 100% !important; }
-        td, th { border: 1px solid #ccc !important; padding: 4px !important; }
-        .text-center { text-align: center !important; }
-        .text-left { text-align: left !important; }
-        .text-right { text-align: right !important; }
-        .font-bold { font-weight: bold !important; }
-        .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
-        .text-sm { font-size: 0.875rem !important; line-height: 1.25rem !important; }
-        .text-\\[9px\\] { font-size: 9px !important; }
-        .text-\\[10px\\] { font-size: 10px !important; }
-        .italic { font-style: italic !important; }
-        * { color-scheme: light !important; }
-      `;
-      clonedDoc.head.appendChild(fallbackStyle);
-
-      // 7. Sanitize all elements in the paper
-      paper.querySelectorAll("*").forEach((el: any) => {
-        if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
-          el.style.cssText = el.style.cssText
-            .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
-            .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
-        }
-      });
-    }
+    onclone: createOnCloneHandler(canvasElement, mapCaptures),
   });
 
   // Get paper dimensions in mm
-  const size = PAPER_SIZES[paperSize] || { width: customWidth || 210, height: customHeight || 297 };
+  const size = PAPER_SIZES[paperSize] || {
+    width: customWidth || 210,
+    height: customHeight || 297,
+  };
   let pdfWidth: number, pdfHeight: number;
 
   if (orientation === "landscape") {
