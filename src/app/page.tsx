@@ -8,8 +8,13 @@ import { DigitizePanel } from "@/components/DigitizePanel";
 import { GpsTrackingTrigger, GpsTrackingPanel } from "@/components/GpsTrackingPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchControl } from "@/components/SearchControl";
+import SpatialConverterModal from "@/components/SpatialConverter";
+import { RefreshCcw } from "lucide-react";
+import { useState } from "react";
 
 export default function Home() {
+  const [isConverterOpen, setIsConverterOpen] = useState(false);
+
   return (
     <main className="relative w-full h-screen overflow-hidden">
       {/* Background Map: Fills 100% of viewport */}
@@ -40,6 +45,13 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsConverterOpen(true)}
+              className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-emerald-500"
+              title="Spatial Converter Studio"
+            >
+              <RefreshCcw className="w-5 h-5" />
+            </button>
             <ThemeToggle />
             <GpsTrackingTrigger />
           </div>
@@ -51,6 +63,10 @@ export default function Home() {
 
       <CommandPalette />
       <GpsTrackingPanel />
+      <SpatialConverterModal 
+        isOpen={isConverterOpen} 
+        onClose={() => setIsConverterOpen(false)} 
+      />
     </main>
   );
 }
