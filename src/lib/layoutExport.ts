@@ -25,46 +25,107 @@ export async function exportToPNG(
              el.classList?.contains("element-controls");
     },
     onclone: (clonedDoc) => {
-      // THE "ABSOLUTE ZERO" ISOLATION STRATEGY
+      // THE "ABSOLUTE ZERO" ISOLATION STRATEGY REFINED
       const paper = clonedDoc.querySelector('.layout-paper');
       if (!paper) return;
 
       clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar], script').forEach(el => el.remove());
 
-      const styles = Array.from(clonedDoc.getElementsByTagName("style"));
-      const links = Array.from(clonedDoc.getElementsByTagName("link"));
-
-      styles.forEach(s => {
-        if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
-          s.innerHTML = s.innerHTML
-            .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
-            .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
+      // 1. Collect all safe CSS rules from the original document
+      let safeCss = "";
+      try {
+        for (let i = 0; i < document.styleSheets.length; i++) {
+          const sheet = document.styleSheets[i];
+          try {
+            const rules = sheet.cssRules || sheet.rules;
+            if (rules) {
+              for (let j = 0; j < rules.length; j++) {
+                const ruleText = rules[j].cssText;
+                if (ruleText) {
+                  if (ruleText.includes("oklch(") || ruleText.includes("lab(")) {
+                    safeCss += ruleText
+                      .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
+                      .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)") + "\n";
+                  } else {
+                    safeCss += ruleText + "\n";
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore cross-origin stylesheets
+          }
         }
-      });
+      } catch (e) {}
 
+      // 2. Remove all external links and style tags from clone to prevent html2canvas parsing errors
+      const links = Array.from(clonedDoc.getElementsByTagName("link"));
       links.forEach(l => {
-        if (l.rel === 'stylesheet' && (l.href.includes('_next') || l.href.includes('vercel'))) {
+        if (l.rel === 'stylesheet') {
           l.remove();
         }
       });
+      const styles = Array.from(clonedDoc.getElementsByTagName("style"));
+      styles.forEach(s => s.remove());
 
-      const style = clonedDoc.createElement('style');
-      style.innerHTML = `
-        .layout-paper { background: white !important; color: black !important; position: relative !important; display: block !important; margin: 0 !important; }
+      // 3. Inject the sanitized CSS from the original document
+      if (safeCss) {
+        const injectedStyle = clonedDoc.createElement('style');
+        injectedStyle.innerHTML = safeCss;
+        clonedDoc.head.appendChild(injectedStyle);
+      }
+
+      // 4. Inject fallback essential Tailwind classes just in case
+      const fallbackStyle = clonedDoc.createElement('style');
+      fallbackStyle.innerHTML = `
+        .layout-paper { background: white !important; color: black !important; position: relative !important; display: block !important; margin: 0 !important; overflow: hidden !important; }
         .layout-element { position: absolute !important; }
         .bg-white { background-color: white !important; }
         .text-black { color: black !important; }
         .border { border: 1px solid #ccc !important; }
+        .border-b { border-bottom: 1px solid #ccc !important; }
+        .border-slate-300 { border-color: #cbd5e1 !important; }
+        .border-slate-200 { border-color: #e2e8f0 !important; }
         .w-full { width: 100% !important; }
         .h-full { height: 100% !important; }
+        .overflow-hidden { overflow: hidden !important; }
+        .overflow-auto { overflow: auto !important; }
+        .flex { display: flex !important; }
+        .flex-col { flex-direction: column !important; }
+        .items-center { align-items: center !important; }
+        .justify-center { justify-content: center !important; }
+        .justify-between { justify-content: space-between !important; }
+        .gap-1 { gap: 0.25rem !important; }
+        .gap-1\\.5 { gap: 0.375rem !important; }
+        .gap-2 { gap: 0.5rem !important; }
+        .p-2 { padding: 0.5rem !important; }
+        .pb-1 { padding-bottom: 0.25rem !important; }
+        .mb-1 { margin-bottom: 0.25rem !important; }
+        .mt-1 { margin-top: 0.25rem !important; }
+        .shrink-0 { flex-shrink: 0 !important; }
+        .flex-1 { flex: 1 1 0% !important; }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .leading-tight { line-height: 1.25 !important; }
+        .rounded-sm { border-radius: 0.125rem !important; }
+        .grid { display: grid !important; }
+        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        .col-span-2 { grid-column: span 2 / span 2 !important; }
         table { border-collapse: collapse !important; width: 100% !important; }
-        td { border: 1px solid #eee !important; padding: 2px !important; }
+        td, th { border: 1px solid #ccc !important; padding: 4px !important; }
         .text-center { text-align: center !important; }
+        .text-left { text-align: left !important; }
+        .text-right { text-align: right !important; }
         .font-bold { font-weight: bold !important; }
-        * { color-scheme: light !important; color: black; }
+        .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
+        .text-sm { font-size: 0.875rem !important; line-height: 1.25rem !important; }
+        .text-\\[9px\\] { font-size: 9px !important; }
+        .text-\\[10px\\] { font-size: 10px !important; }
+        .italic { font-style: italic !important; }
+        * { color-scheme: light !important; }
       `;
-      clonedDoc.head.appendChild(style);
+      clonedDoc.head.appendChild(fallbackStyle);
 
+      // 5. Sanitize inline styles inside paper
       paper.querySelectorAll("*").forEach((el: any) => {
         if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
           el.style.cssText = el.style.cssText
@@ -107,7 +168,7 @@ export async function exportToPDF(
              el.classList?.contains("element-controls");
     },
     onclone: (clonedDoc) => {
-      // THE "ABSOLUTE ZERO" ISOLATION STRATEGY
+      // THE "ABSOLUTE ZERO" ISOLATION STRATEGY REFINED
       
       // 1. Give the paper a unique identifier if it doesn't have one
       const paper = clonedDoc.querySelector('.layout-paper');
@@ -116,47 +177,101 @@ export async function exportToPDF(
       // 2. Remove Vercel Toolbar and other intrusive UI elements
       clonedDoc.querySelectorAll('#__vercel-toolbar, [data-vercel-toolbar], script').forEach(el => el.remove());
 
-      // 3. NUCLEAR: Remove all link tags and style tags that are not essential
-      // We keep styles that DON'T contain lab/oklch
-      const styles = Array.from(clonedDoc.getElementsByTagName("style"));
-      const links = Array.from(clonedDoc.getElementsByTagName("link"));
-
-      styles.forEach(s => {
-        if (s.innerHTML.includes("lab(") || s.innerHTML.includes("oklch(")) {
-          // If it has problematic colors, sanitize it aggressively
-          s.innerHTML = s.innerHTML
-            .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
-            .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)");
+      // 3. Collect all safe CSS rules from the original document
+      let safeCss = "";
+      try {
+        for (let i = 0; i < document.styleSheets.length; i++) {
+          const sheet = document.styleSheets[i];
+          try {
+            const rules = sheet.cssRules || sheet.rules;
+            if (rules) {
+              for (let j = 0; j < rules.length; j++) {
+                const ruleText = rules[j].cssText;
+                if (ruleText) {
+                  if (ruleText.includes("oklch(") || ruleText.includes("lab(")) {
+                    safeCss += ruleText
+                      .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
+                      .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)") + "\n";
+                  } else {
+                    safeCss += ruleText + "\n";
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore cross-origin stylesheets
+          }
         }
-      });
+      } catch (e) {}
 
+      // 4. Remove all external links and style tags from clone to prevent html2canvas parsing errors
+      const links = Array.from(clonedDoc.getElementsByTagName("link"));
       links.forEach(l => {
-        if (l.rel === 'stylesheet' && (l.href.includes('_next') || l.href.includes('vercel'))) {
-          // These are the most likely sources. We REMOVE them.
+        if (l.rel === 'stylesheet') {
           l.remove();
         }
       });
+      const styles = Array.from(clonedDoc.getElementsByTagName("style"));
+      styles.forEach(s => s.remove());
 
-      // 4. Injeksi style darurat yang SANGAT LENGKAP agar layout tetap berfungsi
-      const style = clonedDoc.createElement('style');
-      style.innerHTML = `
-        .layout-paper { background: white !important; color: black !important; position: relative !important; display: block !important; margin: 0 !important; }
+      // 5. Inject the sanitized CSS from the original document
+      if (safeCss) {
+        const injectedStyle = clonedDoc.createElement('style');
+        injectedStyle.innerHTML = safeCss;
+        clonedDoc.head.appendChild(injectedStyle);
+      }
+
+      // 6. Injeksi style darurat yang SANGAT LENGKAP agar layout tetap berfungsi
+      const fallbackStyle = clonedDoc.createElement('style');
+      fallbackStyle.innerHTML = `
+        .layout-paper { background: white !important; color: black !important; position: relative !important; display: block !important; margin: 0 !important; overflow: hidden !important; }
         .layout-element { position: absolute !important; }
         .bg-white { background-color: white !important; }
         .text-black { color: black !important; }
         .border { border: 1px solid #ccc !important; }
+        .border-b { border-bottom: 1px solid #ccc !important; }
+        .border-slate-300 { border-color: #cbd5e1 !important; }
+        .border-slate-200 { border-color: #e2e8f0 !important; }
         .w-full { width: 100% !important; }
         .h-full { height: 100% !important; }
+        .overflow-hidden { overflow: hidden !important; }
+        .overflow-auto { overflow: auto !important; }
+        .flex { display: flex !important; }
+        .flex-col { flex-direction: column !important; }
+        .items-center { align-items: center !important; }
+        .justify-center { justify-content: center !important; }
+        .justify-between { justify-content: space-between !important; }
+        .gap-1 { gap: 0.25rem !important; }
+        .gap-1\\.5 { gap: 0.375rem !important; }
+        .gap-2 { gap: 0.5rem !important; }
+        .p-2 { padding: 0.5rem !important; }
+        .pb-1 { padding-bottom: 0.25rem !important; }
+        .mb-1 { margin-bottom: 0.25rem !important; }
+        .mt-1 { margin-top: 0.25rem !important; }
+        .shrink-0 { flex-shrink: 0 !important; }
+        .flex-1 { flex: 1 1 0% !important; }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .leading-tight { line-height: 1.25 !important; }
+        .rounded-sm { border-radius: 0.125rem !important; }
+        .grid { display: grid !important; }
+        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        .col-span-2 { grid-column: span 2 / span 2 !important; }
         table { border-collapse: collapse !important; width: 100% !important; }
-        td { border: 1px solid #eee !important; padding: 2px !important; }
+        td, th { border: 1px solid #ccc !important; padding: 4px !important; }
         .text-center { text-align: center !important; }
+        .text-left { text-align: left !important; }
+        .text-right { text-align: right !important; }
         .font-bold { font-weight: bold !important; }
-        /* Reset any inherit lab() colors */
-        * { color-scheme: light !important; color: black; }
+        .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
+        .text-sm { font-size: 0.875rem !important; line-height: 1.25rem !important; }
+        .text-\\[9px\\] { font-size: 9px !important; }
+        .text-\\[10px\\] { font-size: 10px !important; }
+        .italic { font-style: italic !important; }
+        * { color-scheme: light !important; }
       `;
-      clonedDoc.head.appendChild(style);
+      clonedDoc.head.appendChild(fallbackStyle);
 
-      // 5. Sanitize all elements in the paper
+      // 7. Sanitize all elements in the paper
       paper.querySelectorAll("*").forEach((el: any) => {
         if (el.style?.cssText && (el.style.cssText.includes("lab(") || el.style.cssText.includes("oklch("))) {
           el.style.cssText = el.style.cssText
