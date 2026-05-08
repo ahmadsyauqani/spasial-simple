@@ -7,7 +7,7 @@ import * as L from "leaflet";
 import * as turf from "@turf/turf";
 import proj4 from "proj4";
 import { useMapContext, BASEMAP_OPTIONS, BasemapType } from "@/lib/MapContext";
-import { Layers, LocateFixed, Loader2, Lock, Unlock, Magnet, MousePointer2, Settings2, Crosshair, Activity, Maximize, Compass } from "lucide-react";
+import { Layers, LocateFixed, Loader2, Lock, Unlock, Magnet, MousePointer2, Settings2, Crosshair, Activity, Maximize, Compass, Ruler, Square } from "lucide-react";
 import { createOfflineTileLayer } from "@/lib/OfflineTileLayer";
 import { OfflineMapManager } from "./OfflineMapManager";
 
@@ -850,7 +850,8 @@ function CursorCoordinates() {
   const map = useMap();
   const { 
     layers, layerGeojsonCache, 
-    isTracking, trackingPath 
+    isTracking, trackingPath,
+    setActiveDigitizingLayerId, areaUnit
   } = useMapContext();
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [isLocked, setIsLocked] = useState(false);
@@ -858,6 +859,20 @@ function CursorCoordinates() {
   const [snapPoint, setSnapPoint] = useState<{lat: number, lng: number} | null>(null);
   const [zoom, setZoom] = useState(13); // Default safely
   const [scale, setScale] = useState(0);
+  
+  const [isMeasuring, setIsMeasuring] = useState(false);
+  const [measureType, setMeasureType] = useState<'distance' | 'area'>('distance');
+
+  const formatUnit = (sqm: number) => {
+    if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
+    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+  };
+
+  const formatLength = (meters: number) => {
+    if (meters >= 1000) return `${(meters / 1000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} km`;
+    return `${meters.toLocaleString('id-ID', { maximumFractionDigits: 1 })} m`;
+  };
 
   const calculateScale = (z: number, l: number) => {
     const metersPerPixel = 156543.03392 * Math.cos(l * Math.PI / 180) / Math.pow(2, z);
@@ -960,6 +975,39 @@ function CursorCoordinates() {
     };
   }, [map, layers, layerGeojsonCache]);
 
+  useEffect(() => {
+    if (!isMeasuring) return;
+
+    const handleMeasureCreate = (e: any) => {
+      const { layer } = e;
+      const geojson = layer.toGeoJSON();
+      
+      if (measureType === 'distance') {
+        const length = turf.length(geojson, { units: 'meters' });
+        toast.success(`Panjang: ${formatLength(length)}`, { id: "measure", duration: 5000 });
+      } else {
+        const area = turf.area(geojson);
+        let perimeterM = 0;
+        try {
+          perimeterM = turf.length(geojson, { units: 'meters' });
+        } catch(err) {}
+        toast.success(`Luas: ${formatUnit(area)} | Keliling: ${formatLength(perimeterM)}`, { id: "measure", duration: 5000 });
+      }
+      
+      setTimeout(() => {
+        layer.remove();
+      }, 2000);
+      
+      setIsMeasuring(false);
+      map.pm.disableDraw();
+    };
+
+    map.on('pm:create', handleMeasureCreate);
+    return () => {
+      map.off('pm:create', handleMeasureCreate);
+    };
+  }, [map, isMeasuring, measureType, areaUnit]);
+
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsLocked(false);
@@ -1041,6 +1089,46 @@ function CursorCoordinates() {
             title={isSnapEnabled ? "Matikan Snap" : "Aktifkan Snap ke Vertex"}
           >
             <Magnet className="w-4 h-4" />
+          </button>
+
+          <button 
+            onClick={() => {
+              if (isMeasuring && measureType === 'distance') {
+                map.pm.disableDraw();
+                setIsMeasuring(false);
+              } else {
+                setActiveDigitizingLayerId(null);
+                setIsMeasuring(true);
+                setMeasureType('distance');
+                map.pm.enableDraw('Polyline', { snappable: isSnapEnabled });
+                toast.info("Mode Ukur Jarak Aktif. Klik di peta.", { id: "measure-info" });
+              }
+            }}
+            className={`p-2 rounded-full shadow-lg border transition-all duration-300 flex items-center gap-1 ${isMeasuring && measureType === 'distance' ? 'bg-orange-500 text-white border-orange-400' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
+            title={isMeasuring && measureType === 'distance' ? "Batal Ukur" : "Ukur Jarak (Panjang)"}
+          >
+            <Crosshair className="w-4 h-4" />
+            <span className="text-[10px] font-bold">Jarak</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              if (isMeasuring && measureType === 'area') {
+                map.pm.disableDraw();
+                setIsMeasuring(false);
+              } else {
+                setActiveDigitizingLayerId(null);
+                setIsMeasuring(true);
+                setMeasureType('area');
+                map.pm.enableDraw('Polygon', { snappable: isSnapEnabled });
+                toast.info("Mode Ukur Luas Aktif. Klik di peta.", { id: "measure-info" });
+              }
+            }}
+            className={`p-2 rounded-full shadow-lg border transition-all duration-300 flex items-center gap-1 ${isMeasuring && measureType === 'area' ? 'bg-orange-500 text-white border-orange-400' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
+            title={isMeasuring && measureType === 'area' ? "Batal Ukur" : "Ukur Luas & Keliling"}
+          >
+            <Maximize className="w-4 h-4" />
+            <span className="text-[10px] font-bold">Luas</span>
           </button>
         </div>
         
@@ -1240,6 +1328,11 @@ function LayerFeature({ layer }: { layer: any }) {
     return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
   };
 
+  const formatLength = (meters: number) => {
+    if (meters >= 1000) return `${(meters / 1000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} km`;
+    return `${meters.toLocaleString('id-ID', { maximumFractionDigits: 1 })} m`;
+  };
+
   const onEachFeature = (feature: any, mapLayer: any) => {
     // Digitizing Edit Trigger
     mapLayer.on('click', (e: L.LeafletMouseEvent) => {
@@ -1250,50 +1343,76 @@ function LayerFeature({ layer }: { layer: any }) {
 
     if (feature.properties) {
       
-      // Hitung luas ruang poligon spesifik menggunakan Turf di tempat
+      // Hitung luas, panjang, keliling menggunakan Turf
       let localAreaHtml = "";
       try {
-         const wgsSqM = turf.area(feature);
+         const geomType = feature.geometry.type;
          
-         // Kalau nilainya 0, ini berarti layer Titik (Point) atau Garis (LineString), bukan Area.
-         if (wgsSqM > 1) { 
-            let utmSqM = wgsSqM * 0.9992;
-            let tm3SqM = wgsSqM * 0.9998;
-            
-            let utm_epsg = "";
-            let tm3_epsg = "";
+         if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+            const wgsSqM = turf.area(feature);
+            let perimeterM = 0;
             try {
-              const centroid = turf.centroid(feature).geometry.coordinates; // [lng, lat]
-              const lng = centroid[0];
-              const lat = centroid[1];
-              const utmZone = Math.floor((lng + 180) / 6) + 1;
-              utm_epsg = ` Zona ${utmZone}`;
-              const tm3Index = Math.round((lng - 94.5) / 3);
-              if (tm3Index >= 0 && tm3Index <= 20) {
-                const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
-                const subZone = (tm3Index % 2 === 0) ? 2 : 1;
-                tm3_epsg = ` Zona ${baseZone}-${subZone}`;
-              }
-            } catch(e) {}
-             
+              perimeterM = turf.length(feature, { units: 'meters' });
+            } catch(e) {
+              console.warn("Gagal menghitung keliling:", e);
+            }
+
+            if (wgsSqM > 1) { 
+               let utmSqM = wgsSqM * 0.9992;
+               let tm3SqM = wgsSqM * 0.9998;
+               
+               let utm_epsg = "";
+               let tm3_epsg = "";
+               try {
+                 const centroid = turf.centroid(feature).geometry.coordinates; // [lng, lat]
+                 const lng = centroid[0];
+                 const lat = centroid[1];
+                 const utmZone = Math.floor((lng + 180) / 6) + 1;
+                 utm_epsg = ` Zona ${utmZone}`;
+                 const tm3Index = Math.round((lng - 94.5) / 3);
+                 if (tm3Index >= 0 && tm3Index <= 20) {
+                   const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
+                   const subZone = (tm3Index % 2 === 0) ? 2 : 1;
+                   tm3_epsg = ` Zona ${baseZone}-${subZone}`;
+                 }
+               } catch(e) {}
+                
+               localAreaHtml += `
+               <div class="mb-2 bg-black/40 p-2 text-xs rounded border border-primary/20">
+                 <span class="text-[10px] uppercase font-bold text-white/50 mb-1 block tracking-wider">📐 Area Poligon</span>
+                 <div class="flex justify-between items-center mt-1">
+                    <span class="text-gray-300">Luas (WGS 84)</span>
+                    <span class="font-mono text-primary font-bold">${formatUnit(wgsSqM)}</span>
+                 </div>
+                 <div class="flex justify-between items-center mt-1">
+                    <span class="text-gray-300">Luas (UTM${utm_epsg})</span>
+                    <span class="font-mono text-gray-100">${formatUnit(utmSqM)}</span>
+                 </div>
+                 <div class="flex justify-between items-center mt-1">
+                    <span class="text-gray-300">Luas (TM-3${tm3_epsg})</span>
+                    <span class="font-mono text-gray-100">${formatUnit(tm3SqM)}</span>
+                 </div>
+                 <div class="flex justify-between items-center mt-1 border-t border-white/10 pt-1">
+                    <span class="text-gray-300">Keliling</span>
+                    <span class="font-mono text-indigo-400 font-bold">${formatLength(perimeterM)}</span>
+                 </div>
+               </div>`;
+            }
+         } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
+            const lengthM = turf.length(feature, { units: 'meters' });
+            
             localAreaHtml += `
             <div class="mb-2 bg-black/40 p-2 text-xs rounded border border-primary/20">
-              <span class="text-[10px] uppercase font-bold text-white/50 mb-1 block tracking-wider">📐 Area Poligon</span>
+              <span class="text-[10px] uppercase font-bold text-white/50 mb-1 block tracking-wider">📏 Garis</span>
               <div class="flex justify-between items-center mt-1">
-                 <span class="text-gray-300">WGS 84</span>
-                 <span class="font-mono text-primary font-bold">${formatUnit(wgsSqM)}</span>
-              </div>
-              <div class="flex justify-between items-center mt-1">
-                 <span class="text-gray-300">UTM${utm_epsg}</span>
-                 <span class="font-mono text-gray-100">${formatUnit(utmSqM)}</span>
-              </div>
-              <div class="flex justify-between items-center mt-1">
-                 <span class="text-gray-300">TM-3${tm3_epsg}</span>
-                 <span class="font-mono text-gray-100">${formatUnit(tm3SqM)}</span>
+                 <span class="text-gray-300">Panjang</span>
+                 <span class="font-mono text-primary font-bold">${formatLength(lengthM)}</span>
               </div>
             </div>`;
          }
-      } catch(e) {}
+      } catch(e) {
+         console.warn("Gagal menghitung dimensi:", e);
+      }
 
       // Build an elegant HTML table for the properties
       let popupContent = `<div class="p-2 min-w-[200px] flex flex-col gap-2">`;
