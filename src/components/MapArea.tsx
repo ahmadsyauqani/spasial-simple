@@ -981,6 +981,7 @@ function CursorCoordinates() {
     const handleMeasureCreate = (e: any) => {
       const { layer } = e;
       const geojson = layer.toGeoJSON();
+      toast.info(`Tipe Geometri: ${geojson.geometry.type}`, { id: "measure-debug" });
       
       if (measureType === 'distance') {
         try {
@@ -1119,8 +1120,8 @@ function CursorCoordinates() {
                 setActiveDigitizingLayerId(null);
                 setIsMeasuring(true);
                 setMeasureType('distance');
-                map.pm.enableDraw('Polyline', { snappable: isSnapEnabled });
-                toast.info("Mode Ukur Jarak Aktif. Klik di peta.", { id: "measure-info" });
+                map.pm.enableDraw('Polyline', { snappable: isSnapEnabled, finishOn: 'dblclick' });
+                toast.info("Mode Ukur Jarak Aktif. Klik di peta. Double-click untuk selesai.", { id: "measure-info" });
               }
             }}
             className={`p-2 rounded-full shadow-lg border transition-all duration-300 flex items-center gap-1 ${isMeasuring && measureType === 'distance' ? 'bg-orange-500 text-white border-orange-400' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
@@ -1139,8 +1140,8 @@ function CursorCoordinates() {
                 setActiveDigitizingLayerId(null);
                 setIsMeasuring(true);
                 setMeasureType('area');
-                map.pm.enableDraw('Polygon', { snappable: isSnapEnabled });
-                toast.info("Mode Ukur Luas Aktif. Klik di peta.", { id: "measure-info" });
+                map.pm.enableDraw('Polygon', { snappable: isSnapEnabled, finishOn: 'dblclick' });
+                toast.info("Mode Ukur Luas Aktif. Klik di peta. Double-click untuk selesai.", { id: "measure-info" });
               }
             }}
             className={`p-2 rounded-full shadow-lg border transition-all duration-300 flex items-center gap-1 ${isMeasuring && measureType === 'area' ? 'bg-orange-500 text-white border-orange-400' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
