@@ -983,15 +983,34 @@ function CursorCoordinates() {
       const geojson = layer.toGeoJSON();
       
       if (measureType === 'distance') {
-        const length = turf.length(geojson, { units: 'meters' });
-        toast.success(`Panjang: ${formatLength(length)}`, { id: "measure", duration: 5000 });
-      } else {
-        const area = turf.area(geojson);
-        let perimeterM = 0;
         try {
-          perimeterM = turf.length(geojson, { units: 'meters' });
-        } catch(err) {}
-        toast.success(`Luas: ${formatUnit(area)} | Keliling: ${formatLength(perimeterM)}`, { id: "measure", duration: 5000 });
+          const coords = geojson.geometry.coordinates;
+          let lengthM = 0;
+          for (let i = 0; i < coords.length - 1; i++) {
+            lengthM += turf.distance(turf.point(coords[i]), turf.point(coords[i+1]), { units: 'meters' });
+          }
+          toast.success(`Panjang: ${formatLength(lengthM)}`, { id: "measure", duration: 5000 });
+        } catch (err: any) {
+          console.error("Gagal menghitung panjang:", err);
+          toast.error("Gagal menghitung panjang", { id: "measure" });
+        }
+      } else {
+        try {
+          const area = turf.area(geojson);
+          let perimeterM = 0;
+          try {
+            const coords = geojson.geometry.coordinates[0]; // Exterior ring for polygon
+            for (let i = 0; i < coords.length - 1; i++) {
+              perimeterM += turf.distance(turf.point(coords[i]), turf.point(coords[i+1]), { units: 'meters' });
+            }
+          } catch(err) {
+            console.warn("Gagal menghitung keliling:", err);
+          }
+          toast.success(`Luas: ${formatUnit(area)} | Keliling: ${formatLength(perimeterM)}`, { id: "measure", duration: 5000 });
+        } catch (err: any) {
+          console.error("Gagal menghitung luas:", err);
+          toast.error("Gagal menghitung luas", { id: "measure" });
+        }
       }
       
       setTimeout(() => {
