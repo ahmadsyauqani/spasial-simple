@@ -586,7 +586,7 @@ export function UploadDatasetPanel() {
 
             {/* Pemetaan Kolom */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-foreground">Pemetaan Kolom (Klik Slot -> Klik Chip)</label>
+              <label className="text-sm font-semibold text-foreground">Pemetaan Kolom (Klik Slot &rarr; Klik Chip)</label>
               
               {/* Slots */}
               <div className="grid grid-cols-3 gap-2">
