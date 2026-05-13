@@ -102,7 +102,36 @@ async def convert_gpkg(file: UploadFile = File(...)):
                             
                 if features:
                     print(f"Successfully read {len(features)} features from layer {layer} via Fiona")
-                    break # Stop at first layer with features
+                    
+                    try:
+                        print("Converting Fiona features to GeoDataFrame for robust serialization...")
+                        import geopandas as gpd
+                        gdf = gpd.GeoDataFrame.from_features(features, crs=detected_crs)
+                        
+                        # Remove Z coordinates
+                        from shapely.ops import transform
+                        def remove_z(geom):
+                            if geom is None: return None
+                            if geom.has_z: return transform(lambda x, y, z=None: (x, y), geom)
+                            return geom
+                        gdf.geometry = gdf.geometry.apply(remove_z)
+                        
+                        # Convert to GeoJSON string (GeoPandas handles serialization perfectly)
+                        geojson_str = gdf.to_json()
+                        geojson_data = json.loads(geojson_str)
+                        
+                        # Add metadata
+                        geojson_data['detected_crs'] = detected_crs
+                        geojson_data['total_features'] = len(features)
+                        
+                        # Clean up temporary file
+                        os.unlink(tmp_path)
+                        
+                        return JSONResponse(content=geojson_data)
+                    except Exception as e:
+                        print(f"Failed to serialize via GeoPandas: {e}. Falling back to direct JSON response.")
+                        # Break loop and use direct JSON response at the end
+                        break
             except Exception as e:
                 print(f"Failed to read layer {layer} with Fiona: {e}")
                 continue
