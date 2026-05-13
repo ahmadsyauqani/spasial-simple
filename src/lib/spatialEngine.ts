@@ -194,50 +194,11 @@ export async function parseSpatialFile(file: File): Promise<any> {
           }
         }
         
-        const tableCounts: string[] = [];
-        for (const tableName of featureTableNames) {
-          const featureDao = geoPackage.getFeatureDao(tableName) as any;
-          let count: any = 'unknown';
-          try {
-            count = featureDao.count();
-          } catch (e) {
-            const rows = featureDao.queryForAll();
-            if (rows && rows.length !== undefined) count = rows.length;
-          }
-          tableCounts.push(`${tableName} (${count} baris)`);
-        }
-        
         const tileTables = geoPackage.getTileTables();
         geoPackage.close();
         
         if (allFeatures.length === 0) {
-          let debugInfo = 'No rows found';
-          if (featureTableNames.length > 0) {
-            const firstTable = featureTableNames[0];
-            const featureDao = geoPackage.getFeatureDao(firstTable) as any;
-            const rows = featureDao.queryForAll();
-            const firstRow = rows[0];
-            if (firstRow) {
-              const keys = Object.keys(firstRow);
-              const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(firstRow)).filter(p => {
-                try {
-                  return typeof (firstRow as any)[p] === 'function';
-                } catch (e) {
-                  return false;
-                }
-              });
-              debugInfo = `Keys: [${keys.join(', ')}], Methods: [${methods.join(', ')}]`;
-              
-              const geomCol = featureDao.geometryColumnName;
-              const geomVal = firstRow.getValue ? firstRow.getValue(geomCol) : 'no getValue';
-              debugInfo += `, GeomCol: ${geomCol}, GeomVal type: ${typeof geomVal}`;
-              
-              if (geomVal && typeof geomVal === 'object') {
-                debugInfo += `, GeomVal keys: [${Object.keys(geomVal).join(', ')}]`;
-              }
-            }
-          }
-          throw new Error(`GeoPackage tidak memiliki fitur geometri yang valid. Tabel fitur: [${tableCounts.join(', ')}]. Debug: ${debugInfo}`);
+          throw new Error(`GeoPackage tidak memiliki fitur geometri yang valid. Tabel fitur: [${featureTableNames.join(', ')}], Tabel tile: [${tileTables.join(', ')}]`);
         }
         
         geojson = {
