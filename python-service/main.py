@@ -138,17 +138,13 @@ async def convert_gpkg(file: UploadFile = File(...)):
             geojson_data['detected_crs'] = detected_crs
             geojson_data['total_features'] = len(all_features)
             
-            # Clean up temporary file
-            os.unlink(tmp_path)
-            
             return JSONResponse(content=geojson_data)
-                    except Exception as e:
-                        print(f"Failed to serialize via GeoPandas: {e}. Falling back to direct JSON response.")
-                        # Break loop and use direct JSON response at the end
-                        break
-            except Exception as e:
-                print(f"Failed to read layer {layer} with Fiona: {e}")
-                continue
+        except Exception as e:
+            print(f"Failed to serialize via GeoPandas: {e}. Returning raw features.")
+            return JSONResponse(content={"type": "FeatureCollection", "features": all_features})
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
                 
         if not features:
             # Fallback to GeoPandas if Fiona failed or returned nothing
