@@ -222,10 +222,12 @@ async def convert_kmz(file: UploadFile = File(...)):
         tmp.write(content)
         tmp_path = tmp.name
         
+    debug_logs = []
     try:
         with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
             # Cari file KML di dalam KMZ
             kml_files = [f for f in zip_ref.namelist() if f.endswith('.kml')]
+            debug_logs.append(f"Files in ZIP: {zip_ref.namelist()}")
             if not kml_files:
                 os.unlink(tmp_path)
                 raise HTTPException(status_code=400, detail="Tidak ada file KML di dalam KMZ")
@@ -249,7 +251,7 @@ async def convert_kmz(file: UploadFile = File(...)):
                     
                     encoded = base64.b64encode(val).decode('utf-8')
                     images_base64[img_file] = f"data:{mime_type};base64,{encoded}"
-                    print(f"Extracted image {img_file} and converted to base64")
+                    debug_logs.append(f"Extracted image {img_file}")
                     
         # Simpan KML ke file sementara agar bisa dibaca Fiona
         with tempfile.NamedTemporaryFile(delete=False, suffix=".kml") as tmp_kml:
@@ -262,7 +264,7 @@ async def convert_kmz(file: UploadFile = File(...)):
         features = []
         try:
             with fiona.open(tmp_kml_path, 'r') as src:
-                for feat in src:
+                for idx, feat in enumerate(src):
                     try:
                         if hasattr(feat, '__geo_interface__'):
                             feat_dict = dict(feat.__geo_interface__)
@@ -275,13 +277,18 @@ async def convert_kmz(file: UploadFile = File(...)):
                             
                         properties = feat_dict.get('properties', {})
                         
+                        if idx < 3:
+                            debug_logs.append(f"Feature {idx} properties: {list(properties.keys())}")
+                            if 'description' in properties:
+                                debug_logs.append(f"Feature {idx} description snippet: {str(properties['description'])[:100]}")
+                        
                         # Ganti path gambar dengan Base64 di properties (misal di dalam deskripsi HTML)
                         for key, val in properties.items():
                             if isinstance(val, str):
                                 for img_path, base64_str in images_base64.items():
                                     if img_path in val:
                                         properties[key] = val.replace(img_path, base64_str)
-                                        print(f"Replaced reference to {img_path} with base64 in property '{key}'")
+                                        debug_logs.append(f"Replaced {img_path} in {key}")
                                         
                             # Konversi bytes ke base64 (jika ada BLOB langsung)
                             elif isinstance(val, bytes):
@@ -297,10 +304,10 @@ async def convert_kmz(file: UploadFile = File(...)):
                         if feat_dict.get('geometry') is not None:
                             features.append(feat_dict)
                     except Exception as e:
-                        print(f"Error parsing KML feature: {e}")
+                        debug_logs.append(f"Error parsing feature {idx}: {e}")
                         continue
         except Exception as e:
-            print(f"Fiona failed to read KML: {e}. Trying GeoPandas directly...")
+            debug_logs.append(f"Fiona failed: {e}. Trying GeoPandas fallback.")
             # Fallback ke GeoPandas langsung
             gdf = gpd.read_file(tmp_kml_path)
             geojson_str = gdf.to_json()
@@ -308,7 +315,7 @@ async def convert_kmz(file: UploadFile = File(...)):
             
             os.unlink(tmp_kml_path)
             os.unlink(tmp_path)
-            return JSONResponse(content=geojson_data)
+            return JSONResponse(content={"geojson": geojson_data, "debug_logs": debug_logs})
             
         os.unlink(tmp_kml_path)
         os.unlink(tmp_path)
@@ -330,7 +337,7 @@ async def convert_kmz(file: UploadFile = File(...)):
         geojson_str = gdf.to_json()
         geojson_data = json.loads(geojson_str)
         
-        return JSONResponse(content=geojson_data)
+        return JSONResponse(content={"geojson": geojson_data, "debug_logs": debug_logs})
         
     except Exception as e:
         if os.path.exists(tmp_path): os.unlink(tmp_path)
