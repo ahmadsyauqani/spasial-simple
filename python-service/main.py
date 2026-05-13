@@ -207,12 +207,16 @@ async def convert_gpkg(file: UploadFile = File(...)):
 
 @app.post("/convert-kmz")
 async def convert_kmz(file: UploadFile = File(...)):
-    # Save to temp file
     import tempfile
     import os
     import zipfile
-    from fastapi import Response
+    import fiona
+    import geopandas as gpd
+    import json
+    from fastapi.responses import JSONResponse
+    from fastapi import HTTPException
     
+    # Save KMZ to temp file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".kmz") as tmp:
         content = await file.read()
         tmp.write(content)
@@ -220,23 +224,93 @@ async def convert_kmz(file: UploadFile = File(...)):
         
     try:
         with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
-            # Find doc.kml or any KML file
+            # Cari file KML di dalam KMZ
             kml_files = [f for f in zip_ref.namelist() if f.endswith('.kml')]
             if not kml_files:
                 os.unlink(tmp_path)
                 raise HTTPException(status_code=400, detail="Tidak ada file KML di dalam KMZ")
                 
-            # Read the first KML file
+            # Ekstrak file KML pertama
             with zip_ref.open(kml_files[0]) as kml_file:
                 kml_content = kml_file.read()
                 
+        # Simpan KML ke file sementara agar bisa dibaca Fiona
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".kml") as tmp_kml:
+            tmp_kml.write(kml_content)
+            tmp_kml_path = tmp_kml.name
+            
+        # Aktifkan driver KML di Fiona
+        fiona.drvsupport.supported_drivers['KML'] = 'rw'
+        
+        features = []
+        try:
+            with fiona.open(tmp_kml_path, 'r') as src:
+                for feat in src:
+                    try:
+                        if hasattr(feat, '__geo_interface__'):
+                            feat_dict = dict(feat.__geo_interface__)
+                        else:
+                            feat_dict = {
+                                "type": "Feature",
+                                "properties": dict(feat.get('properties', {})),
+                                "geometry": dict(feat.get('geometry', {})) if feat.get('geometry') else None
+                            }
+                            
+                        # Konversi bytes ke base64 (jika ada)
+                        properties = feat_dict.get('properties', {})
+                        for key, val in properties.items():
+                            if isinstance(val, bytes):
+                                import base64
+                                mime_type = "image/jpeg"
+                                if val.startswith(b'\x89PNG\r\n\x1a\n'): mime_type = "image/png"
+                                elif val.startswith(b'GIF8'): mime_type = "image/gif"
+                                elif val.startswith(b'\xff\xd8'): mime_type = "image/jpeg"
+                                
+                                encoded = base64.b64encode(val).decode('utf-8')
+                                properties[key] = f"data:{mime_type};base64,{encoded}"
+                                
+                        if feat_dict.get('geometry') is not None:
+                            features.append(feat_dict)
+                    except Exception as e:
+                        print(f"Error parsing KML feature: {e}")
+                        continue
+        except Exception as e:
+            print(f"Fiona failed to read KML: {e}. Trying GeoPandas directly...")
+            # Fallback ke GeoPandas langsung
+            gdf = gpd.read_file(tmp_kml_path)
+            geojson_str = gdf.to_json()
+            geojson_data = json.loads(geojson_str)
+            
+            os.unlink(tmp_kml_path)
+            os.unlink(tmp_path)
+            return JSONResponse(content=geojson_data)
+            
+        os.unlink(tmp_kml_path)
         os.unlink(tmp_path)
-        # Return KML content as XML text
-        return Response(content=kml_content, media_type="application/vnd.google-earth.kml+xml")
+        
+        if not features:
+            raise HTTPException(status_code=400, detail="Gagal mengekstrak fitur dari file KML di dalam KMZ")
+            
+        # Gunakan GeoPandas untuk serialisasi agar rapi
+        gdf = gpd.GeoDataFrame.from_features(features)
+        
+        # Hapus koordinat Z jika ada
+        from shapely.ops import transform
+        def remove_z(geom):
+            if geom is None: return None
+            if geom.has_z: return transform(lambda x, y, z=None: (x, y), geom)
+            return geom
+        gdf.geometry = gdf.geometry.apply(remove_z)
+        
+        geojson_str = gdf.to_json()
+        geojson_data = json.loads(geojson_str)
+        
+        return JSONResponse(content=geojson_data)
         
     except Exception as e:
-        if os.path.exists(tmp_path):
-            os.unlink(tmp_path)
+        if os.path.exists(tmp_path): os.unlink(tmp_path)
+        if 'tmp_kml_path' in locals() and os.path.exists(tmp_kml_path): os.unlink(tmp_kml_path)
+        print(f"Error in convert_kmz: {e}")
         raise HTTPException(status_code=500, detail=f"Gagal memproses KMZ: {str(e)}")
 
 if __name__ == "__main__":
