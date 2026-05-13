@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: sakagis-python-api
+    env: docker
+    plan: free
+    rootDir: python-service
+    healthCheckPath: /
