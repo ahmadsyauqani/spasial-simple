@@ -317,6 +317,17 @@ async def convert_kmz(file: UploadFile = File(...)):
                         if val_tag is not None and val_tag.text:
                             properties[data_name] = val_tag.text
                             
+                # Ekstrak Icon (Kadang foto disimpan sebagai Icon atau IconStyle)
+                icon_tag = pm.find(f'.//{ns}Icon/{ns}href')
+                if icon_tag is not None and icon_tag.text:
+                    properties["Foto"] = icon_tag.text
+                    debug_logs.append(f"Found Icon href: {icon_tag.text}")
+                    
+                style_icon_tag = pm.find(f'.//{ns}IconStyle/{ns}Icon/{ns}href')
+                if style_icon_tag is not None and style_icon_tag.text:
+                    properties["Foto"] = style_icon_tag.text
+                    debug_logs.append(f"Found IconStyle href: {style_icon_tag.text}")
+                    
                 # Ekstrak Geometri (Point)
                 point = pm.find(f'.//{ns}Point')
                 geometry = None
