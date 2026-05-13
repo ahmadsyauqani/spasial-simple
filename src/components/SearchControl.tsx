@@ -70,7 +70,7 @@ export function SearchControl() {
   };
 
   return (
-    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-[450px]">
+    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[40] w-[90%] max-w-[450px]">
       <form 
         onSubmit={handleSearch}
         className="relative group"
