@@ -100,11 +100,8 @@ export async function uploadLayerToSupabase(projectId: string, layerName: string
     const results = await Promise.allSettled(promises);
     results.forEach((result, idx) => {
       if (result.status === 'rejected') {
-        console.error("Gagal menyimpan fitur ke Supabase. Error detail:", {
-          properties: validFeatures[idx].properties,
-          geometry_type: validFeatures[idx].geometry?.type,
-          reason: result.reason?.message || result.reason
-        });
+        const err = result.reason;
+        console.error(`Gagal menyimpan fitur ke Supabase. Error: ${err.message || err}. Code: ${err.code || 'N/A'}. Details: ${err.details || 'N/A'}`);
       }
     });
   }
