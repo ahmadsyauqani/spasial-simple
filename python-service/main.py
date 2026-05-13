@@ -90,6 +90,20 @@ async def convert_gpkg(file: UploadFile = File(...)):
                             for key, val in properties.items():
                                 if isinstance(val, bytes):
                                     import base64
+                                    from PIL import Image
+                                    import io
+                                    
+                                    # Coba perkecil ukuran gambar agar tidak melebihi limit database
+                                    try:
+                                        image = Image.open(io.BytesIO(val))
+                                        image.thumbnail((300, 300)) # Maksimal 300x300 px
+                                        out_io = io.BytesIO()
+                                        image.save(out_io, format=image.format or 'JPEG', quality=80)
+                                        val = out_io.getvalue()
+                                        print(f"Resized blob image in property '{key}'")
+                                    except Exception as e:
+                                        print(f"Failed to resize blob (might not be an image): {e}")
+                                        
                                     mime_type = "image/jpeg" # Default fallback
                                     if val.startswith(b'\x89PNG\r\n\x1a\n'):
                                         mime_type = "image/png"
