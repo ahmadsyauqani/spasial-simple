@@ -44,63 +44,63 @@ async def convert_gpkg(file: UploadFile = File(...)):
             os.unlink(tmp_path)
             raise HTTPException(status_code=400, detail="GeoPackage tidak memiliki layer")
 
-        # Read the first layer that has geometry
-        gdf = None
+        # Use Fiona to read features directly
+        features = []
+        detected_crs = "Unknown"
+        
         for layer in layers:
             try:
-                gdf_temp = gpd.read_file(tmp_path, layer=layer)
-                if not gdf_temp.empty and gdf_temp.geometry.notnull().any():
-                    gdf = gdf_temp
-                    break
+                with fiona.open(tmp_path, layer=layer) as src:
+                    detected_crs = str(src.crs) if src.crs else "None"
+                    print(f"Reading layer {layer} via Fiona. CRS: {detected_crs}")
+                    
+                    for feat in src:
+                        # Fiona returns features as dictionaries matching GeoJSON
+                        if feat.get('geometry') is not None:
+                            features.append(feat)
+                            
+                if features:
+                    print(f"Successfully read {len(features)} features from layer {layer} via Fiona")
+                    break # Stop at first layer with features
             except Exception as e:
-                print(f"Skipping layer {layer}: {e}")
+                print(f"Failed to read layer {layer} with Fiona: {e}")
                 continue
                 
-        if gdf is None:
+        if not features:
+            # Fallback to GeoPandas if Fiona failed or returned nothing
+            print("Fiona returned 0 features or failed. Falling back to GeoPandas...")
+            try:
+                gdf = gpd.read_file(tmp_path)
+                if not gdf.empty:
+                    print(f"GeoPandas read successful. Shape: {gdf.shape}")
+                    
+                    # Remove Z coordinates
+                    from shapely.ops import transform
+                    def remove_z(geom):
+                        if geom is None: return None
+                        if geom.has_z: return transform(lambda x, y, z=None: (x, y), geom)
+                        return geom
+                    gdf.geometry = gdf.geometry.apply(remove_z)
+                    
+                    # Convert to GeoJSON
+                    geojson_str = gdf.to_json()
+                    geojson_data = json.loads(geojson_str)
+                    
+                    os.unlink(tmp_path)
+                    return JSONResponse(content=geojson_data)
+            except Exception as e:
+                print(f"GeoPandas fallback also failed: {e}")
+                
             os.unlink(tmp_path)
             raise HTTPException(status_code=400, detail="Tidak ada layer dengan geometri valid yang ditemukan")
 
-        print(f"Layer read successfully. Shape: {gdf.shape}, CRS: {gdf.crs}")
-        detected_crs = str(gdf.crs) if gdf.crs else "None"
-        
-        # Remove Z coordinates if present (often causes issues with GeoJSON export/rendering)
-        from shapely.ops import transform
-        def remove_z(geom):
-            if geom is None:
-                return None
-            if geom.has_z:
-                return transform(lambda x, y, z=None: (x, y), geom)
-            return geom
-            
-        try:
-            print(f"Original geometry types: {gdf.geometry.type.unique()}")
-            gdf.geometry = gdf.geometry.apply(remove_z)
-            print("Successfully processed Z coordinates.")
-        except Exception as e:
-            print(f"Warning: Failed to remove Z coordinates: {e}")
-        if gdf.crs is not None:
-            try:
-                # Use to_epsg() which might be None if it's a custom CRS
-                epsg = gdf.crs.to_epsg()
-                if epsg != 4326:
-                    print(f"Converting from {gdf.crs} to EPSG:4326")
-                    gdf = gdf.to_crs(epsg=4326)
-            except Exception as e:
-                print(f"Failed to convert CRS automatically: {e}. Trying fallback to EPSG:4326 directly.")
-                try:
-                    gdf = gdf.to_crs("EPSG:4326")
-                except Exception as e2:
-                    print(f"Fallback conversion also failed: {e2}")
-        else:
-            print("Warning: CRS is None! Coordinates might be projected and incorrect.")
-
-        # Convert to GeoJSON string
-        geojson_str = gdf.to_json()
-        geojson_data = json.loads(geojson_str)
-        
-        # Add metadata to the root of the object
-        geojson_data['detected_crs'] = detected_crs
-        geojson_data['total_features'] = len(gdf)
+        # Build GeoJSON
+        geojson_data = {
+            "type": "FeatureCollection",
+            "features": features,
+            "detected_crs": detected_crs,
+            "total_features": len(features)
+        }
 
         # Clean up temporary file
         os.unlink(tmp_path)
