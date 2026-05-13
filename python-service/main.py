@@ -83,6 +83,17 @@ async def convert_gpkg(file: UploadFile = File(...)):
                                 if hasattr(feat, 'id'):
                                     feat_dict['id'] = feat.id
                                     
+                            # Hapus koordinat Z (3D) agar tidak error di Supabase
+                            geom = feat_dict.get('geometry')
+                            if geom and 'coordinates' in geom and geom['coordinates']:
+                                def remove_z_coords(coords):
+                                    if not coords: return coords
+                                    if isinstance(coords[0], (int, float)):
+                                        return [coords[0], coords[1]] # Hanya ambil X dan Y
+                                    return [remove_z_coords(c) for c in coords]
+                                
+                                geom['coordinates'] = remove_z_coords(geom['coordinates'])
+                                
                             properties = feat_dict.get('properties', {})
                             properties['_layer_name'] = layer # Tandai asal layernya
                             
