@@ -1549,7 +1549,14 @@ function LayerFeature({ layer }: { layer: any }) {
       key={`${layer.id}-${featureCollection?.features?.length || 0}-${JSON.stringify(style)}-${areaUnit}`}
       style={() => style}
       pointToLayer={(feature, latlng) => {
-        return L.circleMarker(latlng, style);
+        return L.circleMarker(latlng, {
+          ...style,
+          radius: 8,
+          color: '#ff0000',
+          fillColor: '#ff0000',
+          fillOpacity: 1,
+          weight: 2
+        });
       }}
       onEachFeature={onEachFeature}
     />
