@@ -136,11 +136,11 @@ export function UploadDatasetPanel() {
               const [x, y] = coord;
               try {
                 const [lon, lat] = proj4(sourceDef, "EPSG:4326", [x, y]);
-                return [lon, lat];
+                return [lon, lat] as [number, number];
               } catch (e) {
-                return [0, 0];
+                return [0, 0] as [number, number];
               }
-            }).filter(c => c[0] !== 0 || c[1] !== 0);
+            }).filter(c => c[0] !== 0 || c[1] !== 0) as [number, number][];
           }
         }
 
