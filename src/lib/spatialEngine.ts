@@ -138,9 +138,11 @@ export async function parseSpatialFile(file: File): Promise<any> {
             try {
               const rowAny = row as any;
               const geometry = rowAny.geometry;
-              if (!geometry || !geometry.geometry) continue;
+              if (!geometry) continue;
               
-              const geom = geometry.geometry;
+              // Fleksibel: gunakan geometry.geometry jika ada, atau geometry itu sendiri
+              const geom = geometry.geometry || geometry;
+              
               const geojsonGeom = parseGeoPackageGeometry(geom);
               if (!geojsonGeom) continue;
               
@@ -162,10 +164,11 @@ export async function parseSpatialFile(file: File): Promise<any> {
           }
         }
         
+        const tileTables = geoPackage.getTileTables();
         geoPackage.close();
         
         if (allFeatures.length === 0) {
-          throw new Error('GeoPackage tidak memiliki fitur geometri yang valid.');
+          throw new Error(`GeoPackage tidak memiliki fitur geometri yang valid. Tabel fitur: [${featureTableNames.join(', ')}], Tabel tile: [${tileTables.join(', ')}]`);
         }
         
         geojson = {

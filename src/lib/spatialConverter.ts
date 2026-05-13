@@ -67,9 +67,11 @@ export class SpatialConverter {
               try {
                 const rowAny = row as any;
                 const geometry = rowAny.geometry;
-                if (!geometry || !geometry.geometry) continue;
+                if (!geometry) continue;
                 
-                const geom = geometry.geometry;
+                // Fleksibel: gunakan geometry.geometry jika ada, atau geometry itu sendiri
+                const geom = geometry.geometry || geometry;
+                
                 const geojsonGeom = parseGeoPackageGeometry(geom);
                 if (!geojsonGeom) continue;
                 
