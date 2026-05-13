@@ -11,6 +11,7 @@
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@geoman-io/leaflet-geoman-free": "^2.19.3",
+    "@ngageoint/geopackage": "^4.2.6",
     "@supabase/supabase-js": "^2.104.1",
     "@tmcw/togeojson": "^7.1.2",
     "@turf/turf": "^7.3.5",

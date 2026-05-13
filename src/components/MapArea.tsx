@@ -1019,7 +1019,7 @@ function CursorCoordinates() {
       }, 2000);
       
       setIsMeasuring(false);
-      map.pm.disableDraw();
+      try { map.pm.disableDraw(); } catch(e) {}
     };
 
     map.on('pm:create', handleMeasureCreate);
@@ -1101,104 +1101,124 @@ function CursorCoordinates() {
       {isLocked && coords && (
         <Marker position={[coords.lat, coords.lng]} icon={customIcon} />
       )}
-      <div className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[400] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/80 border-primary/50 shadow-primary/20' : 'bg-card/70 border-border/50'} backdrop-blur-xl border rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-2xl flex flex-col sm:flex-row gap-1.5 sm:gap-6 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
-        <div className="absolute -top-10 left-0 flex gap-2 sm:static sm:mr-4">
+      {/* ── Coordinate Bar ── */}
+      <div className={`absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[400] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/80 border-primary/50 shadow-primary/20' : 'bg-slate-950/85 border-white/[0.06]'} backdrop-blur-2xl border rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
+
+        {/* Tool Buttons — Inline */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button 
             onClick={() => setIsSnapEnabled(!isSnapEnabled)}
-            className={`p-2 rounded-full shadow-lg border transition-all duration-300 ${isSnapEnabled ? 'bg-indigo-500 text-white border-indigo-400 animate-pulse' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
+            className={`p-2 rounded-xl transition-all duration-200 ${isSnapEnabled ? 'bg-indigo-500/20 text-indigo-400 ring-1 ring-indigo-500/40' : 'text-white/30 hover:text-white/60 hover:bg-white/5'}`}
             title={isSnapEnabled ? "Matikan Snap" : "Aktifkan Snap ke Vertex"}
           >
-            <Magnet className="w-4 h-4" />
+            <Magnet className="w-3.5 h-3.5" />
           </button>
 
           <button 
             onClick={() => {
               if (isMeasuring && measureType === 'distance') {
-                map.pm.disableDraw();
+                try { map.pm.disableDraw(); } catch(e) {}
                 setIsMeasuring(false);
               } else {
                 setActiveDigitizingLayerId(null);
                 setIsMeasuring(true);
                 setMeasureType('distance');
-                map.pm.enableDraw('Polyline', { snappable: isSnapEnabled, finishOn: 'dblclick' });
+                try {
+                  map.pm.enableDraw('Line', { snappable: isSnapEnabled, finishOn: 'dblclick' });
+                } catch(e) {
+                  console.warn('Geoman enableDraw fallback:', e);
+                  try { map.pm.enableDraw('Polyline', { snappable: isSnapEnabled, finishOn: 'dblclick' }); } catch(e2) {}
+                }
                 toast.info("Mode Ukur Jarak Aktif. Klik di peta. Double-click untuk selesai.", { id: "measure-info" });
               }
             }}
-            className={`p-2 rounded-full shadow-lg border transition-all duration-300 flex items-center gap-1 ${isMeasuring && measureType === 'distance' ? 'bg-orange-500 text-white border-orange-400' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
+            className={`px-2.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-1.5 ${isMeasuring && measureType === 'distance' ? 'bg-orange-500/20 text-orange-400 ring-1 ring-orange-500/40' : 'text-white/30 hover:text-white/60 hover:bg-white/5'}`}
             title={isMeasuring && measureType === 'distance' ? "Batal Ukur" : "Ukur Jarak (Panjang)"}
           >
-            <Crosshair className="w-4 h-4" />
-            <span className="text-[10px] font-bold">Jarak</span>
+            <Ruler className="w-3.5 h-3.5" />
+            <span className="text-[9px] font-bold uppercase tracking-wide hidden sm:inline">Jarak</span>
           </button>
 
           <button 
             onClick={() => {
               if (isMeasuring && measureType === 'area') {
-                map.pm.disableDraw();
+                try { map.pm.disableDraw(); } catch(e) {}
                 setIsMeasuring(false);
               } else {
                 setActiveDigitizingLayerId(null);
                 setIsMeasuring(true);
                 setMeasureType('area');
-                map.pm.enableDraw('Polygon', { snappable: isSnapEnabled, finishOn: 'dblclick' });
+                try {
+                  map.pm.enableDraw('Polygon', { snappable: isSnapEnabled, finishOn: 'dblclick' });
+                } catch(e) {
+                  console.warn('Geoman enableDraw Polygon error:', e);
+                }
                 toast.info("Mode Ukur Luas Aktif. Klik di peta. Double-click untuk selesai.", { id: "measure-info" });
               }
             }}
-            className={`p-2 rounded-full shadow-lg border transition-all duration-300 flex items-center gap-1 ${isMeasuring && measureType === 'area' ? 'bg-orange-500 text-white border-orange-400' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
+            className={`px-2.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-1.5 ${isMeasuring && measureType === 'area' ? 'bg-orange-500/20 text-orange-400 ring-1 ring-orange-500/40' : 'text-white/30 hover:text-white/60 hover:bg-white/5'}`}
             title={isMeasuring && measureType === 'area' ? "Batal Ukur" : "Ukur Luas & Keliling"}
           >
-            <Maximize className="w-4 h-4" />
-            <span className="text-[10px] font-bold">Luas</span>
+            <Square className="w-3.5 h-3.5" />
+            <span className="text-[9px] font-bold uppercase tracking-wide hidden sm:inline">Luas</span>
           </button>
         </div>
-        
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-white/10 shrink-0"></div>
+
+        {/* Scale & Zoom */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-col items-center">
+            <span className="text-[7px] text-white/25 uppercase font-black tracking-widest leading-none">Scale</span>
+            <span className="font-mono font-black text-white/80 text-[11px] leading-tight">1:{new Intl.NumberFormat('id-ID').format(scale)}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[7px] text-white/25 uppercase font-black tracking-widest leading-none">Zoom</span>
+            <span className="font-mono font-black text-indigo-400 text-[11px] leading-tight">{zoom}</span>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-white/10 shrink-0 hidden sm:block"></div>
+
+        {/* WGS 84 */}
+        <div className="hidden sm:flex flex-col items-center">
+          <span className={`text-[8px] uppercase font-bold tracking-wider leading-none mb-1 ${isLocked ? 'text-primary-foreground/60' : 'text-white/25'}`}>WGS 84</span>
+          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>{toDMS(lat, true)}</span>
+          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>{toDMS(lng, false)}</span>
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-white/10 shrink-0 hidden sm:block"></div>
+
+        {/* UTM */}
+        <div className="hidden sm:flex flex-col items-center">
+          <span className={`text-[8px] uppercase font-bold tracking-wider leading-none mb-1 ${isLocked ? 'text-primary-foreground/60' : 'text-white/25'}`}>UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
+          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>X: {utmResult.x.toFixed(2)}</span>
+          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>Y: {utmResult.y.toFixed(2)}</span>
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-white/10 shrink-0 hidden sm:block"></div>
+
+        {/* TM-3 */}
+        <div className="hidden sm:flex flex-col items-center">
+          <span className={`text-[8px] uppercase font-bold tracking-wider leading-none mb-1 ${isLocked ? 'text-primary-foreground/60' : 'text-white/25'}`}>TM-3 {tm3ZoneDisplay}</span>
+          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>X: {tm3Result.x.toFixed(2)}</span>
+          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>Y: {tm3Result.y.toFixed(2)}</span>
+        </div>
+
+        {/* Lock Badge */}
         {isLocked && (
           <button 
             onClick={handleUnlock}
-            className="absolute -top-3 -right-2 sm:-right-3 bg-red-500 text-white rounded-full p-1 shadow-lg flex items-center justify-center animate-in zoom-in duration-300 border border-white hover:bg-red-600 transition-colors pointer-events-auto"
-            title={isLocked ? "Buka Kunci Koordinat" : "Kunci Koordinat di Sini"}
+            className="ml-1 p-1.5 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-all ring-1 ring-red-500/30 shrink-0"
+            title="Buka Kunci Koordinat"
           >
-            {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+            <Lock className="w-3.5 h-3.5" />
           </button>
         )}
-
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 flex-1 min-w-0">
-          {/* SCALE & ZOOM INFO */}
-          <div className="flex items-center gap-4 border-r border-white/10 pr-6 mr-2 shrink-0">
-            <div className="flex flex-col">
-              <span className="text-[7px] text-gray-400 uppercase font-black tracking-widest opacity-50">Scale</span>
-              <span className="font-mono font-black text-white">1:{new Intl.NumberFormat('id-ID').format(scale)}</span>
-            </div>
-            <div className="flex flex-col border-l border-white/5 pl-4">
-              <span className="text-[7px] text-gray-400 uppercase font-black tracking-widest opacity-50">Zoom</span>
-              <span className="font-mono font-black text-indigo-400">LVL {zoom}</span>
-            </div>
-          </div>
-
-          <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto">
-            <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>WGS 84</span>
-            <div className="flex flex-col items-end sm:items-center">
-              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>{toDMS(lat, true)}</span>
-              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>{toDMS(lng, false)}</span>
-            </div>
-          </div>
-          <div className="hidden sm:block w-px h-6 bg-border/70"></div>
-          <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
-            <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
-            <div className="flex flex-col items-end sm:items-center">
-              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>X: {utmResult.x.toFixed(2)}</span>
-              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>Y: {utmResult.y.toFixed(2)}</span>
-            </div>
-          </div>
-          <div className="hidden sm:block w-px h-6 bg-border/70"></div>
-          <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto border-t sm:border-t-0 border-border/40 pt-1.5 sm:pt-0">
-            <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider mb-0 sm:mb-0.5 whitespace-nowrap ${isLocked ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>TM-3 {tm3ZoneDisplay}</span>
-            <div className="flex flex-col items-end sm:items-center">
-              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>X: {tm3Result.x.toFixed(2)}</span>
-              <span className={`font-mono font-medium whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-card-foreground'}`}>Y: {tm3Result.y.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </>
   );

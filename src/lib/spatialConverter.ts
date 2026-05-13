@@ -48,6 +48,21 @@ export class SpatialConverter {
       case 'geojson':
         return JSON.parse(new TextDecoder().decode(arrayBuffer));
 
+      case 'gpkg': {
+        // GeoPackage: kirim ke server-side API route untuk parsing
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/parse-gpkg', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({ error: 'Server error' }));
+          throw new Error(errData.error || `Server error: ${res.status}`);
+        }
+        return await res.json();
+      }
+
       default:
         throw new Error(`Format file .${extension} tidak didukung.`);
     }

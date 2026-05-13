@@ -112,18 +112,36 @@ export function DigitizePanel() {
 
     if (activeDigitizingLayerId === layerId) {
       setActiveDigitizingLayerId(null);
-      if ((map?.pm as any).Draw.getActiveMode()) {
-        (map?.pm.Draw as any).getActiveShape()?.finish?.();
+      try {
+        if ((map?.pm as any)?.Draw?.getActiveMode?.()) {
+          (map?.pm?.Draw as any)?.getActiveShape?.()?.finish?.();
+        }
+        map?.pm?.disableDraw();
+      } catch(e) {
+        console.warn('Geoman disableDraw error:', e);
       }
-      map?.pm.disableDraw();
       toast.info("Mode digitasi dinonaktifkan");
     } else {
       setActiveDigitizingLayerId(layerId);
-      const drawMode = layer.geometryType === 'Point' ? 'Marker' : (layer.geometryType === 'Line' ? 'Polyline' : 'Polygon');
-      (map?.pm as any).enableDraw(drawMode, { 
-        snappable: digitizeSettings.snapping, 
-        snapDistance: digitizeSettings.snapDistance 
-      });
+      const drawMode = layer.geometryType === 'Point' ? 'Marker' : (layer.geometryType === 'Line' ? 'Line' : 'Polygon');
+      try {
+        (map?.pm as any)?.enableDraw(drawMode, { 
+          snappable: digitizeSettings.snapping, 
+          snapDistance: digitizeSettings.snapDistance 
+        });
+      } catch(e) {
+        console.warn('Geoman enableDraw error:', e);
+        // Fallback: try alternative shape names
+        try {
+          const fallbackMode = layer.geometryType === 'Line' ? 'Polyline' : drawMode;
+          (map?.pm as any)?.enableDraw(fallbackMode, { 
+            snappable: digitizeSettings.snapping, 
+            snapDistance: digitizeSettings.snapDistance 
+          });
+        } catch(e2) {
+          console.warn('Geoman enableDraw fallback also failed:', e2);
+        }
+      }
       toast.success(`Mode gambar ${layer.geometryType} aktif`);
     }
   };

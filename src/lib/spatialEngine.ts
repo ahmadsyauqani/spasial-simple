@@ -56,6 +56,19 @@ export async function parseSpatialFile(file: File): Promise<any> {
       } catch (err: any) {
         throw new Error("Gagal mengekstrak RAR. Kemungkinan format RAR5 baru atau password-protected. Mohon ekstrak dan jadikan .zip: " + err.message);
       }
+    } else if (extension === "gpkg") {
+      // GeoPackage: kirim ke server-side API route untuk parsing
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/parse-gpkg', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(errData.error || `Server error: ${res.status}`);
+      }
+      geojson = await res.json();
     } else if (extension === "kml") {
       const text = await file.text();
       const dom = new DOMParser().parseFromString(text, "text/xml");
@@ -67,7 +80,7 @@ export async function parseSpatialFile(file: File): Promise<any> {
       throw new Error("DXF parsing is not fully implemented yet.");
       // Will require dxf-parser and turf.polygonize
     } else {
-      throw new Error("Format tidak didukung. Unggah .zip (Shapefile), .gdb.zip (File Geodatabase), .rar, .kml, .geojson, atau .json");
+      throw new Error("Format tidak didukung. Unggah .zip (Shapefile), .gdb.zip (File Geodatabase), .rar, .kml, .gpkg (GeoPackage), .geojson, atau .json");
     }
 
     // Normalize to single FeatureCollection

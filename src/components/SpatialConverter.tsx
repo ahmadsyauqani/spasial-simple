@@ -91,7 +91,7 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
               </DialogTitle>
             </div>
             <DialogDescription className="text-slate-400 text-sm font-medium">
-              Konversi format spasial antar SHP, KML, dan DXF dengan transformasi koordinat TM-3 Indonesia yang akurat.
+              Konversi format spasial antar SHP, KML, DXF, dan GeoPackage (.gpkg) dengan transformasi koordinat TM-3 Indonesia yang akurat.
             </DialogDescription>
           </DialogHeader>
 
@@ -112,7 +112,7 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
                   <div className="text-center space-y-1">
                     <p className="font-bold text-lg text-slate-200">Klik atau seret file ke sini</p>
                     <p className="text-xs text-slate-500 font-medium px-8 leading-relaxed">
-                      Mendukung .zip (SHP), .kml, .dxf, .geojson. Pastikan file SHP dikompres dalam satu file .zip.
+                      Mendukung .zip (SHP), .kml, .dxf, .gpkg (GeoPackage), .geojson. Pastikan file SHP dikompres dalam satu file .zip.
                     </p>
                   </div>
                   <input
@@ -120,7 +120,7 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
-                    accept=".zip,.kml,.dxf,.json,.geojson"
+                    accept=".zip,.kml,.dxf,.json,.geojson,.gpkg"
                   />
                 </div>
               </div>
