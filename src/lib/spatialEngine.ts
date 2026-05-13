@@ -2,6 +2,68 @@ import * as turf from "@turf/turf";
 import shp from "shpjs";
 import { kml } from "@tmcw/togeojson";
 
+/**
+ * Convert GeoPackage geometry object to GeoJSON geometry
+ */
+export function parseGeoPackageGeometry(geom: any): any {
+  if (!geom) return null;
+
+  if (typeof geom.toGeoJSON === 'function') {
+    return geom.toGeoJSON();
+  }
+
+  const geomType = geom.geometryType || geom.type;
+
+  if (geomType === 'Point' || geomType === 0) {
+    return {
+      type: 'Point',
+      coordinates: [geom.x, geom.y, ...(geom.z !== undefined ? [geom.z] : [])],
+    };
+  }
+
+  if (geomType === 'LineString' || geomType === 1) {
+    const coords = (geom.points || []).map((p: any) => [p.x, p.y]);
+    return { type: 'LineString', coordinates: coords };
+  }
+
+  if (geomType === 'Polygon' || geomType === 2) {
+    const rings = (geom.rings || []).map((ring: any) =>
+      (ring.points || ring).map((p: any) => [p.x, p.y])
+    );
+    return { type: 'Polygon', coordinates: rings };
+  }
+
+  if (geomType === 'MultiPoint' || geomType === 3) {
+    const coords = (geom.points || geom.geometries || []).map((p: any) => [p.x, p.y]);
+    return { type: 'MultiPoint', coordinates: coords };
+  }
+
+  if (geomType === 'MultiLineString' || geomType === 4) {
+    const lines = (geom.lineStrings || geom.geometries || []).map((ls: any) =>
+      (ls.points || ls).map((p: any) => [p.x, p.y])
+    );
+    return { type: 'MultiLineString', coordinates: lines };
+  }
+
+  if (geomType === 'MultiPolygon' || geomType === 5) {
+    const polygons = (geom.polygons || geom.geometries || []).map((poly: any) =>
+      (poly.rings || [poly]).map((ring: any) =>
+        (ring.points || ring).map((p: any) => [p.x, p.y])
+      )
+    );
+    return { type: 'MultiPolygon', coordinates: polygons };
+  }
+
+  if (geomType === 'GeometryCollection' || geomType === 6) {
+    const geometries = (geom.geometries || [])
+      .map((g: any) => parseGeoPackageGeometry(g))
+      .filter(Boolean);
+    return { type: 'GeometryCollection', geometries };
+  }
+
+  return null;
+}
+
 export async function parseSpatialFile(file: File): Promise<any> {
   let extension = file.name.split(".").pop()?.toLowerCase();
   
@@ -57,29 +119,62 @@ export async function parseSpatialFile(file: File): Promise<any> {
         throw new Error("Gagal mengekstrak RAR. Kemungkinan format RAR5 baru atau password-protected. Mohon ekstrak dan jadikan .zip: " + err.message);
       }
     } else if (extension === "gpkg") {
-      // GeoPackage: kirim ke server-side API route untuk parsing
-      
-      // Vercel limit check (Hobby tier has 4.5MB body size limit)
-      if (file.size > 4.5 * 1024 * 1024) {
-        throw new Error("File GeoPackage terlalu besar untuk diproses di Vercel (Maksimal 4.5 MB). Silakan gunakan file yang lebih kecil atau jalankan di lokal.");
-      }
-
-      const formData = new FormData();
-      formData.append('file', file);
-      
+      // GeoPackage: parse di sisi client untuk menghindari limit Vercel
       try {
-        const res = await fetch('/api/parse-gpkg', {
-          method: 'POST',
-          body: formData,
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({ error: 'Server error' }));
-          throw new Error(errData.error || `Server error: ${res.status}`);
+        const { GeoPackageAPI } = await import('@ngageoint/geopackage');
+        
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8 = new Uint8Array(arrayBuffer);
+        
+        const geoPackage = await GeoPackageAPI.open(uint8);
+        const allFeatures: any[] = [];
+        const featureTableNames = geoPackage.getFeatureTables();
+        
+        for (const tableName of featureTableNames) {
+          const featureDao = geoPackage.getFeatureDao(tableName) as any;
+          const featureRows = featureDao.queryForAll();
+          
+          for (const row of featureRows) {
+            try {
+              const rowAny = row as any;
+              const geometry = rowAny.geometry;
+              if (!geometry || !geometry.geometry) continue;
+              
+              const geom = geometry.geometry;
+              const geojsonGeom = parseGeoPackageGeometry(geom);
+              if (!geojsonGeom) continue;
+              
+              const properties: Record<string, any> = {};
+              const columnNames = rowAny.columnNames;
+              for (const col of columnNames) {
+                if (col === featureDao.geometryColumnName || col === 'id') continue;
+                properties[col] = rowAny.getValue(col);
+              }
+              
+              allFeatures.push({
+                type: 'Feature',
+                properties,
+                geometry: geojsonGeom,
+              });
+            } catch (featureErr) {
+              console.warn(`Skipping feature in table ${tableName}:`, featureErr);
+            }
+          }
         }
-        geojson = await res.json();
-      } catch (fetchErr: any) {
-        console.error("Fetch error:", fetchErr);
-        throw new Error(`Gagal memproses file. Ini biasanya terjadi jika server Vercel kehabisan memori atau file terlalu kompleks: ${fetchErr.message || 'Failed to fetch'}`);
+        
+        geoPackage.close();
+        
+        if (allFeatures.length === 0) {
+          throw new Error('GeoPackage tidak memiliki fitur geometri yang valid.');
+        }
+        
+        geojson = {
+          type: 'FeatureCollection',
+          features: allFeatures,
+        };
+      } catch (err: any) {
+        console.error("GeoPackage parse error:", err);
+        throw new Error(`Gagal membaca GeoPackage di browser: ${err.message || 'Unknown error'}`);
       }
     } else if (extension === "kml") {
       const text = await file.text();

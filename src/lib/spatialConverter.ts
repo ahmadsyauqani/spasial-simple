@@ -7,6 +7,7 @@ import DxfWriter from 'dxf-writer';
 import { reproject } from 'reproject';
 import proj4 from 'proj4';
 import { registerProjections } from './crs';
+import { parseGeoPackageGeometry } from './spatialEngine';
 
 // Ensure projections are registered
 registerProjections();
@@ -49,29 +50,60 @@ export class SpatialConverter {
         return JSON.parse(new TextDecoder().decode(arrayBuffer));
 
       case 'gpkg': {
-        // GeoPackage: kirim ke server-side API route untuk parsing
-        
-        // Vercel limit check (Hobby tier has 4.5MB body size limit)
-        if (file.size > 4.5 * 1024 * 1024) {
-          throw new Error("File GeoPackage terlalu besar untuk diproses di Vercel (Maksimal 4.5 MB). Silakan gunakan file yang lebih kecil atau jalankan di lokal.");
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-        
+        // GeoPackage: parse di sisi client untuk menghindari limit Vercel
         try {
-          const res = await fetch('/api/parse-gpkg', {
-            method: 'POST',
-            body: formData,
-          });
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({ error: 'Server error' }));
-            throw new Error(errData.error || `Server error: ${res.status}`);
+          const { GeoPackageAPI } = await import('@ngageoint/geopackage');
+          
+          const uint8 = new Uint8Array(arrayBuffer);
+          const geoPackage = await GeoPackageAPI.open(uint8);
+          const allFeatures: any[] = [];
+          const featureTableNames = geoPackage.getFeatureTables();
+          
+          for (const tableName of featureTableNames) {
+            const featureDao = geoPackage.getFeatureDao(tableName) as any;
+            const featureRows = featureDao.queryForAll();
+            
+            for (const row of featureRows) {
+              try {
+                const rowAny = row as any;
+                const geometry = rowAny.geometry;
+                if (!geometry || !geometry.geometry) continue;
+                
+                const geom = geometry.geometry;
+                const geojsonGeom = parseGeoPackageGeometry(geom);
+                if (!geojsonGeom) continue;
+                
+                const properties: Record<string, any> = {};
+                const columnNames = rowAny.columnNames;
+                for (const col of columnNames) {
+                  if (col === featureDao.geometryColumnName || col === 'id') continue;
+                  properties[col] = rowAny.getValue(col);
+                }
+                
+                allFeatures.push({
+                  type: 'Feature',
+                  properties,
+                  geometry: geojsonGeom,
+                });
+              } catch (featureErr) {
+                console.warn(`Skipping feature in table ${tableName}:`, featureErr);
+              }
+            }
           }
-          return await res.json();
-        } catch (fetchErr: any) {
-          console.error("Fetch error:", fetchErr);
-          throw new Error(`Gagal memproses file. Ini biasanya terjadi jika server Vercel kehabisan memori atau file terlalu kompleks: ${fetchErr.message || 'Failed to fetch'}`);
+          
+          geoPackage.close();
+          
+          if (allFeatures.length === 0) {
+            throw new Error('GeoPackage tidak memiliki fitur geometri yang valid.');
+          }
+          
+          return {
+            type: 'FeatureCollection',
+            features: allFeatures,
+          };
+        } catch (err: any) {
+          console.error("GeoPackage parse error:", err);
+          throw new Error(`Gagal membaca GeoPackage di browser: ${err.message || 'Unknown error'}`);
         }
       }
 
