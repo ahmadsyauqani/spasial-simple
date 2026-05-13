@@ -23,6 +23,20 @@ import "@geoman-io/leaflet-geoman-free";
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 import { updateGeometryInSupabase } from "@/lib/database";
 import { toast } from "sonner";
+import L from "leaflet";
+
+function safeFitBounds(map: L.Map, bounds: L.LatLngBounds, options: L.FitBoundsOptions = {}) {
+  if (bounds.isValid()) {
+    const ne = bounds.getNorthEast();
+    const sw = bounds.getSouthWest();
+    if (ne && sw && !isNaN(ne.lat) && !isNaN(ne.lng) && !isNaN(sw.lat) && !isNaN(sw.lng)) {
+      map.fitBounds(bounds, options);
+      return true;
+    }
+  }
+  console.warn("[MapArea] Invalid bounds detected, skipping fitBounds");
+  return false;
+}
 
 function MapController() {
   const map = useMap();
@@ -359,7 +373,7 @@ function OverlapLayer() {
     if (overlapResult?.geojson) {
       try {
         const bounds = L.geoJSON(overlapResult.geojson).getBounds();
-        if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+        safeFitBounds(map, bounds, { padding: [50, 50], maxZoom: 16 });
       } catch(e) {}
     }
   }, [overlapResult, map]);
@@ -1238,7 +1252,7 @@ function LayerFeature({ layer }: { layer: any }) {
       setTimeout(() => {
          try {
            const bounds = L.geoJSON(featureCollection).getBounds();
-           if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 16 });
+           safeFitBounds(map, bounds, { padding: [20, 20], maxZoom: 16 });
          } catch(e) {}
       }, 50);
       triggerZoomToLayer(null);
