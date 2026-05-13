@@ -51,7 +51,9 @@ export async function uploadLayerToSupabase(projectId: string, layerName: string
         return null;
       }
       
+      const type = feature.geometry.type;
       const coords = feature.geometry.coordinates;
+      
       if (Array.isArray(coords) && coords.length === 0) {
         console.warn("Melewati fitur dengan koordinat kosong:", feature);
         return null;
@@ -63,17 +65,37 @@ export async function uploadLayerToSupabase(projectId: string, layerName: string
         console.warn("Melewati fitur dengan koordinat tidak valid (NaN/Null):", feature);
         return null;
       }
+      
+      // Validasi ketat jumlah titik minimal untuk PostGIS
+      if (type === "LineString" || type === "MultiLineString") {
+        if (coords.length < 2) {
+          console.warn("Melewati LineString dengan kurang dari 2 titik:", feature);
+          return null;
+        }
+      } else if (type === "Polygon" || type === "MultiPolygon") {
+        // Untuk Polygon, ring pertama harus punya minimal 4 titik (menutup loop)
+        const ring = type === "Polygon" ? coords[0] : (coords[0] ? coords[0][0] : []);
+        if (!Array.isArray(ring) || ring.length < 4) {
+          console.warn("Melewati Polygon dengan ring tidak valid (kurang dari 4 titik):", feature);
+          return null;
+        }
+      }
 
       return feature;
     }).filter((f): f is any => f !== null);
 
-    const promises = validFeatures.map((feature: any) => 
-      supabase.rpc("insert_subdivided_geometry", {
+    const promises = validFeatures.map(async (feature: any) => {
+      const { data, error } = await supabase.rpc("insert_subdivided_geometry", {
         p_layer_id: layer.id,
         p_properties: feature.properties || {},
         p_geom_geojson: feature.geometry
-      })
-    );
+      });
+      
+      if (error) {
+        throw error; // Paksa throw agar Promise.allSettled membacanya sebagai 'rejected'
+      }
+      return data;
+    });
     
     const results = await Promise.allSettled(promises);
     results.forEach((result, idx) => {
