@@ -137,7 +137,16 @@ export async function parseSpatialFile(file: File): Promise<any> {
           for (const row of featureRows) {
             try {
               const rowAny = row as any;
-              const geometry = rowAny.geometry;
+              
+              // Coba berbagai cara untuk mendapatkan data geometri
+              let geometry = rowAny.geometry;
+              if (!geometry && typeof rowAny.getGeometry === 'function') {
+                geometry = rowAny.getGeometry();
+              }
+              if (!geometry && featureDao.geometryColumnName) {
+                geometry = rowAny.getValue(featureDao.geometryColumnName);
+              }
+              
               if (!geometry) continue;
               
               // Fleksibel: gunakan geometry.geometry jika ada, atau geometry itu sendiri
