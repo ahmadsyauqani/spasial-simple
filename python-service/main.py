@@ -355,9 +355,16 @@ async def convert_kmz(file: UploadFile = File(...)):
                 for key, val in properties.items():
                     if isinstance(val, str):
                         for img_path, base64_str in images_base64.items():
+                            img_filename = os.path.basename(img_path)
+                            
+                            # Jika path lengkap ada di dalam value (misal deskripsi HTML)
                             if img_path in val:
                                 properties[key] = val.replace(img_path, base64_str)
-                                debug_logs.append(f"Replaced path {img_path} with base64 in property {key}")
+                                debug_logs.append(f"Replaced path {img_path} in {key}")
+                            # Jika value HANYA berisi nama file saja
+                            elif val == img_filename or val == img_path:
+                                properties[key] = base64_str
+                                debug_logs.append(f"Matched filename {img_filename} for property {key}")
                                 
                 if geometry:
                     features.append({
