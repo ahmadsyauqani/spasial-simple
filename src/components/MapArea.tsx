@@ -1525,14 +1525,14 @@ function LayerFeature({ layer }: { layer: any }) {
         }
 
         const l = e.target;
-        layer.setStyle({
+        l.setStyle({
           weight: 4,
           color: '#ffffff',
           fillOpacity: 0.6,
           dashArray: '5, 10'
         });
         if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-          layer.bringToFront();
+          l.bringToFront();
         }
       });
 
