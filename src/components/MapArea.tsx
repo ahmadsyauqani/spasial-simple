@@ -23,7 +23,6 @@ import "@geoman-io/leaflet-geoman-free";
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 import { updateGeometryInSupabase } from "@/lib/database";
 import { toast } from "sonner";
-import L from "leaflet";
 
 function safeFitBounds(map: L.Map, bounds: L.LatLngBounds, options: L.FitBoundsOptions = {}) {
   if (bounds.isValid()) {
