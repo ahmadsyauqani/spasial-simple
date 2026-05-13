@@ -205,6 +205,40 @@ async def convert_gpkg(file: UploadFile = File(...)):
         print(f"Error processing GeoPackage: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Gagal memproses GeoPackage: {str(e)}")
 
+@app.post("/convert-kmz")
+async def convert_kmz(file: UploadFile = File(...)):
+    # Save to temp file
+    import tempfile
+    import os
+    import zipfile
+    from fastapi import Response
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".kmz") as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+        
+    try:
+        with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
+            # Find doc.kml or any KML file
+            kml_files = [f for f in zip_ref.namelist() if f.endswith('.kml')]
+            if not kml_files:
+                os.unlink(tmp_path)
+                raise HTTPException(status_code=400, detail="Tidak ada file KML di dalam KMZ")
+                
+            # Read the first KML file
+            with zip_ref.open(kml_files[0]) as kml_file:
+                kml_content = kml_file.read()
+                
+        os.unlink(tmp_path)
+        # Return KML content as XML text
+        return Response(content=kml_content, media_type="application/vnd.google-earth.kml+xml")
+        
+    except Exception as e:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        raise HTTPException(status_code=500, detail=f"Gagal memproses KMZ: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

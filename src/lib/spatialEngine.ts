@@ -150,6 +150,28 @@ export async function parseSpatialFile(file: File): Promise<any> {
         console.error("GeoPackage API error:", err);
         throw new Error(`Gagal mengonversi GeoPackage melalui Python API: ${err.message || 'Unknown error'}. Pastikan server Python berjalan.`);
       }
+    } else if (extension === "kmz") {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_API_URL}/convert-kmz`, {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Server error: ${response.status}`);
+        }
+        
+        const kmlText = await response.text();
+        const dom = new DOMParser().parseFromString(kmlText, "text/xml");
+        geojson = kml(dom);
+      } catch (err: any) {
+        console.error("KMZ API error:", err);
+        throw new Error(`Gagal mengonversi KMZ melalui Python API: ${err.message || 'Unknown error'}`);
+      }
     } else if (extension === "kml") {
       const text = await file.text();
       const dom = new DOMParser().parseFromString(text, "text/xml");
@@ -161,7 +183,7 @@ export async function parseSpatialFile(file: File): Promise<any> {
       throw new Error("DXF parsing is not fully implemented yet.");
       // Will require dxf-parser and turf.polygonize
     } else {
-      throw new Error("Format tidak didukung. Unggah .zip (Shapefile), .gdb.zip (File Geodatabase), .rar, .kml, .gpkg (GeoPackage), .geojson, atau .json");
+      throw new Error("Format tidak didukung. Unggah .zip (Shapefile), .gdb.zip (File Geodatabase), .rar, .kml, .kmz, .gpkg (GeoPackage), .geojson, atau .json");
     }
 
     // Normalize to single FeatureCollection
