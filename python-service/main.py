@@ -60,13 +60,33 @@ async def convert_gpkg(file: UploadFile = File(...)):
             os.unlink(tmp_path)
             raise HTTPException(status_code=400, detail="Tidak ada layer dengan geometri valid yang ditemukan")
 
+        print(f"Layer read successfully. CRS: {gdf.crs}")
+        detected_crs = str(gdf.crs) if gdf.crs else "None"
+        
         # Convert to EPSG:4326 (WGS84) if it's not already
-        if gdf.crs is not None and gdf.crs.to_epsg() != 4326:
-            gdf = gdf.to_crs(epsg=4326)
+        if gdf.crs is not None:
+            try:
+                # Use to_epsg() which might be None if it's a custom CRS
+                epsg = gdf.crs.to_epsg()
+                if epsg != 4326:
+                    print(f"Converting from {gdf.crs} to EPSG:4326")
+                    gdf = gdf.to_crs(epsg=4326)
+            except Exception as e:
+                print(f"Failed to convert CRS automatically: {e}. Trying fallback to EPSG:4326 directly.")
+                try:
+                    gdf = gdf.to_crs("EPSG:4326")
+                except Exception as e2:
+                    print(f"Fallback conversion also failed: {e2}")
+        else:
+            print("Warning: CRS is None! Coordinates might be projected and incorrect.")
 
         # Convert to GeoJSON string
         geojson_str = gdf.to_json()
         geojson_data = json.loads(geojson_str)
+        
+        # Add metadata to the root of the object
+        geojson_data['detected_crs'] = detected_crs
+        geojson_data['total_features'] = len(gdf)
 
         # Clean up temporary file
         os.unlink(tmp_path)
