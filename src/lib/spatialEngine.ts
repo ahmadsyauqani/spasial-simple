@@ -21,6 +21,14 @@ export function parseGeoPackageGeometry(geom: any): any {
     };
   }
 
+  // Fallback untuk Point jika geometryType tidak terdefinisi tapi punya x dan y
+  if (geom.x !== undefined && geom.y !== undefined) {
+    return {
+      type: 'Point',
+      coordinates: [geom.x, geom.y, ...(geom.z !== undefined ? [geom.z] : [])],
+    };
+  }
+
   if (geomType === 'LineString' || geomType === 1) {
     const coords = (geom.points || []).map((p: any) => [p.x, p.y]);
     return { type: 'LineString', coordinates: coords };
