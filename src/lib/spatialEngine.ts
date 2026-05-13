@@ -173,11 +173,24 @@ export async function parseSpatialFile(file: File): Promise<any> {
           }
         }
         
+        const tableCounts: string[] = [];
+        for (const tableName of featureTableNames) {
+          const featureDao = geoPackage.getFeatureDao(tableName) as any;
+          let count: any = 'unknown';
+          try {
+            count = featureDao.count();
+          } catch (e) {
+            const rows = featureDao.queryForAll();
+            if (rows && rows.length !== undefined) count = rows.length;
+          }
+          tableCounts.push(`${tableName} (${count} baris)`);
+        }
+        
         const tileTables = geoPackage.getTileTables();
         geoPackage.close();
         
         if (allFeatures.length === 0) {
-          throw new Error(`GeoPackage tidak memiliki fitur geometri yang valid. Tabel fitur: [${featureTableNames.join(', ')}], Tabel tile: [${tileTables.join(', ')}]`);
+          throw new Error(`GeoPackage tidak memiliki fitur geometri yang valid. Tabel fitur: [${tableCounts.join(', ')}], Tabel tile: [${tileTables.join(', ')}]`);
         }
         
         geojson = {
