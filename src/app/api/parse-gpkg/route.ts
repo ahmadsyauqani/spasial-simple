@@ -13,7 +13,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Dynamic import to ensure it only runs on server (Node.js)
-    const { GeoPackageAPI } = await import('@ngageoint/geopackage');
+    const { GeoPackageAPI, CanvasKitCanvasAdapter } = await import('@ngageoint/geopackage');
+
+    // Bypass CanvasKit initialization as we only need feature data (GeoJSON)
+    // and not tile rendering which requires canvas.
+    try {
+      if (CanvasKitCanvasAdapter) {
+        CanvasKitCanvasAdapter.initialized = true;
+      }
+    } catch (e) {
+      console.warn('Failed to set CanvasKitCanvasAdapter.initialized:', e);
+    }
 
     const arrayBuffer = await file.arrayBuffer();
     const uint8 = new Uint8Array(arrayBuffer);
