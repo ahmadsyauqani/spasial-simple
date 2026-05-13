@@ -60,8 +60,8 @@ async def convert_gpkg(file: UploadFile = File(...)):
             os.unlink(tmp_path)
             raise HTTPException(status_code=400, detail="GeoPackage tidak memiliki layer")
 
-        # Use Fiona to read features directly
-        features = []
+        # Use Fiona to read features directly from all layers
+        all_features = []
         detected_crs = "Unknown"
         
         for layer in layers:
@@ -71,9 +71,6 @@ async def convert_gpkg(file: UploadFile = File(...)):
                     print(f"Reading layer {layer} via Fiona. CRS: {detected_crs}")
                     
                     for feat in src:
-                        # Fiona returns features as Model objects in newer versions.
-                        # We must convert them to pure dicts for JSON serialization.
-                        # Try to use __geo_interface__ which returns a pure dict, otherwise manual mapping
                         try:
                             if hasattr(feat, '__geo_interface__'):
                                 feat_dict = dict(feat.__geo_interface__)
@@ -86,14 +83,13 @@ async def convert_gpkg(file: UploadFile = File(...)):
                                 if hasattr(feat, 'id'):
                                     feat_dict['id'] = feat.id
                                     
-                            # Check for BLOB/bytes in properties (often used for images in GPKG)
                             properties = feat_dict.get('properties', {})
+                            properties['_layer_name'] = layer # Tandai asal layernya
+                            
+                            # Check for BLOB/bytes in properties (often used for images in GPKG)
                             for key, val in properties.items():
                                 if isinstance(val, bytes):
                                     import base64
-                                    print(f"Found binary data in property '{key}' ({len(val)} bytes)")
-                                    
-                                    # Try to detect image type from magic numbers
                                     mime_type = "image/jpeg" # Default fallback
                                     if val.startswith(b'\x89PNG\r\n\x1a\n'):
                                         mime_type = "image/png"
@@ -107,47 +103,45 @@ async def convert_gpkg(file: UploadFile = File(...)):
                                     print(f"Converted property '{key}' to base64 data URL.")
                                     
                             if feat_dict.get('geometry') is not None:
-                                features.append(feat_dict)
+                                all_features.append(feat_dict)
                         except Exception as e:
-                            print(f"Failed to process feature: {e}")
-                            # Fallback to simplest possible dict
-                            try:
-                                features.append({
-                                    "type": "Feature",
-                                    "properties": {},
-                                    "geometry": None
-                                })
-                            except:
-                                pass
-                            
-                if features:
-                    print(f"Successfully read {len(features)} features from layer {layer} via Fiona")
-                    
-                    try:
-                        print("Converting Fiona features to GeoDataFrame for robust serialization...")
-                        import geopandas as gpd
-                        gdf = gpd.GeoDataFrame.from_features(features, crs=detected_crs)
-                        
-                        # Remove Z coordinates
-                        from shapely.ops import transform
-                        def remove_z(geom):
-                            if geom is None: return None
-                            if geom.has_z: return transform(lambda x, y, z=None: (x, y), geom)
-                            return geom
-                        gdf.geometry = gdf.geometry.apply(remove_z)
-                        
-                        # Convert to GeoJSON string (GeoPandas handles serialization perfectly)
-                        geojson_str = gdf.to_json()
-                        geojson_data = json.loads(geojson_str)
-                        
-                        # Add metadata
-                        geojson_data['detected_crs'] = detected_crs
-                        geojson_data['total_features'] = len(features)
-                        
-                        # Clean up temporary file
-                        os.unlink(tmp_path)
-                        
-                        return JSONResponse(content=geojson_data)
+                            print(f"Failed to process feature in layer {layer}: {e}")
+                            continue
+            except Exception as e:
+                print(f"Error reading layer {layer}: {e}")
+                continue
+                
+        if not all_features:
+            os.unlink(tmp_path)
+            raise HTTPException(status_code=400, detail="Tidak ada fitur valid yang bisa dibaca dari GeoPackage")
+            
+        print(f"Successfully read {len(all_features)} features from all layers")
+        
+        try:
+            print("Converting features to GeoDataFrame for robust serialization...")
+            import geopandas as gpd
+            gdf = gpd.GeoDataFrame.from_features(all_features, crs=detected_crs)
+            
+            # Remove Z coordinates
+            from shapely.ops import transform
+            def remove_z(geom):
+                if geom is None: return None
+                if geom.has_z: return transform(lambda x, y, z=None: (x, y), geom)
+                return geom
+            gdf.geometry = gdf.geometry.apply(remove_z)
+            
+            # Convert to GeoJSON string
+            geojson_str = gdf.to_json()
+            geojson_data = json.loads(geojson_str)
+            
+            # Add metadata
+            geojson_data['detected_crs'] = detected_crs
+            geojson_data['total_features'] = len(all_features)
+            
+            # Clean up temporary file
+            os.unlink(tmp_path)
+            
+            return JSONResponse(content=geojson_data)
                     except Exception as e:
                         print(f"Failed to serialize via GeoPandas: {e}. Falling back to direct JSON response.")
                         # Break loop and use direct JSON response at the end
