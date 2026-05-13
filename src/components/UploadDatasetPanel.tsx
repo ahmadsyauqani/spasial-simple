@@ -39,6 +39,18 @@ export function UploadDatasetPanel() {
   const [customEpsg, setCustomEpsg] = useState("");
   const [isFixing, setIsFixing] = useState(false);
 
+  // State untuk Fitur Upload Koordinat (CSV/TXT)
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvSettings, setCsvSettings] = useState({
+    projection: 'geografis', // 'geografis', 'utm', 'tm3'
+    zone: '48.1', // Default zone untuk TM3
+    colCode: '',
+    colX: '',
+    colY: ''
+  });
+
   useEffect(() => {
     fetchActiveLayers()
       .then((data) => {
@@ -70,6 +82,42 @@ export function UploadDatasetPanel() {
   const [isDragging, setIsDragging] = useState(false);
 
   const processSelectedFile = async (file: File) => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    // Khusus untuk file koordinat (CSV/TXT)
+    if (extension === 'csv' || extension === 'txt') {
+      setCsvFile(file);
+      setIsCsvModalOpen(true);
+      
+      // Baca header kolom
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        if (lines.length > 0) {
+          // Pisahkan dengan koma atau tab
+          const delimiter = lines[0].includes('\t') ? '\t' : ',';
+          const headers = lines[0].split(delimiter).map(h => h.trim().replace(/\r$/, ''));
+          setCsvHeaders(headers);
+          
+          // Tebak kolom
+          const colCode = headers.find(h => /kode|id|titik/i.test(h)) || '';
+          const colX = headers.find(h => /x|lon|east|bujur/i.test(h)) || '';
+          const colY = headers.find(h => /y|lat|north|lintang/i.test(h)) || '';
+          
+          setCsvSettings({
+            projection: 'geografis',
+            zone: '48.1',
+            colCode,
+            colX,
+            colY
+          });
+        }
+      };
+      reader.readAsText(file);
+      return; // Stop di sini, biarkan modal yang melanjutkan
+    }
+
     setIsUploading(true);
     toast.info(`Memproses file ${file.name} di The Satpam...`);
     try {
@@ -188,11 +236,11 @@ export function UploadDatasetPanel() {
         ) : (
           <FileUp className="w-4 h-4" />
         )}
-        <span>{isUploading ? "Memproses..." : (isDragging ? "Lepaskan File!" : "Unggah Data Baru (.SHP/.KML/.GPKG)")}</span>
+        <span>{isUploading ? "Memproses..." : (isDragging ? "Lepaskan File!" : "Unggah Data Baru (.SHP/.KML/.GPKG/.CSV/.TXT)")}</span>
         <input
           type="file"
           className="hidden"
-          accept=".zip,.rar,.kml,.kmz,.geojson,.json,.gdb.zip,.gpkg"
+          accept=".zip,.rar,.kml,.kmz,.geojson,.json,.gdb.zip,.gpkg,.csv,.txt"
           onChange={handleFileUpload}
           disabled={isUploading}
         />
@@ -349,6 +397,202 @@ export function UploadDatasetPanel() {
               className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]"
             >
               {isFixing ? <span className="flex items-center"><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menghitung...</span> : <span className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2" /> Perbaiki & Unggah</span>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG PENGATURAN CSV/TXT KOORDINAT */}
+      <Dialog open={isCsvModalOpen} onOpenChange={setIsCsvModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card text-card-foreground border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Settings2 className="w-5 h-5" />
+              Pengaturan File Koordinat
+            </DialogTitle>
+            <DialogDescription>
+              Silakan tentukan sistem proyeksi dan sesuaikan kolom yang berisi koordinat.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-4">
+            {/* Pilihan Proyeksi */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-foreground">Sistem Proyeksi</label>
+              <select 
+                value={csvSettings.projection} 
+                onChange={(e) => setCsvSettings(prev => ({ ...prev, projection: e.target.value }))}
+                className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white"
+              >
+                <option value="geografis">Geografis (WGS84)</option>
+                <option value="utm">UTM (Universal Transverse Mercator)</option>
+                <option value="tm3">TM3 (Transverse Mercator 3 Degree)</option>
+              </select>
+            </div>
+
+            {/* Input Zona jika UTM atau TM3 */}
+            {csvSettings.projection !== 'geografis' && (
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-foreground">Zona {csvSettings.projection === 'utm' ? 'UTM' : 'TM3'}</label>
+                <Input 
+                  value={csvSettings.zone} 
+                  onChange={(e) => setCsvSettings(prev => ({ ...prev, zone: e.target.value }))}
+                  placeholder={csvSettings.projection === 'utm' ? "Contoh: 48S" : "Contoh: 48.1"}
+                  className="bg-background"
+                />
+              </div>
+            )}
+
+            {/* Pemetaan Kolom */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-foreground">Pemetaan Kolom</label>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground">Kode Titik</label>
+                  <select 
+                    value={csvSettings.colCode} 
+                    onChange={(e) => setCsvSettings(prev => ({ ...prev, colCode: e.target.value }))}
+                    className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white"
+                  >
+                    <option value="">-- Pilih --</option>
+                    {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-muted-foreground">{csvSettings.projection === 'geografis' ? 'Longitude' : 'X (Easting)'}</label>
+                  <select 
+                    value={csvSettings.colX} 
+                    onChange={(e) => setCsvSettings(prev => ({ ...prev, colX: e.target.value }))}
+                    className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white"
+                  >
+                    <option value="">-- Pilih --</option>
+                    {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-muted-foreground">{csvSettings.projection === 'geografis' ? 'Latitude' : 'Y (Northing)'}</label>
+                  <select 
+                    value={csvSettings.colY} 
+                    onChange={(e) => setCsvSettings(prev => ({ ...prev, colY: e.target.value }))}
+                    className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white"
+                  >
+                    <option value="">-- Pilih --</option>
+                    {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t pt-4 flex gap-2 justify-end">
+            <Button variant="ghost" onClick={() => setIsCsvModalOpen(false)}>
+              Batalkan
+            </Button>
+            <Button 
+              onClick={async () => {
+                if (!csvFile || !csvSettings.colX || !csvSettings.colY) {
+                  toast.error("Kolom X dan Y harus dipilih!");
+                  return;
+                }
+                setIsCsvModalOpen(false);
+                setIsUploading(true);
+                
+                try {
+                  toast.info("Membaca file koordinat...");
+                  const reader = new FileReader();
+                  reader.onload = async (e) => {
+                    const text = e.target?.result as string;
+                    const lines = text.split('\n');
+                    if (lines.length <= 1) throw new Error("File kosong atau hanya berisi header.");
+                    
+                    const delimiter = lines[0].includes('\t') ? '\t' : ',';
+                    const headers = lines[0].split(delimiter).map(h => h.trim().replace(/\r$/, ''));
+                    
+                    const idxX = headers.indexOf(csvSettings.colX);
+                    const idxY = headers.indexOf(csvSettings.colY);
+                    
+                    if (idxX === -1 || idxY === -1) throw new Error("Kolom X atau Y tidak ditemukan.");
+                    
+                    const coordinates: [number, number][] = [];
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                      const line = lines[i].trim();
+                      if (!line) continue;
+                      const vals = line.split(delimiter);
+                      const x = parseFloat(vals[idxX]);
+                      const y = parseFloat(vals[idxY]);
+                      
+                      if (!isNaN(x) && !isNaN(y)) {
+                        coordinates.push([x, y]);
+                      }
+                    }
+                    
+                    if (coordinates.length < 3) throw new Error("Butuh minimal 3 titik untuk membentuk poligon.");
+                    
+                    // Otomatis tutup poligon jika belum
+                    const first = coordinates[0];
+                    const last = coordinates[coordinates.length - 1];
+                    if (first[0] !== last[0] || first[1] !== last[1]) {
+                      coordinates.push([first[0], first[1]]);
+                    }
+                    
+                    // Konversi koordinat jika bukan geografis
+                    let finalCoords = coordinates;
+                    if (csvSettings.projection !== 'geografis') {
+                      toast.info(`Mengonversi koordinat dari ${csvSettings.projection.toUpperCase()}...`);
+                      const proj4 = (await import('proj4')).default;
+                      const { TM3_ZONES } = await import('@/lib/crs');
+                      
+                      let sourceDef = "";
+                      if (csvSettings.projection === 'utm') {
+                        const zoneNum = parseInt(csvSettings.zone);
+                        const isSouth = csvSettings.zone.toUpperCase().endsWith('S');
+                        if (isNaN(zoneNum)) throw new Error("Zona UTM tidak valid.");
+                        sourceDef = `+proj=utm +zone=${zoneNum} ${isSouth ? '+south' : ''} +datum=WGS84 +units=m +no_defs`;
+                      } else if (csvSettings.projection === 'tm3') {
+                        const zoneObj = TM3_ZONES.find(z => z.zone === csvSettings.zone);
+                        if (!zoneObj) throw new Error(`Zona TM3 ${csvSettings.zone} tidak ditemukan di crs.ts.`);
+                        sourceDef = `+proj=tmerc +lat_0=0 +lon_0=${zoneObj.cm} +k=0.9999 +x_0=200000 +y_0=1500000 +ellps=WGS84 +units=m +no_defs`;
+                      }
+                      
+                      finalCoords = coordinates.map(coord => {
+                        const [x, y] = coord;
+                        // proj4(from, to, [x, y])
+                        const [lon, lat] = proj4(sourceDef, "EPSG:4326", [x, y]);
+                        return [lon, lat];
+                      });
+                    }
+                    
+                    // Buat GeoJSON Polygon
+                    const geojson = {
+                      type: "FeatureCollection",
+                      features: [{
+                        type: "Feature",
+                        properties: {
+                          nama: csvFile.name.replace(/\.[^/.]+$/, "")
+                        },
+                        geometry: {
+                          type: "Polygon",
+                          coordinates: [finalCoords]
+                        }
+                      }]
+                    };
+                    
+                    await executeUpload(csvFile, geojson);
+                  };
+                  reader.readAsText(csvFile);
+                } catch (err: any) {
+                  toast.error(`Gagal memproses file koordinat: ${err.message}`);
+                } finally {
+                  setIsUploading(false);
+                }
+              }} 
+              className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]"
+            >
+              Proses & Gambar
             </Button>
           </DialogFooter>
         </DialogContent>
