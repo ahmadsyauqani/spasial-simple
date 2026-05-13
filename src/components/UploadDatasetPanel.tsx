@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2 } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
