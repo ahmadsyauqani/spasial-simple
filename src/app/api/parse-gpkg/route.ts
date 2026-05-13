@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     // and not tile rendering which requires canvas.
     try {
       if (CanvasKitCanvasAdapter) {
+        // @ts-ignore - Property is private in types but we need to set it to bypass canvas init in Node
         CanvasKitCanvasAdapter.initialized = true;
       }
     } catch (e) {
@@ -37,12 +38,13 @@ export async function POST(request: NextRequest) {
     const featureTableNames = geoPackage.getFeatureTables();
 
     for (const tableName of featureTableNames) {
-      const featureDao = geoPackage.getFeatureDao(tableName);
+      const featureDao = geoPackage.getFeatureDao(tableName) as any;
       const featureRows = featureDao.queryForAll();
 
       for (const row of featureRows) {
         try {
-          const geometry = row.geometry;
+          const rowAny = row as any;
+          const geometry = rowAny.geometry;
           if (!geometry || !geometry.geometry) continue;
 
           const geom = geometry.geometry;
@@ -51,10 +53,10 @@ export async function POST(request: NextRequest) {
 
           // Extract properties (non-geometry columns)
           const properties: Record<string, any> = {};
-          const columnNames = row.columnNames;
+          const columnNames = rowAny.columnNames;
           for (const col of columnNames) {
             if (col === featureDao.geometryColumnName || col === 'id') continue;
-            properties[col] = row.getValue(col);
+            properties[col] = rowAny.getValue(col);
           }
 
           allFeatures.push({
