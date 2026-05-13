@@ -71,9 +71,22 @@ async def convert_gpkg(file: UploadFile = File(...)):
                     print(f"Reading layer {layer} via Fiona. CRS: {detected_crs}")
                     
                     for feat in src:
-                        # Fiona returns features as dictionaries matching GeoJSON
+                        # Fiona returns features as Model objects in newer versions.
+                        # We must convert them to pure dicts for JSON serialization.
                         if feat.get('geometry') is not None:
-                            features.append(feat)
+                            feat_dict = {
+                                "type": "Feature",
+                                "properties": dict(feat.get('properties', {})),
+                                "geometry": dict(feat.get('geometry', {})) if feat.get('geometry') else None
+                            }
+                            # Preserve ID if available
+                            try:
+                                if hasattr(feat, 'id'):
+                                    feat_dict['id'] = feat.id
+                            except:
+                                pass
+                                
+                            features.append(feat_dict)
                             
                 if features:
                     print(f"Successfully read {len(features)} features from layer {layer} via Fiona")
