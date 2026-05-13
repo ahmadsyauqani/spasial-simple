@@ -355,9 +355,9 @@ async def convert_kmz(file: UploadFile = File(...)):
                 for key, val in properties.items():
                     if isinstance(val, str):
                         for img_path, base64_str in images_base64.items():
-                            if img_path in val or val in img_path:
-                                properties[key] = base64_str
-                                debug_logs.append(f"Matched image {img_path} in property {key}")
+                            if img_path in val:
+                                properties[key] = val.replace(img_path, base64_str)
+                                debug_logs.append(f"Replaced path {img_path} with base64 in property {key}")
                                 
                 if geometry:
                     features.append({
