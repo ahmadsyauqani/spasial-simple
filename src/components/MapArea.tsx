@@ -1468,10 +1468,17 @@ function LayerFeature({ layer }: { layer: any }) {
       for (const key in feature.properties) {
         if (key === "db_id" || key === "FID") continue; // Sembunyikan field internal
         const value = feature.properties[key];
+        let displayValue = value === null ? "null" : value;
+        
+        // Jika value adalah data URL gambar (Base64), tampilkan sebagai <img>
+        if (typeof value === 'string' && value.startsWith('data:image/')) {
+          displayValue = `<div class="mt-1"><img src="${value}" class="max-w-[150px] h-auto rounded border border-white/20" alt="${key}" /></div>`;
+        }
+        
         popupContent += `
           <tr class="border-b border-white/10 last:border-0 hover:bg-white/10 transition-colors">
             <td class="py-1.5 pr-3 font-medium text-gray-300 w-1/3 align-top">${key}</td>
-            <td class="py-1.5 text-white font-mono break-words">${value === null ? "null" : value}</td>
+            <td class="py-1.5 text-white font-mono break-words">${displayValue}</td>
           </tr>
         `;
       }
