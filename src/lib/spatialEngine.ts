@@ -146,6 +146,19 @@ export async function parseSpatialFile(file: File): Promise<any> {
             try {
               const rowAny = row as any;
               
+              // Coba gunakan toGeoJSON bawaan jika ada
+              if (typeof rowAny.toGeoJSON === 'function') {
+                try {
+                  const feature = rowAny.toGeoJSON();
+                  if (feature && feature.geometry) {
+                    allFeatures.push(feature);
+                    continue;
+                  }
+                } catch (e) {
+                  console.warn("row.toGeoJSON failed, falling back:", e);
+                }
+              }
+              
               // Coba berbagai cara untuk mendapatkan data geometri
               let geometry = rowAny.geometry;
               if (!geometry && typeof rowAny.getGeometry === 'function') {
