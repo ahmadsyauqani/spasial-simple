@@ -73,20 +73,32 @@ async def convert_gpkg(file: UploadFile = File(...)):
                     for feat in src:
                         # Fiona returns features as Model objects in newer versions.
                         # We must convert them to pure dicts for JSON serialization.
-                        if feat.get('geometry') is not None:
-                            feat_dict = {
-                                "type": "Feature",
-                                "properties": dict(feat.get('properties', {})),
-                                "geometry": dict(feat.get('geometry', {})) if feat.get('geometry') else None
-                            }
-                            # Preserve ID if available
-                            try:
+                        # Try to use __geo_interface__ which returns a pure dict, otherwise manual mapping
+                        try:
+                            if hasattr(feat, '__geo_interface__'):
+                                feat_dict = dict(feat.__geo_interface__)
+                            else:
+                                feat_dict = {
+                                    "type": "Feature",
+                                    "properties": dict(feat.get('properties', {})),
+                                    "geometry": dict(feat.get('geometry', {})) if feat.get('geometry') else None
+                                }
                                 if hasattr(feat, 'id'):
                                     feat_dict['id'] = feat.id
+                                    
+                            if feat_dict.get('geometry') is not None:
+                                features.append(feat_dict)
+                        except Exception as e:
+                            print(f"Failed to process feature: {e}")
+                            # Fallback to simplest possible dict
+                            try:
+                                features.append({
+                                    "type": "Feature",
+                                    "properties": {},
+                                    "geometry": None
+                                })
                             except:
                                 pass
-                                
-                            features.append(feat_dict)
                             
                 if features:
                     print(f"Successfully read {len(features)} features from layer {layer} via Fiona")
