@@ -168,6 +168,7 @@ export async function parseSpatialFile(file: File): Promise<any> {
         const kmlText = await response.text();
         const dom = new DOMParser().parseFromString(kmlText, "text/xml");
         geojson = kml(dom);
+        console.log("[spatialEngine] Parsed KMZ to GeoJSON:", geojson);
       } catch (err: any) {
         console.error("KMZ API error:", err);
         throw new Error(`Gagal mengonversi KMZ melalui Python API: ${err.message || 'Unknown error'}`);

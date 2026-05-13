@@ -45,28 +45,42 @@ export async function uploadLayerToSupabase(projectId: string, layerName: string
   for (let i = 0; i < features.length; i += batchSize) {
     const batch = features.slice(i, i + batchSize);
     
-    const promises = batch.map((feature: any) => {
-      // Validasi geometri sebelum dikirim ke Supabase
+    const validFeatures = batch.map((feature: any) => {
       if (!feature.geometry || !feature.geometry.coordinates) {
         console.warn("Melewati fitur tanpa geometri:", feature);
         return null;
       }
       
-      // Validasi koordinat kosong
       const coords = feature.geometry.coordinates;
       if (Array.isArray(coords) && coords.length === 0) {
         console.warn("Melewati fitur dengan koordinat kosong:", feature);
         return null;
       }
+      
+      // Deteksi koordinat rusak (NaN atau null hasil stringify)
+      const coordsStr = JSON.stringify(coords);
+      if (coordsStr.includes("null") || coordsStr.includes("NaN")) {
+        console.warn("Melewati fitur dengan koordinat tidak valid (NaN/Null):", feature);
+        return null;
+      }
 
-      return supabase.rpc("insert_subdivided_geometry", {
+      return feature;
+    }).filter((f): f is any => f !== null);
+
+    const promises = validFeatures.map((feature: any) => 
+      supabase.rpc("insert_subdivided_geometry", {
         p_layer_id: layer.id,
         p_properties: feature.properties || {},
         p_geom_geojson: feature.geometry
-      });
-    }).filter((p): p is Promise<any> => p !== null);
+      })
+    );
     
-    await Promise.all(promises);
+    const results = await Promise.allSettled(promises);
+    results.forEach((result, idx) => {
+      if (result.status === 'rejected') {
+        console.error("Gagal menyimpan fitur ke Supabase:", validFeatures[idx], "Error:", result.reason);
+      }
+    });
   }
 
   return layer;
