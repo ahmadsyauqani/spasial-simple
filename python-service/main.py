@@ -60,10 +60,24 @@ async def convert_gpkg(file: UploadFile = File(...)):
             os.unlink(tmp_path)
             raise HTTPException(status_code=400, detail="Tidak ada layer dengan geometri valid yang ditemukan")
 
-        print(f"Layer read successfully. CRS: {gdf.crs}")
+        print(f"Layer read successfully. Shape: {gdf.shape}, CRS: {gdf.crs}")
         detected_crs = str(gdf.crs) if gdf.crs else "None"
         
-        # Convert to EPSG:4326 (WGS84) if it's not already
+        # Remove Z coordinates if present (often causes issues with GeoJSON export/rendering)
+        from shapely.ops import transform
+        def remove_z(geom):
+            if geom is None:
+                return None
+            if geom.has_z:
+                return transform(lambda x, y, z=None: (x, y), geom)
+            return geom
+            
+        try:
+            print(f"Original geometry types: {gdf.geometry.type.unique()}")
+            gdf.geometry = gdf.geometry.apply(remove_z)
+            print("Successfully processed Z coordinates.")
+        except Exception as e:
+            print(f"Warning: Failed to remove Z coordinates: {e}")
         if gdf.crs is not None:
             try:
                 # Use to_epsg() which might be None if it's a custom CRS
