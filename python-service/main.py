@@ -241,9 +241,28 @@ async def convert_kmz(file: UploadFile = File(...)):
             image_files = [f for f in zip_ref.namelist() if f.lower().endswith(image_extensions)]
             
             images_base64 = {}
+            from PIL import Image
+            import io
+            
             for img_file in image_files:
                 with zip_ref.open(img_file) as img:
-                    val = img.read()
+                    img_data = img.read()
+                    
+                    try:
+                        # Perkecil ukuran gambar untuk menghemat database & mencegah timeout
+                        image = Image.open(io.BytesIO(img_data))
+                        image.thumbnail((300, 300)) # Maksimal 300x300 px
+                        
+                        # Simpan kembali ke bytes
+                        out_io = io.BytesIO()
+                        image.save(out_io, format=image.format or 'JPEG', quality=80)
+                        val = out_io.getvalue()
+                        debug_logs.append(f"Resized image {img_file} to fit in database")
+                    except Exception as e:
+                        print(f"Gagal me-resize gambar {img_file}: {e}")
+                        val = img_data # Fallback ke data asli
+                        debug_logs.append(f"Failed to resize {img_file}, using original size")
+                        
                     import base64
                     mime_type = "image/jpeg"
                     if img_file.lower().endswith('.png'): mime_type = "image/png"

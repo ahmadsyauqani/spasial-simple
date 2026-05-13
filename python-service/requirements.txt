@@ -5,3 +5,4 @@ geopandas>=0.14.0
 fiona>=1.9.5
 pyproj>=3.6.1
 shapely>=2.0.2
+Pillow>=10.0.0
