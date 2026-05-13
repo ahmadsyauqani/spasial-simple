@@ -33,10 +33,26 @@ async def convert_gpkg(file: UploadFile = File(...)):
             tmp.write(content)
             tmp_path = tmp.name
 
-        # Read the GeoPackage using GeoPandas
-        # By default, geopandas reads the first layer. 
-        # For multi-layer support, you'd need to list layers with fiona first,
-        # but for this simple converter, we'll read the first active geometry layer.
+        # Inspect the GeoPackage file as an SQLite database to look for images/media
+        import sqlite3
+        try:
+            conn = sqlite3.connect(tmp_path)
+            cursor = conn.cursor()
+            
+            # List all tables
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = [row[0] for row in cursor.fetchall()]
+            print(f"[GPKG Inspect] All tables: {tables}")
+            
+            # Check for media tables
+            media_tables = [t for t in tables if 'media' in t or 'attachment' in t or 'photo' in t]
+            if media_tables:
+                print(f"[GPKG Inspect] Found suspected media tables: {media_tables}")
+            
+            conn.close()
+        except Exception as e:
+            print(f"[GPKG Inspect] Failed: {e}")
+
         import fiona
         layers = fiona.listlayers(tmp_path)
         
