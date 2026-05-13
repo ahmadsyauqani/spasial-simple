@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
@@ -362,6 +362,7 @@ import { ExportLayerDialog } from "./ExportLayerDialog";
 function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => void }) {
   const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer } = useMapContext();
   const style = layer.style || { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2, dissolve_key: 'none' };
+  const colorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
 
   useEffect(() => {
@@ -405,11 +406,21 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
     if (layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
   };
 
-  const handleColorChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
     const newStyle = { ...style, color: newColor, fillColor: newColor };
+    
+    // Update local state immediately for smooth UI
     updateLayerStyle(layer.id, newStyle);
-    if (layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
+    
+    // Debounce database update
+    if (colorTimeoutRef.current) {
+      clearTimeout(colorTimeoutRef.current);
+    }
+    
+    colorTimeoutRef.current = setTimeout(async () => {
+      if (layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
+    }, 500); // 500ms debounce
   };
 
   const handleOpacityChange = async (val: number[]) => {
