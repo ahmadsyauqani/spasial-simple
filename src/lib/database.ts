@@ -45,13 +45,26 @@ export async function uploadLayerToSupabase(projectId: string, layerName: string
   for (let i = 0; i < features.length; i += batchSize) {
     const batch = features.slice(i, i + batchSize);
     
-    const promises = batch.map((feature: any) => 
-      supabase.rpc("insert_subdivided_geometry", {
+    const promises = batch.map((feature: any) => {
+      // Validasi geometri sebelum dikirim ke Supabase
+      if (!feature.geometry || !feature.geometry.coordinates) {
+        console.warn("Melewati fitur tanpa geometri:", feature);
+        return null;
+      }
+      
+      // Validasi koordinat kosong
+      const coords = feature.geometry.coordinates;
+      if (Array.isArray(coords) && coords.length === 0) {
+        console.warn("Melewati fitur dengan koordinat kosong:", feature);
+        return null;
+      }
+
+      return supabase.rpc("insert_subdivided_geometry", {
         p_layer_id: layer.id,
         p_properties: feature.properties || {},
         p_geom_geojson: feature.geometry
-      })
-    );
+      });
+    }).filter((p): p is Promise<any> => p !== null);
     
     await Promise.all(promises);
   }
