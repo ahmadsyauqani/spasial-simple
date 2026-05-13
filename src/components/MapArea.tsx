@@ -1362,10 +1362,16 @@ function LayerFeature({ layer }: { layer: any }) {
 
   const style = layer.style || { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2 };
 
+  console.log(`[MapArea] Rendering layer ${layer.id}:`, featureCollection);
+  if (featureCollection?.features?.length > 0) {
+    console.log(`[MapArea] First feature geometry:`, featureCollection.features[0].geometry);
+  }
+
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
-    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
+    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²²`;
     return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+  };
   };
 
   const formatLength = (meters: number) => {
