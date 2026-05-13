@@ -183,16 +183,18 @@ export function UploadDatasetPanel() {
       setCsvFile(file);
       setIsCsvModalOpen(true);
       
-      // Baca header kolom
+      // Baca 1MB pertama untuk pratinjau (Optimasi Memori!)
+      const previewSlice = file.slice(0, 1024 * 1024);
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
         setCsvFullText(text);
         const lines = text.split('\n');
         if (lines.length > 0) {
-          // Pisahkan dengan koma atau tab
-          const delimiter = lines[0].includes('\t') ? '\t' : ',';
-          const headers = lines[0].split(delimiter).map(h => h.trim().replace(/\r$/, ''));
+          // Deteksi pembatas: Tab, Semicolon, atau Koma
+          const firstLine = lines[0];
+          const delimiter = firstLine.includes('\t') ? '\t' : firstLine.includes(';') ? ';' : ',';
+          const headers = firstLine.split(delimiter).map(h => h.trim().replace(/\r$/, ''));
           setCsvHeaders(headers);
           
           // Baca 5 baris pertama untuk pratinjau
@@ -216,7 +218,7 @@ export function UploadDatasetPanel() {
           });
         }
       };
-      reader.readAsText(file);
+      reader.readAsText(previewSlice);
       return; // Stop di sini, biarkan modal yang melanjutkan
     }
 
@@ -687,8 +689,9 @@ export function UploadDatasetPanel() {
                     const lines = text.split('\n');
                     if (lines.length <= 1) throw new Error("File kosong atau hanya berisi header.");
                     
-                    const delimiter = lines[0].includes('\t') ? '\t' : ',';
-                    const headers = lines[0].split(delimiter).map(h => h.trim().replace(/\r$/, ''));
+                    const firstLine = lines[0];
+                    const delimiter = firstLine.includes('\t') ? '\t' : firstLine.includes(';') ? ';' : ',';
+                    const headers = firstLine.split(delimiter).map(h => h.trim().replace(/\r$/, ''));
                     
                     const idxX = headers.indexOf(csvSettings.colX);
                     const idxY = headers.indexOf(csvSettings.colY);
