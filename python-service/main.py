@@ -86,6 +86,26 @@ async def convert_gpkg(file: UploadFile = File(...)):
                                 if hasattr(feat, 'id'):
                                     feat_dict['id'] = feat.id
                                     
+                            # Check for BLOB/bytes in properties (often used for images in GPKG)
+                            properties = feat_dict.get('properties', {})
+                            for key, val in properties.items():
+                                if isinstance(val, bytes):
+                                    import base64
+                                    print(f"Found binary data in property '{key}' ({len(val)} bytes)")
+                                    
+                                    # Try to detect image type from magic numbers
+                                    mime_type = "image/jpeg" # Default fallback
+                                    if val.startswith(b'\x89PNG\r\n\x1a\n'):
+                                        mime_type = "image/png"
+                                    elif val.startswith(b'GIF87a') or val.startswith(b'GIF89a'):
+                                        mime_type = "image/gif"
+                                    elif val.startswith(b'\xff\xd8'):
+                                        mime_type = "image/jpeg"
+                                        
+                                    encoded = base64.b64encode(val).decode('utf-8')
+                                    properties[key] = f"data:{mime_type};base64,{encoded}"
+                                    print(f"Converted property '{key}' to base64 data URL.")
+                                    
                             if feat_dict.get('geometry') is not None:
                                 features.append(feat_dict)
                         except Exception as e:
