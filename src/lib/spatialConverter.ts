@@ -50,17 +50,29 @@ export class SpatialConverter {
 
       case 'gpkg': {
         // GeoPackage: kirim ke server-side API route untuk parsing
+        
+        // Vercel limit check (Hobby tier has 4.5MB body size limit)
+        if (file.size > 4.5 * 1024 * 1024) {
+          throw new Error("File GeoPackage terlalu besar untuk diproses di Vercel (Maksimal 4.5 MB). Silakan gunakan file yang lebih kecil atau jalankan di lokal.");
+        }
+
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/parse-gpkg', {
-          method: 'POST',
-          body: formData,
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({ error: 'Server error' }));
-          throw new Error(errData.error || `Server error: ${res.status}`);
+        
+        try {
+          const res = await fetch('/api/parse-gpkg', {
+            method: 'POST',
+            body: formData,
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({ error: 'Server error' }));
+            throw new Error(errData.error || `Server error: ${res.status}`);
+          }
+          return await res.json();
+        } catch (fetchErr: any) {
+          console.error("Fetch error:", fetchErr);
+          throw new Error(`Gagal memproses file. Ini biasanya terjadi jika server Vercel kehabisan memori atau file terlalu kompleks: ${fetchErr.message || 'Failed to fetch'}`);
         }
-        return await res.json();
       }
 
       default:
