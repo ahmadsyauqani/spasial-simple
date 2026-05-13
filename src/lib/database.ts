@@ -82,7 +82,7 @@ export async function uploadLayerToSupabase(projectId: string, layerName: string
       }
 
       return feature;
-    }).filter((f): f is any => f !== null);
+    }).filter((f: any): f is any => f !== null);
 
     const promises = validFeatures.map(async (feature: any) => {
       const { data, error } = await supabase.rpc("insert_subdivided_geometry", {
