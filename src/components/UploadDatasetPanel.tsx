@@ -456,7 +456,7 @@ export function UploadDatasetPanel() {
                     className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white"
                   >
                     <option value="">-- Pilih --</option>
-                    {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                    {csvHeaders.map((h, idx) => <option key={`${h}-${idx}`} value={h}>{h}</option>)}
                   </select>
                 </div>
                 
@@ -468,7 +468,7 @@ export function UploadDatasetPanel() {
                     className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white"
                   >
                     <option value="">-- Pilih --</option>
-                    {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                    {csvHeaders.map((h, idx) => <option key={`${h}-${idx}`} value={h}>{h}</option>)}
                   </select>
                 </div>
                 
@@ -480,7 +480,7 @@ export function UploadDatasetPanel() {
                     className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white"
                   >
                     <option value="">-- Pilih --</option>
-                    {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                    {csvHeaders.map((h, idx) => <option key={`${h}-${idx}`} value={h}>{h}</option>)}
                   </select>
                 </div>
               </div>
