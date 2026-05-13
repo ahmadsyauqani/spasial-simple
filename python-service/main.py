@@ -258,65 +258,138 @@ async def convert_kmz(file: UploadFile = File(...)):
             tmp_kml.write(kml_content)
             tmp_kml_path = tmp_kml.name
             
-        # Aktifkan driver KML di Fiona
+        # Aktifkan driver KML di Fiona (tetap jaga-jaga jika ingin pakai Fiona)
         fiona.drvsupport.supported_drivers['KML'] = 'rw'
         
         features = []
+        
+        # Coba parse menggunakan XML ElementTree untuk ekstraksi gambar yang lebih kuat
         try:
-            with fiona.open(tmp_kml_path, 'r') as src:
-                for idx, feat in enumerate(src):
-                    try:
-                        if hasattr(feat, '__geo_interface__'):
-                            feat_dict = dict(feat.__geo_interface__)
-                        else:
-                            feat_dict = {
-                                "type": "Feature",
-                                "properties": dict(feat.get('properties', {})),
-                                "geometry": dict(feat.get('geometry', {})) if feat.get('geometry') else None
-                            }
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(kml_content)
+            
+            # Deteksi namespace
+            ns = ""
+            if '}' in root.tag:
+                ns = root.tag.split('}')[0] + '}'
+                
+            placemarks = root.findall(f'.//{ns}Placemark')
+            debug_logs.append(f"Found {len(placemarks)} placemarks using ElementTree")
+            
+            for idx, pm in enumerate(placemarks):
+                name_tag = pm.find(f'{ns}name')
+                name = name_tag.text if name_tag is not None else ""
+                
+                desc_tag = pm.find(f'{ns}description')
+                description = desc_tag.text if desc_tag is not None else ""
+                
+                properties = {
+                    "Name": name,
+                    "Description": description
+                }
+                
+                # Ekstrak ExtendedData
+                extended_data = pm.find(f'{ns}ExtendedData')
+                if extended_data is not None:
+                    data_tags = extended_data.findall(f'{ns}Data')
+                    for dt in data_tags:
+                        data_name = dt.get('name')
+                        val_tag = dt.find(f'{ns}value')
+                        if val_tag is not None and val_tag.text:
+                            properties[data_name] = val_tag.text
                             
-                        properties = feat_dict.get('properties', {})
-                        
-                        if idx < 3:
-                            debug_logs.append(f"Feature {idx} properties: {list(properties.keys())}")
-                            if 'description' in properties:
-                                debug_logs.append(f"Feature {idx} description snippet: {str(properties['description'])[:100]}")
-                        
-                        # Ganti path gambar dengan Base64 di properties (misal di dalam deskripsi HTML)
-                        for key, val in properties.items():
-                            if isinstance(val, str):
-                                for img_path, base64_str in images_base64.items():
-                                    if img_path in val:
-                                        properties[key] = val.replace(img_path, base64_str)
-                                        debug_logs.append(f"Replaced {img_path} in {key}")
-                                        
-                            # Konversi bytes ke base64 (jika ada BLOB langsung)
-                            elif isinstance(val, bytes):
-                                import base64
-                                mime_type = "image/jpeg"
-                                if val.startswith(b'\x89PNG\r\n\x1a\n'): mime_type = "image/png"
-                                elif val.startswith(b'GIF8'): mime_type = "image/gif"
-                                elif val.startswith(b'\xff\xd8'): mime_type = "image/jpeg"
+                # Ekstrak Geometri (Point)
+                point = pm.find(f'.//{ns}Point')
+                geometry = None
+                if point is not None:
+                    coords_tag = point.find(f'{ns}coordinates')
+                    if coords_tag is not None and coords_tag.text:
+                        coords_str = coords_tag.text.strip()
+                        parts = coords_str.split(',')
+                        if len(parts) >= 2:
+                            try:
+                                lon = float(parts[0])
+                                lat = float(parts[1])
+                                geometry = {"type": "Point", "coordinates": [lon, lat]}
+                            except:
+                                pass
                                 
-                                encoded = base64.b64encode(val).decode('utf-8')
-                                properties[key] = f"data:{mime_type};base64,{encoded}"
+                # Jika bukan Point, coba LineString
+                if not geometry:
+                    ls = pm.find(f'.//{ns}LineString')
+                    if ls is not None:
+                        coords_tag = ls.find(f'{ns}coordinates')
+                        if coords_tag is not None and coords_tag.text:
+                            coords_str = coords_tag.text.strip().split()
+                            coords = []
+                            for c in coords_str:
+                                parts = c.split(',')
+                                if len(parts) >= 2:
+                                    try:
+                                        coords.append([float(parts[0]), float(parts[1])])
+                                    except:
+                                        pass
+                            if coords:
+                                geometry = {"type": "LineString", "coordinates": coords}
                                 
-                        if feat_dict.get('geometry') is not None:
-                            features.append(feat_dict)
-                    except Exception as e:
-                        debug_logs.append(f"Error parsing feature {idx}: {e}")
-                        continue
+                # Ganti path gambar dengan Base64
+                for key, val in properties.items():
+                    if isinstance(val, str):
+                        for img_path, base64_str in images_base64.items():
+                            if img_path in val or val in img_path:
+                                properties[key] = base64_str
+                                debug_logs.append(f"Matched image {img_path} in property {key}")
+                                
+                if geometry:
+                    features.append({
+                        "type": "Feature",
+                        "properties": properties,
+                        "geometry": geometry
+                    })
+                    
+            debug_logs.append(f"Successfully parsed {len(features)} features with images")
+            
         except Exception as e:
-            debug_logs.append(f"Fiona failed: {e}. Trying GeoPandas fallback.")
-            # Fallback ke GeoPandas langsung
-            gdf = gpd.read_file(tmp_kml_path)
-            geojson_str = gdf.to_json()
-            geojson_data = json.loads(geojson_str)
+            debug_logs.append(f"ElementTree parsing failed: {e}. Falling back to Fiona.")
+            print(f"ElementTree parsing failed: {e}")
             
-            os.unlink(tmp_kml_path)
-            os.unlink(tmp_path)
-            return JSONResponse(content={"geojson": geojson_data, "debug_logs": debug_logs})
-            
+            # Fallback ke Fiona jika XML parser gagal
+            try:
+                with fiona.open(tmp_kml_path, 'r') as src:
+                    for idx, feat in enumerate(src):
+                        try:
+                            if hasattr(feat, '__geo_interface__'):
+                                feat_dict = dict(feat.__geo_interface__)
+                            else:
+                                feat_dict = {
+                                    "type": "Feature",
+                                    "properties": dict(feat.get('properties', {})),
+                                    "geometry": dict(feat.get('geometry', {})) if feat.get('geometry') else None
+                                }
+                                
+                            properties = feat_dict.get('properties', {})
+                            
+                            # Ganti path gambar dengan Base64
+                            for key, val in properties.items():
+                                if isinstance(val, str):
+                                    for img_path, base64_str in images_base64.items():
+                                        if img_path in val:
+                                            properties[key] = val.replace(img_path, base64_str)
+                                            
+                            if feat_dict.get('geometry') is not None:
+                                features.append(feat_dict)
+                        except Exception as e:
+                            continue
+            except Exception as e2:
+                debug_logs.append(f"Fiona also failed: {e2}")
+                gdf = gpd.read_file(tmp_kml_path)
+                geojson_str = gdf.to_json()
+                geojson_data = json.loads(geojson_str)
+                
+                os.unlink(tmp_kml_path)
+                os.unlink(tmp_path)
+                return JSONResponse(content={"geojson": geojson_data, "debug_logs": debug_logs})
+                
         os.unlink(tmp_kml_path)
         os.unlink(tmp_path)
         
