@@ -234,6 +234,23 @@ async def convert_kmz(file: UploadFile = File(...)):
             with zip_ref.open(kml_files[0]) as kml_file:
                 kml_content = kml_file.read()
                 
+            # Ekstrak semua gambar di dalam KMZ
+            image_extensions = ('.jpg', '.jpeg', '.png', '.gif')
+            image_files = [f for f in zip_ref.namelist() if f.lower().endswith(image_extensions)]
+            
+            images_base64 = {}
+            for img_file in image_files:
+                with zip_ref.open(img_file) as img:
+                    val = img.read()
+                    import base64
+                    mime_type = "image/jpeg"
+                    if img_file.lower().endswith('.png'): mime_type = "image/png"
+                    elif img_file.lower().endswith('.gif'): mime_type = "image/gif"
+                    
+                    encoded = base64.b64encode(val).decode('utf-8')
+                    images_base64[img_file] = f"data:{mime_type};base64,{encoded}"
+                    print(f"Extracted image {img_file} and converted to base64")
+                    
         # Simpan KML ke file sementara agar bisa dibaca Fiona
         with tempfile.NamedTemporaryFile(delete=False, suffix=".kml") as tmp_kml:
             tmp_kml.write(kml_content)
@@ -256,10 +273,18 @@ async def convert_kmz(file: UploadFile = File(...)):
                                 "geometry": dict(feat.get('geometry', {})) if feat.get('geometry') else None
                             }
                             
-                        # Konversi bytes ke base64 (jika ada)
                         properties = feat_dict.get('properties', {})
+                        
+                        # Ganti path gambar dengan Base64 di properties (misal di dalam deskripsi HTML)
                         for key, val in properties.items():
-                            if isinstance(val, bytes):
+                            if isinstance(val, str):
+                                for img_path, base64_str in images_base64.items():
+                                    if img_path in val:
+                                        properties[key] = val.replace(img_path, base64_str)
+                                        print(f"Replaced reference to {img_path} with base64 in property '{key}'")
+                                        
+                            # Konversi bytes ke base64 (jika ada BLOB langsung)
+                            elif isinstance(val, bytes):
                                 import base64
                                 mime_type = "image/jpeg"
                                 if val.startswith(b'\x89PNG\r\n\x1a\n'): mime_type = "image/png"
