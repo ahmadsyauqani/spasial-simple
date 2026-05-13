@@ -310,6 +310,7 @@ async def convert_kmz(file: UploadFile = File(...)):
                 # Ekstrak ExtendedData
                 extended_data = pm.find(f'{ns}ExtendedData')
                 if extended_data is not None:
+                    # Tipe 1: <Data name="..."> <value>
                     data_tags = extended_data.findall(f'{ns}Data')
                     for dt in data_tags:
                         data_name = dt.get('name')
@@ -317,6 +318,15 @@ async def convert_kmz(file: UploadFile = File(...)):
                         if val_tag is not None and val_tag.text:
                             properties[data_name] = val_tag.text
                             
+                    # Tipe 2: <SchemaData> <SimpleData name="...">
+                    schema_data = extended_data.find(f'{ns}SchemaData')
+                    if schema_data is not None:
+                        simple_data_tags = schema_data.findall(f'{ns}SimpleData')
+                        for sdt in simple_data_tags:
+                            data_name = sdt.get('name')
+                            if sdt.text:
+                                properties[data_name] = sdt.text
+                                
                 # Ekstrak Icon (Kadang foto disimpan sebagai Icon atau IconStyle)
                 icon_tag = pm.find(f'.//{ns}Icon/{ns}href')
                 if icon_tag is not None and icon_tag.text:
