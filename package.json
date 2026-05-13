@@ -24,6 +24,7 @@
     "dxf-parser": "^1.1.2",
     "dxf-writer": "^1.18.4",
     "fgdb": "^1.0.0",
+    "gdal3.js": "^2.8.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.1",

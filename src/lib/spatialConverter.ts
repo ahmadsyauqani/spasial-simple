@@ -50,84 +50,29 @@ export class SpatialConverter {
         return JSON.parse(new TextDecoder().decode(arrayBuffer));
 
       case 'gpkg': {
-        // GeoPackage: parse di sisi client untuk menghindari limit Vercel
+        // GeoPackage: kirim ke Python API untuk konversi (Opsi 2)
         try {
-          const { GeoPackageAPI } = await import('@ngageoint/geopackage');
+          const blob = new Blob([arrayBuffer]);
+          const formData = new FormData();
+          formData.append('file', blob, 'upload.gpkg');
           
-          const uint8 = new Uint8Array(arrayBuffer);
-          const geoPackage = await GeoPackageAPI.open(uint8);
-          const allFeatures: any[] = [];
-          const featureTableNames = geoPackage.getFeatureTables();
+          // Coba ambil URL API dari environment, jika tidak ada fallback ke localhost
+          const apiUrl = process.env.NEXT_PUBLIC_PYTHON_API_URL || 'http://localhost:8000';
           
-          for (const tableName of featureTableNames) {
-            const featureDao = geoPackage.getFeatureDao(tableName) as any;
-            const featureRows = featureDao.queryForAll();
-            
-            for (const row of featureRows) {
-              try {
-                const rowAny = row as any;
-                
-                // Coba gunakan toGeoJSON bawaan jika ada
-                if (typeof rowAny.toGeoJSON === 'function') {
-                  try {
-                    const feature = rowAny.toGeoJSON();
-                    if (feature && feature.geometry) {
-                      allFeatures.push(feature);
-                      continue;
-                    }
-                  } catch (e) {
-                    console.warn("row.toGeoJSON failed, falling back:", e);
-                  }
-                }
-                
-                // Coba berbagai cara untuk mendapatkan data geometri
-                let geometry = rowAny.geometry;
-                if (!geometry && typeof rowAny.getGeometry === 'function') {
-                  geometry = rowAny.getGeometry();
-                }
-                if (!geometry && featureDao.geometryColumnName) {
-                  geometry = rowAny.getValue(featureDao.geometryColumnName);
-                }
-                
-                if (!geometry) continue;
-                
-                // Fleksibel: gunakan geometry.geometry jika ada, atau geometry itu sendiri
-                const geom = geometry.geometry || geometry;
-                
-                const geojsonGeom = parseGeoPackageGeometry(geom);
-                if (!geojsonGeom) continue;
-                
-                const properties: Record<string, any> = {};
-                const columnNames = rowAny.columnNames;
-                for (const col of columnNames) {
-                  if (col === featureDao.geometryColumnName || col === 'id') continue;
-                  properties[col] = rowAny.getValue(col);
-                }
-                
-                allFeatures.push({
-                  type: 'Feature',
-                  properties,
-                  geometry: geojsonGeom,
-                });
-              } catch (featureErr) {
-                console.warn(`Skipping feature in table ${tableName}:`, featureErr);
-              }
-            }
+          const response = await fetch(`${apiUrl}/convert-gpkg`, {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `Server error: ${response.status}`);
           }
           
-          geoPackage.close();
-          
-          if (allFeatures.length === 0) {
-            throw new Error('GeoPackage tidak memiliki fitur geometri yang valid.');
-          }
-          
-          return {
-            type: 'FeatureCollection',
-            features: allFeatures,
-          };
+          return await response.json();
         } catch (err: any) {
-          console.error("GeoPackage parse error:", err);
-          throw new Error(`Gagal membaca GeoPackage di browser: ${err.message || 'Unknown error'}`);
+          console.error("GeoPackage API error:", err);
+          throw new Error(`Gagal mengonversi GeoPackage melalui Python API: ${err.message || 'Unknown error'}. Pastikan server Python berjalan.`);
         }
       }
 
