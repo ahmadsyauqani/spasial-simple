@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
+
+const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
 import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2 } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
@@ -43,6 +45,10 @@ export function UploadDatasetPanel() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvPreviewData, setCsvPreviewData] = useState<string[][]>([]);
+  const [csvFullText, setCsvFullText] = useState<string>("");
+  const [previewCoords, setPreviewCoords] = useState<[number, number][]>([]);
+  const [activeSlot, setActiveSlot] = useState<'colCode' | 'colX' | 'colY' | null>(null);
   const [csvSettings, setCsvSettings] = useState({
     projection: 'geografis', // 'geografis', 'utm', 'tm3'
     zone: '48.1', // Default zone untuk TM3
@@ -58,6 +64,94 @@ export function UploadDatasetPanel() {
       })
       .catch((err) => console.error("Gagal load layers awal:", err));
   }, [setLayers]);
+
+
+  useEffect(() => {
+    if (!csvFullText || !csvSettings.colX || !csvSettings.colY) {
+      setPreviewCoords([]);
+      return;
+    }
+
+    const calculatePreview = async () => {
+      try {
+        const lines = csvFullText.split('\n');
+        if (lines.length <= 1) return;
+
+        const delimiter = lines[0].includes('\t') ? '\t' : ',';
+        const headers = lines[0].split(delimiter).map(h => h.trim().replace(/\r$/, ''));
+
+        const idxX = headers.indexOf(csvSettings.colX);
+        const idxY = headers.indexOf(csvSettings.colY);
+
+        if (idxX === -1 || idxY === -1) return;
+
+        const coordinates: [number, number][] = [];
+
+        // Ambil maksimal 1000 titik saja untuk preview agar tidak lambat
+        const maxLines = Math.min(lines.length, 1000);
+        
+        for (let i = 1; i < maxLines; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          const vals = line.split(delimiter);
+          const x = parseFloat(vals[idxX]);
+          const y = parseFloat(vals[idxY]);
+
+          if (!isNaN(x) && !isNaN(y)) {
+            coordinates.push([x, y]);
+          }
+        }
+
+        if (coordinates.length < 3) return;
+
+        // Otomatis tutup poligon jika belum
+        const first = coordinates[0];
+        const last = coordinates[coordinates.length - 1];
+        if (first[0] !== last[0] || first[1] !== last[1]) {
+          coordinates.push([first[0], first[1]]);
+        }
+
+        // Konversi koordinat jika bukan geografis
+        let finalCoords = coordinates;
+        if (csvSettings.projection !== 'geografis') {
+          const proj4 = (await import('proj4')).default;
+          const { TM3_ZONES } = await import('@/lib/crs');
+
+          let sourceDef = "";
+          if (csvSettings.projection === 'utm') {
+            const zoneNum = parseInt(csvSettings.zone);
+            const isSouth = csvSettings.zone.toUpperCase().endsWith('S');
+            if (!isNaN(zoneNum)) {
+              sourceDef = `+proj=utm +zone=${zoneNum} ${isSouth ? '+south' : ''} +datum=WGS84 +units=m +no_defs`;
+            }
+          } else if (csvSettings.projection === 'tm3') {
+            const zoneObj = TM3_ZONES.find(z => z.zone === csvSettings.zone);
+            if (zoneObj) {
+              sourceDef = `+proj=tmerc +lat_0=0 +lon_0=${zoneObj.cm} +k=0.9999 +x_0=200000 +y_0=1500000 +ellps=WGS84 +units=m +no_defs`;
+            }
+          }
+
+          if (sourceDef) {
+            finalCoords = coordinates.map(coord => {
+              const [x, y] = coord;
+              try {
+                const [lon, lat] = proj4(sourceDef, "EPSG:4326", [x, y]);
+                return [lon, lat];
+              } catch (e) {
+                return [0, 0];
+              }
+            }).filter(c => c[0] !== 0 || c[1] !== 0);
+          }
+        }
+
+        setPreviewCoords(finalCoords);
+      } catch (err) {
+        console.error("Gagal menghitung preview coords:", err);
+      }
+    };
+
+    calculatePreview();
+  }, [csvFullText, csvSettings.colX, csvSettings.colY, csvSettings.projection, csvSettings.zone]);
 
   const handleDeleteLayer = async (id: string, name: string) => {
     try {
@@ -93,12 +187,20 @@ export function UploadDatasetPanel() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
+        setCsvFullText(text);
         const lines = text.split('\n');
         if (lines.length > 0) {
           // Pisahkan dengan koma atau tab
           const delimiter = lines[0].includes('\t') ? '\t' : ',';
           const headers = lines[0].split(delimiter).map(h => h.trim().replace(/\r$/, ''));
           setCsvHeaders(headers);
+          
+          // Baca 5 baris pertama untuk pratinjau
+          const previewRows = lines.slice(1, 6).map(line => {
+            if (!line.trim()) return [];
+            return line.split(delimiter).map(v => v.trim().replace(/\r$/, ''));
+          }).filter(row => row.length > 0);
+          setCsvPreviewData(previewRows);
           
           // Tebak kolom
           const colCode = headers.find(h => /kode|id|titik/i.test(h)) || '';
@@ -416,6 +518,45 @@ export function UploadDatasetPanel() {
           </DialogHeader>
 
           <div className="flex flex-col gap-4 py-4">
+            {/* Pratinjau Tabel */}
+            {csvPreviewData.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-foreground">Pratinjau Data (5 Baris Pertama)</label>
+                <div className="overflow-x-auto border rounded-lg border-border/50 bg-muted/30">
+                  <table className="w-full text-[10px] text-left">
+                    <thead className="bg-black/10 dark:bg-white/5">
+                      <tr>
+                        {csvHeaders.map((h, idx) => (
+                          <th key={idx} className={`px-2 py-1.5 font-bold ${
+                            h === csvSettings.colX ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400' :
+                            h === csvSettings.colY ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400' :
+                            ''
+                          }`}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {csvPreviewData.map((row, rIdx) => (
+                        <tr key={rIdx} className="border-t border-border/20">
+                          {row.map((cell, cIdx) => (
+                            <td key={cIdx} className={`px-2 py-1 ${
+                              csvHeaders[cIdx] === csvSettings.colX ? 'bg-cyan-500/10' :
+                              csvHeaders[cIdx] === csvSettings.colY ? 'bg-orange-500/10' :
+                              ''
+                            }`}>
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* Pilihan Proyeksi */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-foreground">Sistem Proyeksi</label>
@@ -445,45 +586,83 @@ export function UploadDatasetPanel() {
 
             {/* Pemetaan Kolom */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-foreground">Pemetaan Kolom</label>
+              <label className="text-sm font-semibold text-foreground">Pemetaan Kolom (Klik Slot -> Klik Chip)</label>
               
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-muted-foreground">Kode Titik</label>
-                  <select 
-                    value={csvSettings.colCode} 
-                    onChange={(e) => setCsvSettings(prev => ({ ...prev, colCode: e.target.value }))}
-                    className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white"
-                  >
-                    <option value="">-- Pilih --</option>
-                    {csvHeaders.map((h, idx) => <option key={`${h}-${idx}`} value={h}>{h}</option>)}
-                  </select>
+              {/* Slots */}
+              <div className="grid grid-cols-3 gap-2">
+                <div 
+                  onClick={() => setActiveSlot('colCode')}
+                  className={`cursor-pointer p-2 rounded-lg border-2 transition-all ${
+                    activeSlot === 'colCode' ? 'border-primary bg-primary/10' : 'border-border/50 bg-muted/30'
+                  }`}
+                >
+                  <label className="text-xs text-muted-foreground block mb-1">Kode Titik</label>
+                  <div className="text-xs font-bold truncate">
+                    {csvSettings.colCode || <span className="text-muted-foreground/50">-- Pilih --</span>}
+                  </div>
                 </div>
                 
-                <div>
-                  <label className="text-xs text-muted-foreground">{csvSettings.projection === 'geografis' ? 'Longitude' : 'X (Easting)'}</label>
-                  <select 
-                    value={csvSettings.colX} 
-                    onChange={(e) => setCsvSettings(prev => ({ ...prev, colX: e.target.value }))}
-                    className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white"
-                  >
-                    <option value="">-- Pilih --</option>
-                    {csvHeaders.map((h, idx) => <option key={`${h}-${idx}`} value={h}>{h}</option>)}
-                  </select>
+                <div 
+                  onClick={() => setActiveSlot('colX')}
+                  className={`cursor-pointer p-2 rounded-lg border-2 transition-all ${
+                    activeSlot === 'colX' ? 'border-cyan-500 bg-cyan-500/10' : 'border-border/50 bg-muted/30'
+                  }`}
+                >
+                  <label className="text-xs text-muted-foreground block mb-1">
+                    {csvSettings.projection === 'geografis' ? 'Longitude' : 'X (Easting)'}
+                  </label>
+                  <div className="text-xs font-bold truncate text-cyan-600 dark:text-cyan-400">
+                    {csvSettings.colX || <span className="text-muted-foreground/50">-- Pilih --</span>}
+                  </div>
                 </div>
                 
-                <div>
-                  <label className="text-xs text-muted-foreground">{csvSettings.projection === 'geografis' ? 'Latitude' : 'Y (Northing)'}</label>
-                  <select 
-                    value={csvSettings.colY} 
-                    onChange={(e) => setCsvSettings(prev => ({ ...prev, colY: e.target.value }))}
-                    className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white"
-                  >
-                    <option value="">-- Pilih --</option>
-                    {csvHeaders.map((h, idx) => <option key={`${h}-${idx}`} value={h}>{h}</option>)}
-                  </select>
+                <div 
+                  onClick={() => setActiveSlot('colY')}
+                  className={`cursor-pointer p-2 rounded-lg border-2 transition-all ${
+                    activeSlot === 'colY' ? 'border-orange-500 bg-orange-500/10' : 'border-border/50 bg-muted/30'
+                  }`}
+                >
+                  <label className="text-xs text-muted-foreground block mb-1">
+                    {csvSettings.projection === 'geografis' ? 'Latitude' : 'Y (Northing)'}
+                  </label>
+                  <div className="text-xs font-bold truncate text-orange-600 dark:text-orange-400">
+                    {csvSettings.colY || <span className="text-muted-foreground/50">-- Pilih --</span>}
+                  </div>
                 </div>
               </div>
+
+              {/* Chips (Daftar Kolom) */}
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {csvHeaders.map((h, idx) => {
+                  const isCurrent = activeSlot && csvSettings[activeSlot] === h;
+                  
+                  return (
+                    <button
+                      key={`${h}-${idx}`}
+                      onClick={() => {
+                        if (activeSlot) {
+                          setCsvSettings(prev => ({ ...prev, [activeSlot]: h }));
+                          setActiveSlot(null); // Reset slot setelah memilih
+                        }
+                      }}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                        isCurrent ? 'bg-primary text-primary-foreground border-primary' :
+                        h === csvSettings.colX ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 border-cyan-500/50' :
+                        h === csvSettings.colY ? 'bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/50' :
+                        h === csvSettings.colCode ? 'bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/50' :
+                        'bg-background hover:bg-muted border-border/50'
+                      }`}
+                    >
+                      {h}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Mini Map Preview */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-foreground">Pratinjau Spasial</label>
+              <MiniMap coordinates={previewCoords} />
             </div>
           </div>
 
