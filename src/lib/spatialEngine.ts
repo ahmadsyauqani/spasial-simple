@@ -211,7 +211,33 @@ export async function parseSpatialFile(file: File): Promise<any> {
         geoPackage.close();
         
         if (allFeatures.length === 0) {
-          throw new Error(`GeoPackage tidak memiliki fitur geometri yang valid. Tabel fitur: [${tableCounts.join(', ')}], Tabel tile: [${tileTables.join(', ')}]`);
+          let debugInfo = 'No rows found';
+          if (featureTableNames.length > 0) {
+            const firstTable = featureTableNames[0];
+            const featureDao = geoPackage.getFeatureDao(firstTable) as any;
+            const rows = featureDao.queryForAll();
+            const firstRow = rows[0];
+            if (firstRow) {
+              const keys = Object.keys(firstRow);
+              const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(firstRow)).filter(p => {
+                try {
+                  return typeof (firstRow as any)[p] === 'function';
+                } catch (e) {
+                  return false;
+                }
+              });
+              debugInfo = `Keys: [${keys.join(', ')}], Methods: [${methods.join(', ')}]`;
+              
+              const geomCol = featureDao.geometryColumnName;
+              const geomVal = firstRow.getValue ? firstRow.getValue(geomCol) : 'no getValue';
+              debugInfo += `, GeomCol: ${geomCol}, GeomVal type: ${typeof geomVal}`;
+              
+              if (geomVal && typeof geomVal === 'object') {
+                debugInfo += `, GeomVal keys: [${Object.keys(geomVal).join(', ')}]`;
+              }
+            }
+          }
+          throw new Error(`GeoPackage tidak memiliki fitur geometri yang valid. Tabel fitur: [${tableCounts.join(', ')}]. Debug: ${debugInfo}`);
         }
         
         geojson = {
