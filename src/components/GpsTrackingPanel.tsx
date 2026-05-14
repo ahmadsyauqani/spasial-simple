@@ -1,35 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMapContext } from "@/lib/MapContext";
-import { Navigation, Play, Square, Save, RotateCcw, Activity, MapPin } from "lucide-react";
+import { Navigation, Play, Square, Save, RotateCcw, Activity, X } from "lucide-react";
 import * as turf from "@turf/turf";
 import { toast } from "sonner";
 import { saveLayer } from "@/lib/database";
+import { cn } from "@/lib/utils";
 
-// COMPONENT 1: The Trigger Button (To be placed next to SAKAGIS)
+// COMPONENT 1: Trigger button — diletakkan di brand header sidebar
 export function GpsTrackingTrigger() {
   const { isGpsPanelOpen, setIsGpsPanelOpen, isTracking } = useMapContext();
-  
+
   return (
-    <button 
+    <button
       onClick={() => setIsGpsPanelOpen(!isGpsPanelOpen)}
-      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 border ${isGpsPanelOpen ? 'bg-indigo-500 border-indigo-400 text-white shadow-lg shadow-indigo-500/20' : 'bg-white/5 border-white/5 text-gray-400 hover:text-white hover:bg-white/10'}`}
-      title="GPS Tracking"
+      title="GPS Field Tracker"
+      className={cn(
+        "p-1.5 rounded-lg transition-all duration-200",
+        isGpsPanelOpen
+          ? "bg-orange-500/20 text-orange-400 shadow-inner"
+          : "text-muted-foreground hover:bg-white/10 hover:text-white"
+      )}
     >
-      <Navigation className={`w-4 h-4 ${isTracking ? 'animate-pulse text-white' : ''}`} />
+      <Navigation className={cn("w-3.5 h-3.5", isTracking && "animate-pulse text-orange-400")} />
     </button>
   );
 }
 
-// COMPONENT 2: The Statistics Panel (To be placed at root level for fixed positioning)
+// COMPONENT 2: GPS Tracking Panel — fixed di kanan atas, tidak tumpang tindih
 export function GpsTrackingPanel() {
-  const { 
-    isTracking, setIsTracking, 
-    trackingPath, setTrackingPath, 
+  const {
+    isTracking, setIsTracking,
+    trackingPath, setTrackingPath,
     trackingDistance, setTrackingDistance,
     fetchLayers,
-    isGpsPanelOpen, setIsGpsPanelOpen
+    isGpsPanelOpen, setIsGpsPanelOpen,
   } = useMapContext();
 
   const [watchId, setWatchId] = useState<number | null>(null);
@@ -39,7 +45,6 @@ export function GpsTrackingPanel() {
       toast.error("Geolocation tidak didukung browser ini.");
       return;
     }
-
     setIsTracking(true);
     setTrackingPath([]);
     setTrackingDistance(0);
@@ -48,13 +53,11 @@ export function GpsTrackingPanel() {
       (position) => {
         const { latitude, longitude } = position.coords;
         const newPoint: [number, number] = [latitude, longitude];
-
         setTrackingPath((prev: any[]) => {
           const newPath = [...prev, newPoint];
           if (newPath.length > 1) {
-            const line = turf.lineString(newPath.map(p => [p[1], p[0]]));
-            const length = turf.length(line, { units: "kilometers" });
-            setTrackingDistance(length);
+            const line = turf.lineString(newPath.map((p) => [p[1], p[0]]));
+            setTrackingDistance(turf.length(line, { units: "kilometers" }));
           }
           return newPath;
         });
@@ -91,14 +94,11 @@ export function GpsTrackingPanel() {
       toast.error("Jejak terlalu pendek untuk disimpan.");
       return;
     }
-
     try {
-      const geojson = turf.lineString(trackingPath.map(p => [p[1], p[0]]));
+      const geojson = turf.lineString(trackingPath.map((p) => [p[1], p[0]]));
       const layerName = `Track_${new Date().toLocaleString("id-ID")}`;
-      
       await saveLayer(layerName, geojson, "LineString");
-      toast.success("Jejak GPS berhasil disimpan ke database!");
-      
+      toast.success("Jejak GPS berhasil disimpan!");
       if (fetchLayers) await fetchLayers();
       resetTracking();
     } catch (err: any) {
@@ -109,59 +109,103 @@ export function GpsTrackingPanel() {
   if (!isGpsPanelOpen) return null;
 
   return (
-    <div 
-      className="fixed top-4 bg-[#0f1115]/98 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] animate-in slide-in-from-right-4 fade-in duration-300 z-[9999] w-[calc(100vw-2rem)] sm:w-80"
-      style={{ right: '1rem' }}
+    <div
+      className={cn(
+        // Posisi: top-4, right-4 — tidak nabrak sidebar kiri
+        "fixed top-4 right-4 z-[9999] w-72",
+        "rounded-2xl border border-border/50 bg-card/90 backdrop-blur-2xl shadow-2xl overflow-hidden",
+        "animate-in slide-in-from-right-3 fade-in duration-300"
+      )}
     >
-      <div className="space-y-5">
+      {/* Accent line — orange saat idle, merah saat tracking */}
+      <div className={cn(
+        "h-[2px] transition-all duration-500",
+        isTracking
+          ? "bg-gradient-to-r from-red-500 via-red-400/60 to-transparent"
+          : "bg-gradient-to-r from-orange-500 via-orange-400/60 to-transparent"
+      )} />
+
+      <div className="p-4 space-y-4">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-500/20 rounded-lg">
-              <Activity className="w-4 h-4 text-indigo-400" />
+          <div className="flex items-center gap-2.5">
+            <div className={cn(
+              "p-1.5 rounded-xl border transition-all duration-300",
+              isTracking
+                ? "bg-red-500/15 border-red-500/30"
+                : "bg-orange-500/15 border-orange-500/20"
+            )}>
+              <Activity className={cn(
+                "w-4 h-4 transition-colors",
+                isTracking ? "text-red-400 animate-pulse" : "text-orange-400"
+              )} />
             </div>
             <div>
-              <h3 className="text-xs font-black text-white uppercase tracking-wider">Field Tracker</h3>
-              <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Avenza Mode</p>
+              <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground">
+                Field Tracker
+              </h3>
+              <p className={cn(
+                "text-[8px] font-black uppercase tracking-[0.2em] transition-colors",
+                isTracking ? "text-red-400" : "text-muted-foreground"
+              )}>
+                {isTracking ? "● Recording..." : "Avenza Mode"}
+              </p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setIsGpsPanelOpen(false)}
-            className="p-1 hover:bg-white/5 rounded-md text-gray-500 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
           >
-            <RotateCcw className="w-3.5 h-3.5 rotate-45" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white/5 border border-white/5 rounded-xl p-4 space-y-1">
-            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Distance</p>
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-muted/30 border border-border/30 rounded-xl p-3 space-y-0.5">
+            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">
+              Distance
+            </p>
             <div className="flex items-baseline gap-1">
-              <span className="text-xl font-black text-white tracking-tighter">{trackingDistance.toFixed(3)}</span>
-              <span className="text-[8px] font-bold text-indigo-400">KM</span>
+              <span className="text-lg font-black tracking-tighter text-foreground">
+                {trackingDistance.toFixed(3)}
+              </span>
+              <span className={cn(
+                "text-[8px] font-black transition-colors",
+                isTracking ? "text-red-400" : "text-orange-400"
+              )}>KM</span>
             </div>
           </div>
-          <div className="bg-white/5 border border-white/5 rounded-xl p-4 space-y-1">
-            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Points</p>
+          <div className="bg-muted/30 border border-border/30 rounded-xl p-3 space-y-0.5">
+            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">
+              Points
+            </p>
             <div className="flex items-baseline gap-1">
-              <span className="text-xl font-black text-white tracking-tighter">{trackingPath.length}</span>
-              <span className="text-[8px] font-bold text-indigo-400">PTS</span>
+              <span className="text-lg font-black tracking-tighter text-foreground">
+                {trackingPath.length}
+              </span>
+              <span className={cn(
+                "text-[8px] font-black transition-colors",
+                isTracking ? "text-red-400" : "text-orange-400"
+              )}>PTS</span>
             </div>
           </div>
         </div>
 
-        <div className="space-y-3 pt-2">
+        {/* Action buttons */}
+        <div className="space-y-2">
           {!isTracking ? (
-            <button 
+            <button
               onClick={startTracking}
-              className="w-full py-3.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center gap-2.5 shadow-lg shadow-indigo-500/20 transition-all group"
+              className="w-full py-3 bg-orange-500 hover:bg-orange-400 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all duration-200 active:scale-[0.98] group"
             >
               <Play className="w-4 h-4 fill-current group-hover:scale-110 transition-transform" />
               <span className="text-[10px] font-black uppercase tracking-widest">Start Recording</span>
             </button>
           ) : (
-            <button 
+            <button
               onClick={stopTracking}
-              className="w-full py-3.5 bg-red-500 hover:bg-red-600 text-white rounded-xl flex items-center justify-center gap-2.5 shadow-lg shadow-red-500/20 transition-all group"
+              className="w-full py-3 bg-red-500 hover:bg-red-400 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all duration-200 active:scale-[0.98] group"
             >
               <Square className="w-4 h-4 fill-current group-hover:scale-110 transition-transform" />
               <span className="text-[10px] font-black uppercase tracking-widest">Stop Recording</span>
@@ -169,17 +213,22 @@ export function GpsTrackingPanel() {
           )}
 
           <div className="grid grid-cols-2 gap-2">
-            <button 
+            <button
               onClick={resetTracking}
-              className="py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+              className="py-2.5 bg-muted/40 hover:bg-muted border border-border/30 text-muted-foreground hover:text-foreground rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
             >
               <RotateCcw className="w-3 h-3" />
               Reset
             </button>
-            <button 
+            <button
               onClick={handleSaveTrack}
               disabled={isTracking || trackingPath.length < 2}
-              className="py-2.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white disabled:opacity-30 disabled:hover:bg-emerald-500/10 disabled:hover:text-emerald-500 border border-emerald-500/20 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+              className={cn(
+                "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 border",
+                isTracking || trackingPath.length < 2
+                  ? "bg-muted/20 border-border/20 text-muted-foreground/40 cursor-not-allowed"
+                  : "bg-orange-500/10 hover:bg-orange-500 border-orange-500/30 text-orange-400 hover:text-white hover:shadow-lg hover:shadow-orange-500/20"
+              )}
             >
               <Save className="w-3 h-3" />
               Save Layer
