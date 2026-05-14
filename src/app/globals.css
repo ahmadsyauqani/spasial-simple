@@ -227,6 +227,58 @@
   background: rgba(249,115,22,0.1) !important;
 }
 
+/* ── Auto-hide Geoman toolbar: slide in on hover ── */
+
+/* Orange hint strip on the right edge — always visible as a subtle indicator */
+.leaflet-top.leaflet-right {
+  position: relative !important;
+}
+.leaflet-top.leaflet-right::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50px;
+  width: 3px;
+  height: 160px;
+  background: linear-gradient(to bottom, transparent, rgba(249,115,22,0.5), rgba(249,115,22,0.2), transparent);
+  border-radius: 3px 0 0 3px;
+  transition: opacity 0.3s ease;
+  opacity: 1;
+  pointer-events: none;
+}
+.leaflet-top.leaflet-right:hover::before {
+  opacity: 0;
+}
+
+/* Hide buttons by default — translate to the right */
+.leaflet-top.leaflet-right .leaflet-pm-toolbar .button-container {
+  opacity: 0 !important;
+  transform: translateX(56px) !important;
+  pointer-events: none !important;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* Stagger each button reveal */
+.leaflet-top.leaflet-right .leaflet-pm-toolbar .button-container:nth-child(1) { transition-delay: 0ms !important; }
+.leaflet-top.leaflet-right .leaflet-pm-toolbar .button-container:nth-child(2) { transition-delay: 35ms !important; }
+.leaflet-top.leaflet-right .leaflet-pm-toolbar .button-container:nth-child(3) { transition-delay: 70ms !important; }
+.leaflet-top.leaflet-right .leaflet-pm-toolbar .button-container:nth-child(4) { transition-delay: 105ms !important; }
+.leaflet-top.leaflet-right .leaflet-pm-toolbar .button-container:nth-child(5) { transition-delay: 140ms !important; }
+.leaflet-top.leaflet-right .leaflet-pm-toolbar .button-container:nth-child(6) { transition-delay: 175ms !important; }
+
+/* Reveal on hover of the right container */
+.leaflet-top.leaflet-right:hover .leaflet-pm-toolbar .button-container {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+  pointer-events: auto !important;
+}
+
+/* Zoom control stays always visible — only Geoman gets hidden */
+.leaflet-top.leaflet-right .leaflet-control-zoom {
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
 
 /* ── Leaflet Popup ── */
 .leaflet-popup-content-wrapper {
