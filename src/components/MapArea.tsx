@@ -304,6 +304,7 @@ export default function MapArea() {
         <DissolveLayer />
         <SpatialJoinLayer />
         <SearchResultMarker />
+        <TopologyErrorLayer />
 
         {/* User Location Marker */}
         {userLocation && locationActive && (
@@ -1392,6 +1393,9 @@ function LayerFeature({ layer }: { layer: any }) {
   };
 
   const onEachFeature = (feature: any, mapLayer: any) => {
+    // Enable snapping for this layer in Geoman
+    mapLayer.options.snappable = true;
+
     // Digitizing Edit Trigger
     mapLayer.on('click', (e: L.LeafletMouseEvent) => {
       L.DomEvent.stopPropagation(e);
@@ -1709,6 +1713,80 @@ function SearchResultMarker() {
         </div>
       </Popup>
     </Marker>
+  );
+}
+
+// Komponen render hasil validasi topologi di peta
+function TopologyErrorLayer() {
+  const { topologyErrors, setTopologyErrors } = useMapContext();
+  const map = useMap();
+
+  useEffect(() => {
+    if (topologyErrors) {
+      try {
+        const bounds = L.geoJSON(topologyErrors).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } catch(e) {}
+    }
+  }, [topologyErrors, map]);
+
+  if (!topologyErrors) return null;
+
+  const errorStyle = (feature: any) => {
+    const type = feature.properties?.type;
+    if (type === 'self-intersection') {
+      return {
+        color: '#ff0055',
+        fillColor: '#ff0055',
+        fillOpacity: 0.8,
+        weight: 3
+      };
+    }
+    return {
+      color: '#ff0055',
+      fillColor: '#ff0055',
+      fillOpacity: 0.4,
+      weight: 3,
+      dashArray: '5, 5'
+    };
+  };
+
+  const onEachError = (feature: any, mapLayer: any) => {
+    const props = feature.properties || {};
+    let html = `<div class="p-2 min-w-[200px]">`;
+    html += `<h4 class="font-bold text-base border-b border-pink-500/30 pb-1 mb-2 text-pink-300">🚨 Kesalahan Topologi</h4>`;
+    html += `<p class="text-xs text-white leading-relaxed mb-3">${props.message || "Kesalahan tidak diketahui"}</p>`;
+    html += `<div class="mt-2 text-right"><button id="clear-err-btn" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-bold text-white transition-colors border border-white/10">Hapus Error</button></div>`;
+    html += `</div>`;
+
+    mapLayer.bindPopup(html, { className: 'custom-popup-dark', maxWidth: 250 });
+    
+    mapLayer.on('popupopen', () => {
+      const btn = document.getElementById('clear-err-btn');
+      if (btn) {
+        btn.onclick = () => {
+          setTopologyErrors(null);
+        };
+      }
+    });
+  };
+
+  return (
+    <GeoJSON
+      data={topologyErrors}
+      key={`topology-errors-${Date.now()}`}
+      style={errorStyle}
+      pointToLayer={(feature, latlng) => {
+        return L.circleMarker(latlng, {
+          radius: 8,
+          color: '#ff0055',
+          fillColor: '#ff0055',
+          fillOpacity: 1,
+          weight: 2
+        });
+      }}
+      onEachFeature={onEachError}
+    />
   );
 }
 

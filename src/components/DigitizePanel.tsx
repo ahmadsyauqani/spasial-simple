@@ -7,11 +7,13 @@ import {
   Plus, MousePointer2, Trash2, Pencil, X, 
   CloudUpload, Loader2, Settings, 
   Database, LayoutList, ChevronRight, Save,
-  MapPin, Share2, Square, GripVertical
+  MapPin, Share2, Square, GripVertical,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, updateFeaturePropertiesInSupabase } from "@/lib/database";
 import Draggable from 'react-draggable';
+import * as turf from "@turf/turf";
 
 export function DigitizePanel() {
   const { 
@@ -22,7 +24,8 @@ export function DigitizePanel() {
     mapInstance: map,
     isDigitizePanelExpanded: isMainExpanded,
     setIsDigitizePanelExpanded: setIsMainExpanded,
-    digitizeSettings, setDigitizeSettings
+    digitizeSettings, setDigitizeSettings,
+    setTopologyErrors
   } = useMapContext();
 
   const [isPublishing, setIsPublishing] = useState<string | null>(null);
@@ -145,6 +148,8 @@ export function DigitizePanel() {
       toast.success(`Mode gambar ${layer.geometryType} aktif`);
     }
   };
+
+
 
   const publishLayer = async (layerId: string) => {
     const layer = layers.find(l => l.id === layerId);

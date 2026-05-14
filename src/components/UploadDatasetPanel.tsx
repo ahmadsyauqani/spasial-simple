@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
-import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2 } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2 } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
@@ -28,6 +28,7 @@ import { BufferAnalysisButton } from "./BufferAnalysisPanel";
 import { UnionAnalysisButton } from "./UnionAnalysisPanel";
 import { DissolveAnalysisButton } from "./DissolveAnalysisPanel";
 import { SpatialJoinButton } from "./SpatialJoinPanel";
+import { TopologyValidationButton } from "./TopologyValidationPanel";
 
 const PdfOverlayPanel = dynamic(() => import("./PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
 
@@ -205,9 +206,9 @@ export function UploadDatasetPanel() {
           setCsvPreviewData(previewRows);
           
           // Tebak kolom
-          const colCode = headers.find(h => /kode|id|titik/i.test(h)) || '';
-          const colX = headers.find(h => /x|lon|east|bujur/i.test(h)) || '';
-          const colY = headers.find(h => /y|lat|north|lintang/i.test(h)) || '';
+          const colCode = headers.find(h => /\b(kode|id|titik|no|nomor|code|nama)\b/i.test(h)) || '';
+          const colX = headers.find(h => /\b(longitude|lon|lng|east|easting|bujur|x)\b/i.test(h)) || '';
+          const colY = headers.find(h => /\b(latitude|lat|ltd|north|northing|lintang|y)\b/i.test(h)) || '';
           
           setCsvSettings({
             projection: 'geografis',
@@ -372,6 +373,10 @@ export function UploadDatasetPanel() {
           <div className="flex flex-col items-center gap-1">
             <OverlapAnalysisButton />
             <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Overlap</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <TopologyValidationButton />
+            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Validasi</span>
           </div>
           <div className="flex flex-col items-center gap-1">
             <DissolveAnalysisButton />
@@ -594,41 +599,47 @@ export function UploadDatasetPanel() {
               <div className="grid grid-cols-3 gap-2">
                 <div 
                   onClick={() => setActiveSlot('colCode')}
-                  className={`cursor-pointer p-2 rounded-lg border-2 transition-all ${
-                    activeSlot === 'colCode' ? 'border-primary bg-primary/10' : 'border-border/50 bg-muted/30'
+                  className={`cursor-pointer p-2.5 rounded-xl border-2 transition-all ${
+                    csvSettings.colCode ? 'border-purple-500 bg-purple-500/10 dark:bg-purple-500/5' :
+                    activeSlot === 'colCode' ? 'border-purple-500/50 bg-purple-500/5 animate-pulse' : 
+                    'border-border/50 bg-muted/30 hover:border-purple-500/30'
                   }`}
                 >
-                  <label className="text-xs text-muted-foreground block mb-1">Kode Titik</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Kode Titik</label>
                   <div className="text-xs font-bold truncate">
-                    {csvSettings.colCode || <span className="text-muted-foreground/50">-- Pilih --</span>}
+                    {csvSettings.colCode || <span className="text-muted-foreground/30">-- Pilih --</span>}
                   </div>
                 </div>
                 
                 <div 
                   onClick={() => setActiveSlot('colX')}
-                  className={`cursor-pointer p-2 rounded-lg border-2 transition-all ${
-                    activeSlot === 'colX' ? 'border-cyan-500 bg-cyan-500/10' : 'border-border/50 bg-muted/30'
+                  className={`cursor-pointer p-2.5 rounded-xl border-2 transition-all ${
+                    csvSettings.colX ? 'border-cyan-500 bg-cyan-500/10 dark:bg-cyan-500/5' :
+                    activeSlot === 'colX' ? 'border-cyan-500/50 bg-cyan-500/5 animate-pulse' : 
+                    'border-border/50 bg-muted/30 hover:border-cyan-500/30'
                   }`}
                 >
-                  <label className="text-xs text-muted-foreground block mb-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-1">
                     {csvSettings.projection === 'geografis' ? 'Longitude' : 'X (Easting)'}
                   </label>
                   <div className="text-xs font-bold truncate text-cyan-600 dark:text-cyan-400">
-                    {csvSettings.colX || <span className="text-muted-foreground/50">-- Pilih --</span>}
+                    {csvSettings.colX || <span className="text-muted-foreground/30">-- Pilih --</span>}
                   </div>
                 </div>
                 
                 <div 
                   onClick={() => setActiveSlot('colY')}
-                  className={`cursor-pointer p-2 rounded-lg border-2 transition-all ${
-                    activeSlot === 'colY' ? 'border-orange-500 bg-orange-500/10' : 'border-border/50 bg-muted/30'
+                  className={`cursor-pointer p-2.5 rounded-xl border-2 transition-all ${
+                    csvSettings.colY ? 'border-orange-500 bg-orange-500/10 dark:bg-orange-500/5' :
+                    activeSlot === 'colY' ? 'border-orange-500/50 bg-orange-500/5 animate-pulse' : 
+                    'border-border/50 bg-muted/30 hover:border-orange-500/30'
                   }`}
                 >
-                  <label className="text-xs text-muted-foreground block mb-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-1">
                     {csvSettings.projection === 'geografis' ? 'Latitude' : 'Y (Northing)'}
                   </label>
                   <div className="text-xs font-bold truncate text-orange-600 dark:text-orange-400">
-                    {csvSettings.colY || <span className="text-muted-foreground/50">-- Pilih --</span>}
+                    {csvSettings.colY || <span className="text-muted-foreground/30">-- Pilih --</span>}
                   </div>
                 </div>
               </div>
@@ -644,18 +655,25 @@ export function UploadDatasetPanel() {
                       onClick={() => {
                         if (activeSlot) {
                           setCsvSettings(prev => ({ ...prev, [activeSlot]: h }));
-                          setActiveSlot(null); // Reset slot setelah memilih
+                          // Auto advance ke slot berikutnya agar lebih cepat
+                          if (activeSlot === 'colX') setActiveSlot('colY');
+                          else if (activeSlot === 'colY') setActiveSlot('colCode');
+                          else setActiveSlot(null);
                         }
                       }}
-                      className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                        isCurrent ? 'bg-primary text-primary-foreground border-primary' :
-                        h === csvSettings.colX ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 border-cyan-500/50' :
-                        h === csvSettings.colY ? 'bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/50' :
-                        h === csvSettings.colCode ? 'bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/50' :
-                        'bg-background hover:bg-muted border-border/50'
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 font-medium ${
+                        isCurrent ? 'ring-2 ring-primary ring-offset-1 dark:ring-offset-black' : ''
+                      } ${
+                        h === csvSettings.colX ? 'bg-cyan-500 text-white border-cyan-500 shadow-lg shadow-cyan-500/20' :
+                        h === csvSettings.colY ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20' :
+                        h === csvSettings.colCode ? 'bg-purple-500 text-white border-purple-500 shadow-lg shadow-purple-500/20' :
+                        'bg-muted/50 hover:bg-muted border-border/50 text-foreground'
                       }`}
                     >
-                      {h}
+                      <span>{h}</span>
+                      {h === csvSettings.colX && <span className="text-[9px] font-black bg-white/20 px-1 rounded">X</span>}
+                      {h === csvSettings.colY && <span className="text-[9px] font-black bg-white/20 px-1 rounded">Y</span>}
+                      {h === csvSettings.colCode && <span className="text-[9px] font-black bg-white/20 px-1 rounded">ID</span>}
                     </button>
                   );
                 })}
@@ -669,8 +687,13 @@ export function UploadDatasetPanel() {
           </div>
 
           <DialogFooter className="border-t pt-4 flex gap-2 justify-end">
-            <Button variant="ghost" onClick={() => setIsCsvModalOpen(false)}>
-              Batalkan
+            <Button 
+              variant="ghost" 
+              onClick={() => setIsCsvModalOpen(false)}
+              className="text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors flex items-center gap-2"
+            >
+              <X className="w-4 h-4" />
+              <span>Batalkan</span>
             </Button>
             <Button 
               onClick={async () => {
@@ -772,9 +795,10 @@ export function UploadDatasetPanel() {
                   setIsUploading(false);
                 }
               }} 
-              className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]"
+              className="bg-orange-500 hover:bg-orange-600 text-white min-w-[140px] shadow-lg shadow-orange-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
             >
-              Proses & Gambar
+              <Check className="w-4 h-4" />
+              <span>Proses & Gambar</span>
             </Button>
           </DialogFooter>
         </DialogContent>

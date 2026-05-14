@@ -164,6 +164,8 @@ interface MapContextType {
   setSpatialJoinResult: (result: SpatialJoinResult) => void;
   searchResult: SearchResult;
   setSearchResult: (result: SearchResult) => void;
+  topologyErrors: any | null;
+  setTopologyErrors: (errors: any | null) => void;
   isLayoutComposerOpen: boolean;
   setLayoutComposerOpen: (open: boolean) => void;
   mapViewState: MapViewState;
@@ -258,6 +260,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
     snapDistance: 20,
     showLiveArea: true
   });
+  const [topologyErrors, setTopologyErrors] = useState<any | null>(null);
   const [pdfOverlays, setPdfOverlays] = useState<any[]>([]);
   const [editingPdfId, setEditingPdfId] = useState<string | null>(null);
 
@@ -357,6 +360,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
       dissolveResult, setDissolveResult, 
       spatialJoinResult, setSpatialJoinResult,
       searchResult, setSearchResult,
+      topologyErrors, setTopologyErrors,
       isLayoutComposerOpen, setLayoutComposerOpen, 
       mapViewState, setMapViewState, 
       activeBasemap, setActiveBasemap,
