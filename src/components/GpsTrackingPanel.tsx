@@ -111,10 +111,10 @@ export function GpsTrackingPanel() {
   return (
     <div
       className={cn(
-        // Posisi: top-4, right-4 — tidak nabrak sidebar kiri
-        "fixed top-4 right-4 z-[9999] w-72",
+        // Posisi: bottom-right, di atas status bar — tidak nabrak toolbar kanan maupun sidebar
+        "fixed bottom-[88px] right-4 z-[9999] w-72",
         "rounded-2xl border border-border/50 bg-card/90 backdrop-blur-2xl shadow-2xl overflow-hidden",
-        "animate-in slide-in-from-right-3 fade-in duration-300"
+        "animate-in slide-in-from-bottom-3 fade-in duration-300"
       )}
     >
       {/* Accent line — orange saat idle, merah saat tracking */}
