@@ -101,32 +101,152 @@
   html { @apply font-sans m-0 p-0 overflow-hidden h-full w-full; }
 }
 
-/* Leaflet & Geoman Overrides */
+/* ── Leaflet base controls (zoom) ── */
 .leaflet-bar {
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
+  overflow: hidden !important;
 }
-
 .dark .leaflet-bar {
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  background-color: rgba(15, 15, 20, 0.8) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  background-color: rgba(15, 15, 20, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+.leaflet-bar a {
+  border-bottom: 1px solid rgba(0,0,0,0.06) !important;
+  color: #374151 !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+.dark .leaflet-bar a {
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  color: rgba(255,255,255,0.6) !important;
+  background: transparent !important;
+}
+.leaflet-bar a:hover {
+  background-color: rgba(249,115,22,0.1) !important;
+  color: rgb(249,115,22) !important;
+}
+.dark .leaflet-bar a:hover {
+  background-color: rgba(249,115,22,0.15) !important;
+  color: rgb(251,146,60) !important;
+}
+.leaflet-bar a:last-child { border-bottom: none !important; }
+
+/* ── Geoman toolbar container ── */
+.leaflet-pm-toolbar {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
-.leaflet-popup-content-wrapper {
-  background: white !important;
-  color: #2B3674 !important;
+/* ── Each Geoman button group ── */
+.leaflet-pm-toolbar .button-container {
+  margin: 0 !important;
+}
+
+/* ── Individual Geoman action buttons ── */
+.leaflet-pm-toolbar .leaflet-pm-icon,
+.leaflet-pm-toolbar .button-container button,
+.leaflet-pm-toolbar .leaflet-buttons-control-button {
+  width: 40px !important;
+  height: 40px !important;
   border-radius: 12px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  background: rgba(15,15,20,0.80) !important;
+  backdrop-filter: blur(16px) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+  margin-bottom: 4px !important;
+  cursor: pointer !important;
 }
 
+/* Light mode button */
+:root:not(.dark) .leaflet-pm-toolbar .leaflet-pm-icon,
+:root:not(.dark) .leaflet-pm-toolbar .button-container button,
+:root:not(.dark) .leaflet-pm-toolbar .leaflet-buttons-control-button {
+  background: rgba(255,255,255,0.92) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+}
+
+/* Icons color */
+.leaflet-pm-toolbar .button-container button:not(.active) svg,
+.leaflet-pm-toolbar .button-container button:not(.active) .control-icon {
+  filter: brightness(0) invert(0.55) !important;
+}
+.dark .leaflet-pm-toolbar .button-container button:not(.active) svg,
+.dark .leaflet-pm-toolbar .button-container button:not(.active) .control-icon {
+  filter: brightness(0) invert(0.6) !important;
+}
+
+/* Hover state */
+.leaflet-pm-toolbar .button-container button:hover {
+  background: rgba(249,115,22,0.15) !important;
+  border-color: rgba(249,115,22,0.35) !important;
+  transform: scale(1.05) !important;
+}
+.leaflet-pm-toolbar .button-container button:hover svg,
+.leaflet-pm-toolbar .button-container button:hover .control-icon {
+  filter: brightness(0) saturate(100%) invert(55%) sepia(80%) saturate(800%) hue-rotate(350deg) !important;
+}
+
+/* Active / selected state */
+.leaflet-pm-toolbar .button-container button.active {
+  background: rgba(249,115,22,0.2) !important;
+  border-color: rgba(249,115,22,0.5) !important;
+  box-shadow: 0 0 0 2px rgba(249,115,22,0.25), 0 4px 16px rgba(249,115,22,0.15) !important;
+}
+.leaflet-pm-toolbar .button-container button.active svg,
+.leaflet-pm-toolbar .button-container button.active .control-icon {
+  filter: brightness(0) saturate(100%) invert(55%) sepia(80%) saturate(800%) hue-rotate(350deg) !important;
+}
+
+/* Hide default Geoman tooltip labels */
+.leaflet-pm-toolbar .leaflet-pm-actions-container { display: none !important; }
+
+/* ── Geoman edit vertex handles ── */
+.leaflet-vertex-icon {
+  border-radius: 50% !important;
+  border: 2px solid rgb(249,115,22) !important;
+  background: white !important;
+  box-shadow: 0 0 0 2px rgba(249,115,22,0.3) !important;
+}
+.leaflet-middle-icon {
+  border-radius: 50% !important;
+  border: 2px dashed rgba(249,115,22,0.5) !important;
+  background: rgba(249,115,22,0.1) !important;
+}
+
+
+/* ── Leaflet Popup ── */
+.leaflet-popup-content-wrapper {
+  background: rgba(255,255,255,0.97) !important;
+  color: #2B3674 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+}
 .dark .leaflet-popup-content-wrapper {
-  background: rgba(15, 15, 20, 0.95) !important;
-  color: white !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(15,15,20,0.95) !important;
+  color: rgba(255,255,255,0.9) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+}
+.leaflet-popup-tip {
+  background: rgba(255,255,255,0.97) !important;
+}
+.dark .leaflet-popup-tip {
+  background: rgba(15,15,20,0.95) !important;
 }
 
 /* Fix for native Select/Option/Optgroup in Dark Mode */
