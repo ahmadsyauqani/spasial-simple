@@ -8,12 +8,13 @@ import {
   CloudUpload, Loader2, Settings, 
   Database, LayoutList, ChevronRight, Save,
   MapPin, Share2, Square, GripVertical,
-  AlertTriangle
+  AlertTriangle, Pin
 } from "lucide-react";
 import { toast } from "sonner";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, updateFeaturePropertiesInSupabase } from "@/lib/database";
 import Draggable from 'react-draggable';
 import * as turf from "@turf/turf";
+import { cn } from "@/lib/utils";
 
 export function DigitizePanel() {
   const { 
@@ -35,6 +36,7 @@ export function DigitizePanel() {
   const [newFieldName, setNewFieldName] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
   const nodeRef = useRef(null);
 
   useEffect(() => {
@@ -212,7 +214,10 @@ export function DigitizePanel() {
 
   return (
     <>
-      <div className="bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300">
+      <div className={cn(
+        "bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-500 ease-in-out group",
+        isPinned ? "w-full" : "w-[60px] hover:w-full"
+      )}>
         {/* Sidebar Header - Colorful Lavender Glass */}
         <div 
           className="bg-lavender/80 dark:bg-[#25282c]/80 px-4 py-3.5 border-b border-border/50 flex items-center justify-between cursor-pointer hover:opacity-90 transition-all"
@@ -222,9 +227,24 @@ export function DigitizePanel() {
              <div className="p-1.5 bg-white/20 dark:bg-orange-500/20 rounded-lg shadow-sm">
                <Database className="w-4 h-4 text-navy dark:text-orange-500" />
              </div>
-             <h2 className="text-[11px] font-black uppercase tracking-[0.1em] text-navy dark:text-white">Digitasi Data</h2>
+             <h2 className="text-[11px] font-black uppercase tracking-[0.1em] text-navy dark:text-white max-w-0 overflow-hidden opacity-0 group-hover:max-w-[150px] group-hover:opacity-100 transition-all duration-300 ease-in-out whitespace-nowrap">Digitasi Data</h2>
            </div>
-           <div className="flex items-center gap-2">
+           <div className={cn(
+             "flex items-center gap-2 transition-all duration-300 ease-in-out",
+             isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+           )}>
+             <button 
+               onClick={(e) => { e.stopPropagation(); setIsPinned(!isPinned); }} 
+               className={cn(
+                 "p-1 rounded-md transition-colors",
+                 isPinned 
+                   ? "text-orange-500 bg-orange-500/10" 
+                   : "text-navy/40 dark:text-gray-500 hover:bg-black/10 dark:hover:bg-white/10"
+               )}
+               title={isPinned ? "Lepas Pin" : "Pin Menu"}
+             >
+               <Pin className="w-3.5 h-3.5" />
+             </button>
              <ChevronRight className={`w-4 h-4 text-navy/40 dark:text-gray-500 transition-transform duration-300 ${isMainExpanded ? 'rotate-90 text-navy dark:text-orange-500' : ''}`} />
              <Settings 
                className={`w-3.5 h-3.5 transition-colors ${showSettings ? 'text-navy dark:text-orange-500 rotate-90' : 'text-navy/30 dark:text-gray-500 hover:text-navy dark:hover:text-white'}`} 

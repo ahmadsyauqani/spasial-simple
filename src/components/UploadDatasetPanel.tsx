@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
-import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2 } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
@@ -175,6 +175,8 @@ export function UploadDatasetPanel() {
   };
 
   const [isDragging, setIsDragging] = useState(false);
+  const [isPanelPinned, setIsPanelPinned] = useState(false);
+  const [isToolsPinned, setIsToolsPinned] = useState(false);
 
   const processSelectedFile = async (file: File) => {
     const extension = file.name.split('.').pop()?.toLowerCase();
@@ -248,18 +250,40 @@ export function UploadDatasetPanel() {
   };
 
   return (
-    <div className="bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl rounded-2xl overflow-hidden flex flex-col transition-all duration-300">
-      <div className="bg-cyan-pastel/80 dark:bg-[#25282c]/80 p-4 border-b border-border/50 flex flex-col gap-4">
+    <div className={cn(
+      "bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl rounded-2xl overflow-hidden flex flex-col transition-all duration-500 ease-in-out group",
+      isPanelPinned ? "w-full" : "w-[68px] hover:w-full"
+    )}>
+      <div className="bg-cyan-pastel/80 dark:bg-[#25282c]/80 p-4 border-b border-border/50 flex flex-col gap-0 group-hover:gap-4 transition-all duration-300">
         {/* Row 1: Title */}
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-white/40 dark:bg-orange-500/20 rounded-xl shadow-sm border border-white/30">
-            <UploadCloud className="w-5 h-5 text-navy dark:text-orange-500" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/40 dark:bg-orange-500/20 rounded-xl shadow-sm border border-white/30 shrink-0">
+              <UploadCloud className="w-5 h-5 text-navy dark:text-orange-500" />
+            </div>
+            <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-navy dark:text-white leading-none max-w-0 overflow-hidden opacity-0 group-hover:max-w-[150px] group-hover:opacity-100 transition-all duration-300 ease-in-out whitespace-nowrap">Dataset & Analisis</h3>
           </div>
-          <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-navy dark:text-white leading-none">Dataset & Analisis</h3>
+          <div className={cn(
+            "transition-all duration-300 ease-in-out",
+            isPanelPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setIsPanelPinned(!isPanelPinned); }} 
+              className={cn(
+                "p-1.5 rounded-lg transition-colors",
+                isPanelPinned 
+                  ? "text-orange-500 bg-orange-500/10" 
+                  : "text-navy/40 dark:text-gray-500 hover:bg-black/10 dark:hover:bg-white/10"
+              )}
+              title={isPanelPinned ? "Lepas Pin" : "Pin Menu"}
+            >
+              <Pin className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* Row 2: Controls */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 max-h-0 overflow-hidden opacity-0 group-hover:max-h-20 group-hover:opacity-100 transition-all duration-300 ease-in-out">
           <div className="relative flex items-center bg-black/10 dark:bg-black/40 rounded-xl p-1 border border-black/5 dark:border-white/5 shadow-inner grow max-w-[200px] overflow-hidden">
             {/* Animated Background Pill */}
             <div 
@@ -296,7 +320,12 @@ export function UploadDatasetPanel() {
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className={cn(
+        "p-4 space-y-4 overflow-hidden transition-all duration-500 ease-in-out",
+        isPanelPinned 
+          ? "max-h-[1000px] opacity-100" 
+          : "max-h-0 opacity-0 group-hover:max-h-[1000px] group-hover:opacity-100"
+      )}>
 
       <ScrollArea className="h-40 rounded-xl border border-border bg-muted/30 dark:bg-black/20 p-2">
         {layers.length === 0 ? (
@@ -352,8 +381,42 @@ export function UploadDatasetPanel() {
       </label>
 
       {/* Analysis Tools & More (The Grid) */}
-      <div className="flex flex-col gap-3 pt-2 border-t border-border/30">
-        <div className="flex flex-wrap gap-2 p-2 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner justify-center">
+      <div className={cn(
+        "flex flex-col gap-2 pt-2 border-t border-border/30 transition-all duration-500 ease-in-out group/tools",
+        isToolsPinned ? "w-full" : "w-[60px] hover:w-full"
+      )}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1 bg-white/20 dark:bg-orange-500/20 rounded-lg shadow-sm">
+              <Settings2 className="w-3.5 h-3.5 text-navy dark:text-orange-500" />
+            </div>
+            <span className="text-[10px] font-black uppercase text-white tracking-widest max-w-0 overflow-hidden opacity-0 group-hover/tools:max-w-[100px] group-hover/tools:opacity-100 transition-all duration-300 ease-in-out whitespace-nowrap">Tools</span>
+          </div>
+          <div className={cn(
+            "transition-all duration-300 ease-in-out",
+            isToolsPinned ? "opacity-100" : "opacity-0 group-hover/tools:opacity-100"
+          )}>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setIsToolsPinned(!isToolsPinned); }} 
+              className={cn(
+                "p-1.5 rounded-lg transition-colors",
+                isToolsPinned 
+                  ? "text-orange-500 bg-orange-500/10" 
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+              title={isToolsPinned ? "Lepas Pin" : "Pin Menu"}
+            >
+              <Pin className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+        
+        <div className={cn(
+          "flex flex-wrap gap-2 p-2 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner justify-center overflow-hidden transition-all duration-500 ease-in-out",
+          isToolsPinned 
+            ? "max-h-[200px] opacity-100" 
+            : "max-h-0 opacity-0 group-hover/tools:max-h-[200px] group-hover/tools:opacity-100"
+        )}>
           <div className="flex flex-col items-center gap-1">
             <BufferAnalysisButton />
             <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Buffer</span>
@@ -387,7 +450,7 @@ export function UploadDatasetPanel() {
             <span className="text-[7px] font-bold uppercase text-indigo-400">Join</span>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 mt-2">
           <LayoutPetaButton />
           <DownloadAllResultsButton />
         </div>
@@ -395,7 +458,7 @@ export function UploadDatasetPanel() {
 
       </div>
 
-      {/* DIALOG KONFIRMASI ADAPTIF REPROJECTION */}
+
       <Dialog open={!!metricPayload} onOpenChange={(open) => !open && !isFixing && setMetricPayload(null)}>
         <DialogContent className="sm:max-w-md bg-card text-card-foreground border-border">
           <DialogHeader>
@@ -810,10 +873,11 @@ export function UploadDatasetPanel() {
 import { ExportLayerDialog } from "./ExportLayerDialog";
 
 function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => void }) {
-  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer } = useMapContext();
+  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache } = useMapContext();
   const style = layer.style || { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2, dissolve_key: 'none' };
   const colorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
+  const [isPinned, setIsPinned] = useState(false);
 
   useEffect(() => {
     async function loadKeys() {
@@ -900,6 +964,35 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
     return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
   };
 
+  const renderGeometryIcon = () => {
+    const type = layer.geometryType || layerGeojsonCache[layer.id!]?.features?.[0]?.geometry?.type;
+    
+    if (type === 'Point' || type === 'MultiPoint') {
+      return (
+        <div 
+          className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-sm" 
+          style={{ backgroundColor: style.fillColor }} 
+        />
+      );
+    } else if (type === 'LineString' || type === 'MultiLineString') {
+      return (
+        <div className="w-4 h-3 flex items-center justify-center shrink-0">
+          <div 
+            className="w-4 h-1 rounded-none border border-black/10 dark:border-white/10 shadow-sm" 
+            style={{ backgroundColor: style.fillColor }} 
+          />
+        </div>
+      );
+    } else { // Polygon or MultiPolygon or default
+      return (
+        <div 
+          className="w-3.5 h-3.5 rounded-none shrink-0 border border-black/10 dark:border-white/10 shadow-sm" 
+          style={{ backgroundColor: style.fillColor, opacity: style.fillOpacity || 0.5 }} 
+        />
+      );
+    }
+  };
+
   return (
     <div 
       className="flex flex-col gap-2 bg-white/50 dark:bg-white/5 p-3 rounded-xl border border-border/50 shadow-sm hover:shadow-md hover:border-primary/30 transition-all group cursor-pointer"
@@ -909,152 +1002,168 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
       title="Double klik untuk Zoom ke layer ini"
     >
       <div className="flex items-center gap-3">
-        <div 
-          className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-sm" 
-          style={{ backgroundColor: style.fillColor }} 
-        />
+        {renderGeometryIcon()}
         <span className="flex-1 font-bold text-[11px] text-navy dark:text-white/90 truncate" title={layer.name}>
           {layer.name}
         </span>
+        <button 
+          onClick={(e) => { e.stopPropagation(); setIsPinned(!isPinned); }} 
+          className={cn(
+            "p-1.5 rounded-lg transition-colors",
+            isPinned 
+              ? "text-primary bg-primary/10 hover:bg-primary/20" 
+              : "text-muted-foreground hover:bg-muted"
+          )}
+          title={isPinned ? "Lepas Pin" : "Pin Menu"}
+        >
+          <Pin className="w-3.5 h-3.5" />
+        </button>
         <button onClick={onDelete} className="p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
       
-      <div className="flex items-center justify-between pt-2 border-t border-border/30">
-        <div className="flex items-center bg-muted/30 dark:bg-black/20 rounded-lg p-0.5">
-          <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "up"); setTimeout(syncOrder, 100); }} className="p-1.5 hover:bg-white dark:hover:bg-muted rounded-md text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
-            <ArrowUp className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "down"); setTimeout(syncOrder, 100); }} className="p-1.5 hover:bg-white dark:hover:bg-muted rounded-md text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
-            <ArrowDown className="w-3.5 h-3.5" />
-          </button>
-        </div>
+      <div className={cn(
+        "overflow-hidden transition-all duration-300 ease-in-out",
+        isPinned 
+          ? "max-h-20 opacity-100" 
+          : "max-h-0 opacity-0 group-hover:max-h-20 group-hover:opacity-100"
+      )}>
+        <div className="flex items-center justify-between pt-2 border-t border-border/30 mt-2">
+          <div className="flex items-center bg-muted/30 dark:bg-black/20 rounded-lg p-0.5">
+            <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "up"); setTimeout(syncOrder, 100); }} className="p-1.5 hover:bg-white dark:hover:bg-muted rounded-md text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
+              <ArrowUp className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "down"); setTimeout(syncOrder, 100); }} className="p-1.5 hover:bg-white dark:hover:bg-muted rounded-md text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
+              <ArrowDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={(e) => { e.stopPropagation(); triggerZoomToLayer(layer.id!); }} 
-            className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none"
-            title="Zoom ke Layer"
-          >
-            <Maximize className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={(e) => { e.stopPropagation(); triggerZoomToLayer(layer.id!); }} 
+              className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none"
+              title="Zoom ke Layer"
+            >
+              <Maximize className="w-3.5 h-3.5" />
+            </button>
 
-          <Popover>
-            <PopoverTrigger className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none">
-              <Info className="w-3.5 h-3.5" />
-            </PopoverTrigger>
-            <PopoverContent className="w-72 p-4 flex flex-col gap-3 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
-              <h4 className="font-black text-[11px] uppercase tracking-widest border-b border-border/50 pb-2 text-navy dark:text-white">Informasi Layer</h4>
-              <div className="flex flex-col gap-1.5 text-[11px]">
-                <div className="flex justify-between items-start gap-2">
-                  <span className="text-muted-foreground shrink-0">Nama File:</span>
-                  <span className="font-bold text-navy dark:text-white text-right break-all">{layer.name}</span>
-                </div>
-
-                <div className="flex flex-col gap-1 pt-2 border-t border-border/50 mt-1">
-                   <span className="text-[9px] uppercase font-black text-muted-foreground/60 mb-1 tracking-wider">Metrik Area</span>
-                   <div className="flex justify-between items-center gap-2">
-                     <span className="text-muted-foreground shrink-0">WGS 84</span>
-                     <span className="font-black text-primary text-right">{metrics ? formatUnit(metrics.wgs84_sqm) : "..."}</span>
-                   </div>
-                   {metrics && (
-                     <>
-                       <div className="flex justify-between items-center gap-2">
-                         <span className="text-muted-foreground shrink-0 text-[9px]">UTM ({metrics.utm_epsg})</span>
-                         <span className="font-bold text-navy dark:text-white text-right">{metrics.utm_sqm ? formatUnit(metrics.utm_sqm) : "-"}</span>
-                       </div>
-                       {metrics.tm3_epsg && (
-                         <div className="flex justify-between items-center gap-2">
-                           <span className="text-muted-foreground shrink-0 text-[9px]">TM-3 ({metrics.tm3_epsg})</span>
-                           <span className="font-bold text-navy dark:text-white text-right">{metrics.tm3_sqm ? formatUnit(metrics.tm3_sqm) : "-"}</span>
-                         </div>
-                       )}
-                     </>
-                   )}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-          
-          <Popover>
-            <PopoverTrigger className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none">
-              <Palette className="w-3.5 h-3.5" />
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-4 flex flex-col gap-4 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warna Vektor</label>
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="color" 
-                    value={style.color} 
-                    onChange={handleColorChange} 
-                    className="w-8 h-8 rounded-lg shrink-0 cursor-pointer p-0 border-0 bg-transparent"
-                  />
-                  <span className="text-xs text-navy dark:text-white font-black">{style.color}</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transparansi ({Math.round(style.fillOpacity * 100)}%)</label>
-                <Slider 
-                  value={[Number(style.fillOpacity) * 100 || 20]} 
-                  max={100} 
-                  step={5}
-                  onValueChange={(val: any) => {
-                    const numVal = Array.isArray(val) ? val[0] : val;
-                    updateLayerStyle(layer.id, { ...style, fillOpacity: (numVal || 0) / 100 });
-                  }}
-                  onPointerUp={() => handleOpacityChange([style.fillOpacity * 100])}
-                  onTouchEnd={() => handleOpacityChange([style.fillOpacity * 100])}
-                />
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {availableKeys.length > 0 && (
             <Popover>
-              <PopoverTrigger className={`p-1.5 hover:bg-muted rounded-lg transition-all outline-none ${layer.style?.definition_query ? 'text-primary bg-primary/10' : 'text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground'}`} title="Filter Layer">
-                <Filter className="w-3.5 h-3.5" />
+              <PopoverTrigger className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none">
+                <Info className="w-3.5 h-3.5" />
               </PopoverTrigger>
-              <PopoverContent className="w-64 p-4 flex flex-col gap-3 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
-                <h4 className="text-[11px] font-black uppercase tracking-widest border-b border-border/50 pb-2 text-navy dark:text-white">Filter Layer</h4>
-                <div className="flex flex-col gap-2">
-                  <select value={defField} onChange={e => setDefField(e.target.value)} className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white outline-none focus:ring-1 focus:ring-primary">
-                    <option value="">-- Pilih Kolom --</option>
-                    {availableKeys.map(k => <option key={k} value={k}>{k}</option>)}
-                  </select>
-                  <input 
-                    type="text" 
-                    value={defValue} 
-                    onChange={e => setDefValue(e.target.value)} 
-                    placeholder="Masukkan Nilai..." 
-                    className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    size="sm" 
-                    onClick={() => { handleApplyDefinitionQuery(); }} 
-                    className="flex-1 bg-primary text-primary-foreground font-bold h-8 rounded-lg"
-                  >
-                    Terapkan
-                  </Button>
-                  {layer.style?.definition_query && (
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={handleClearDefinitionQuery} 
-                      className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 font-bold"
-                    >
-                      Reset
-                    </Button>
-                  )}
+              <PopoverContent className="w-72 p-4 flex flex-col gap-3 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
+                <h4 className="font-black text-[11px] uppercase tracking-widest border-b border-border/50 pb-2 text-navy dark:text-white">Informasi Layer</h4>
+                <div className="flex flex-col gap-1.5 text-[11px]">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground shrink-0">Nama File:</span>
+                    <span className="font-bold text-navy dark:text-white text-right break-all">{layer.name}</span>
+                  </div>
+
+                  <div className="flex flex-col gap-1 pt-2 border-t border-border/50 mt-1">
+                     <span className="text-[9px] uppercase font-black text-muted-foreground/60 mb-1 tracking-wider">Metrik Area</span>
+                     <div className="flex justify-between items-center gap-2">
+                       <span className="text-muted-foreground shrink-0">WGS 84</span>
+                       <span className="font-black text-primary text-right">{metrics ? formatUnit(metrics.wgs84_sqm) : "..."}</span>
+                     </div>
+                     {metrics && (
+                       <>
+                         <div className="flex justify-between items-center gap-2">
+                           <span className="text-muted-foreground shrink-0 text-[9px]">UTM ({metrics.utm_epsg})</span>
+                           <span className="font-bold text-navy dark:text-white text-right">{metrics.utm_sqm ? formatUnit(metrics.utm_sqm) : "-"}</span>
+                         </div>
+                         {metrics.tm3_epsg && (
+                           <div className="flex justify-between items-center gap-2">
+                             <span className="text-muted-foreground shrink-0 text-[9px]">TM-3 ({metrics.tm3_epsg})</span>
+                             <span className="font-bold text-navy dark:text-white text-right">{metrics.tm3_sqm ? formatUnit(metrics.tm3_sqm) : "-"}</span>
+                           </div>
+                         )}
+                       </>
+                     )}
+                  </div>
                 </div>
               </PopoverContent>
             </Popover>
-          )}
+            
+            <Popover>
+              <PopoverTrigger className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none">
+                <Palette className="w-3.5 h-3.5" />
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-4 flex flex-col gap-4 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warna Vektor</label>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="color" 
+                      value={style.color} 
+                      onChange={handleColorChange} 
+                      className="w-8 h-8 rounded-lg shrink-0 cursor-pointer p-0 border-0 bg-transparent"
+                    />
+                    <span className="text-xs text-navy dark:text-white font-black">{style.color}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transparansi ({Math.round(style.fillOpacity * 100)}%)</label>
+                  <Slider 
+                    value={[Number(style.fillOpacity) * 100 || 20]} 
+                    max={100} 
+                    step={5}
+                    onValueChange={(val: any) => {
+                      const numVal = Array.isArray(val) ? val[0] : val;
+                      updateLayerStyle(layer.id, { ...style, fillOpacity: (numVal || 0) / 100 });
+                    }}
+                    onPointerUp={() => handleOpacityChange([style.fillOpacity * 100])}
+                    onTouchEnd={() => handleOpacityChange([style.fillOpacity * 100])}
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
 
-          <ExportLayerDialog layer={layer} />
+            {availableKeys.length > 0 && (
+              <Popover>
+                <PopoverTrigger className={`p-1.5 hover:bg-muted rounded-lg transition-all outline-none ${layer.style?.definition_query ? 'text-primary bg-primary/10' : 'text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground'}`} title="Filter Layer">
+                  <Filter className="w-3.5 h-3.5" />
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-4 flex flex-col gap-3 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
+                  <h4 className="text-[11px] font-black uppercase tracking-widest border-b border-border/50 pb-2 text-navy dark:text-white">Filter Layer</h4>
+                  <div className="flex flex-col gap-2">
+                    <select value={defField} onChange={e => setDefField(e.target.value)} className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white outline-none focus:ring-1 focus:ring-primary">
+                      <option value="">-- Pilih Kolom --</option>
+                      {availableKeys.map(k => <option key={k} value={k}>{k}</option>)}
+                    </select>
+                    <input 
+                      type="text" 
+                      value={defValue} 
+                      onChange={e => setDefValue(e.target.value)} 
+                      placeholder="Masukkan Nilai..." 
+                      className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      size="sm" 
+                      onClick={() => { handleApplyDefinitionQuery(); }} 
+                      className="flex-1 bg-primary text-primary-foreground font-bold h-8 rounded-lg"
+                    >
+                      Terapkan
+                    </Button>
+                    {layer.style?.definition_query && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={handleClearDefinitionQuery} 
+                        className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 font-bold"
+                      >
+                        Reset
+                      </Button>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            <ExportLayerDialog layer={layer} />
+          </div>
         </div>
       </div>
     </div>
