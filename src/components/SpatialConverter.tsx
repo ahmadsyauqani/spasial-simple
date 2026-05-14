@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { FileUp, RefreshCcw, Download, Trash2, Layers, MapPin } from "lucide-react";
+import { FileUp, RefreshCcw, Download, Trash2, Layers, MapPin, ArrowRightLeft } from "lucide-react";
 import { SpatialConverter, SpatialFormat } from "@/lib/spatialConverter";
 import { TM3_ZONES } from "@/lib/crs";
+import { cn } from "@/lib/utils";
 
 interface SpatialConverterProps {
   isOpen: boolean;
@@ -20,6 +19,7 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
   const [targetFormat, setTargetFormat] = useState<SpatialFormat>("shp");
   const [targetCrs, setTargetCrs] = useState<string>("EPSG:4326");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,6 +30,7 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       setFile(e.dataTransfer.files[0]);
     }
@@ -45,18 +46,10 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
     const toastId = toast.loading("Sedang memproses konversi...");
 
     try {
-      // 1. Parse to GeoJSON
       const geojson = await SpatialConverter.parseToGeoJSON(file);
-      
-      // 2. Transform if needed
-      const transformed = SpatialConverter.transform(geojson, {
-        targetCrs: targetCrs
-      });
-
-      // 3. Export to target format
+      const transformed = SpatialConverter.transform(geojson, { targetCrs });
       const blob = await SpatialConverter.export(transformed, targetFormat);
 
-      // 4. Download
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       const baseName = file.name.substring(0, file.name.lastIndexOf('.'));
@@ -79,177 +72,211 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[650px] bg-slate-950/95 backdrop-blur-2xl border-slate-800 text-slate-100 shadow-[0_0_50px_-12px_rgba(16,185,129,0.15)] p-0 overflow-hidden">
-        <div className="p-6 space-y-6">
-          <DialogHeader className="space-y-1">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <RefreshCcw className="w-6 h-6 text-emerald-400" />
-                </div>
+      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border border-border/50 bg-card/95 backdrop-blur-2xl shadow-2xl rounded-2xl [&>button]:hidden">
+
+        {/* ── Accent line top ── */}
+        <div className="h-[2px] bg-gradient-to-r from-orange-500 via-orange-400/60 to-transparent" />
+
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/20">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-orange-500/15 border border-orange-500/20 shadow-inner">
+              <ArrowRightLeft className="w-5 h-5 text-orange-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-black tracking-tight text-foreground">
                 Spatial Converter Studio
-              </DialogTitle>
-            </div>
-            <DialogDescription className="text-slate-400 text-sm font-medium">
-              Konversi format spasial antar SHP, KML, DXF, dan GeoPackage (.gpkg) dengan transformasi koordinat TM-3 Indonesia yang akurat.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {/* File Upload Zone */}
-            {!file ? (
-              <div
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className="relative group overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
-                <div className="relative border-2 border-dashed border-slate-800 rounded-2xl p-12 flex flex-col items-center justify-center gap-4 hover:border-emerald-500/40 hover:bg-emerald-500/[0.02] transition-all cursor-pointer">
-                  <div className="w-20 h-20 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center group-hover:scale-110 group-hover:border-emerald-500/30 transition-all duration-500 shadow-xl">
-                    <FileUp className="w-10 h-10 text-slate-500 group-hover:text-emerald-400" />
-                  </div>
-                  <div className="text-center space-y-1">
-                    <p className="font-bold text-lg text-slate-200">Klik atau seret file ke sini</p>
-                    <p className="text-xs text-slate-500 font-medium px-8 leading-relaxed">
-                      Mendukung .zip (SHP), .kml, .dxf, .gpkg (GeoPackage), .geojson. Pastikan file SHP dikompres dalam satu file .zip.
-                    </p>
-                  </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept=".zip,.kml,.dxf,.json,.geojson,.gpkg"
-                  />
-                </div>
-              </div>
-            ) : (
-              <Card className="bg-slate-900/40 border-slate-800 p-5 flex items-center justify-between gap-4 rounded-2xl">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shadow-inner">
-                    <Layers className="w-6 h-6 text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-100 truncate max-w-[250px]">
-                      {file.name}
-                    </p>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mt-0.5">
-                      {(file.size / 1024).toFixed(1)} KB &bull; Siap dikonversi
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setFile(null)}
-                  className="rounded-xl h-10 w-10 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </Button>
-              </Card>
-            )}
-
-            {/* Settings Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">
-                  Format Output
-                </label>
-                <div className="relative group">
-                  <select
-                    value={targetFormat}
-                    onChange={(e) => setTargetFormat(e.target.value as SpatialFormat)}
-                    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 hover:border-slate-700 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="shp">ESRI Shapefile (.shp)</option>
-                    <option value="kml">Keyhole Markup Language (.kml)</option>
-                    <option value="dxf">AutoCAD Exchange (.dxf)</option>
-                    <option value="geojson">GeoJSON (.json)</option>
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-emerald-400 transition-colors">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">
-                  Transformasi Koordinat
-                </label>
-                <div className="relative group">
-                  <select
-                    value={targetCrs}
-                    onChange={(e) => setTargetCrs(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 hover:border-slate-700 transition-all appearance-none cursor-pointer pr-10"
-                  >
-                    <optgroup label="Standar Internasional" className="bg-slate-950">
-                      <option value="EPSG:4326">WGS 84 (Geografis)</option>
-                      <option value="EPSG:3857">Web Mercator (Meter)</option>
-                    </optgroup>
-                    <optgroup label="WGS 84 / UTM (Utara)" className="bg-slate-950">
-                      {[46, 47, 48, 49, 50, 51, 52, 53, 54].map(z => (
-                        <option key={`utm-n-${z}`} value={`EPSG:${32600 + z}`}>
-                          UTM Zone {z}N (EPSG:{32600 + z})
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="WGS 84 / UTM (Selatan)" className="bg-slate-950">
-                      {[46, 47, 48, 49, 50, 51, 52, 53, 54].map(z => (
-                        <option key={`utm-s-${z}`} value={`EPSG:${32700 + z}`}>
-                          UTM Zone {z}S (EPSG:{32700 + z})
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="TM-3 Indonesia (BPN)" className="bg-slate-950">
-                      {TM3_ZONES.map((z) => (
-                        <option key={z.epsg} value={`EPSG:${z.epsg}`}>
-                          TM-3 Zona {z.zone} (EPSG:{z.epsg})
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-emerald-400 transition-colors">
-                    <MapPin className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-emerald-500/[0.03] border border-emerald-500/10 rounded-2xl p-4 flex items-start gap-4">
-              <div className="mt-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-              </div>
-              <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-                Catatan: Konversi ke <span className="text-emerald-400 font-bold">SHP</span> akan menghasilkan file .zip. Untuk <span className="text-emerald-400 font-bold">DXF</span>, disarankan untuk tidak menggunakan data dengan jutaan titik koordinat agar performa browser tetap optimal.
+              </h2>
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-orange-500/70">
+                Format & Koordinat Transform
               </p>
             </div>
           </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+          >
+            ✕
+          </button>
         </div>
 
-        <div className="bg-slate-900/30 border-t border-slate-800 p-6 flex items-center justify-end gap-4">
-          <Button
-            variant="ghost"
+        <div className="px-6 py-5 space-y-5">
+          {/* ── Deskripsi ── */}
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Konversi format spasial antar <span className="text-orange-400 font-bold">SHP</span>, <span className="text-orange-400 font-bold">KML</span>, <span className="text-orange-400 font-bold">DXF</span>, dan <span className="text-orange-400 font-bold">GeoPackage</span> dengan transformasi koordinat TM-3 Indonesia yang akurat.
+          </p>
+
+          {/* ── File Upload Zone ── */}
+          {!file ? (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "relative group flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300 py-10",
+                isDragging
+                  ? "border-orange-500/60 bg-orange-500/8 scale-[1.01]"
+                  : "border-border/40 hover:border-orange-500/40 hover:bg-orange-500/[0.03]"
+              )}
+            >
+              <div className={cn(
+                "w-16 h-16 rounded-2xl border flex items-center justify-center transition-all duration-300 shadow-lg",
+                isDragging
+                  ? "bg-orange-500/20 border-orange-500/40 scale-110"
+                  : "bg-muted/50 border-border/30 group-hover:bg-orange-500/10 group-hover:border-orange-500/30 group-hover:scale-105"
+              )}>
+                <FileUp className={cn(
+                  "w-8 h-8 transition-colors duration-300",
+                  isDragging ? "text-orange-400" : "text-muted-foreground group-hover:text-orange-400"
+                )} />
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-sm font-bold text-foreground">
+                  {isDragging ? "Lepaskan file di sini!" : "Klik atau seret file ke sini"}
+                </p>
+                <p className="text-[11px] text-muted-foreground font-medium leading-relaxed max-w-xs mx-auto">
+                  Mendukung .zip (SHP), .kml, .dxf, .gpkg, .geojson<br />
+                  Pastikan file SHP dikompres dalam satu file .zip
+                </p>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept=".zip,.kml,.dxf,.json,.geojson,.gpkg"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-orange-500/8 border border-orange-500/20">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-orange-500/15 border border-orange-500/20 flex items-center justify-center shrink-0">
+                  <Layers className="w-5 h-5 text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground truncate max-w-[260px]">{file.name}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-orange-500/70 mt-0.5">
+                    {(file.size / 1024).toFixed(1)} KB · Siap dikonversi
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setFile(null)}
+                className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* ── Format & CRS Settings ── */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Format Output */}
+            <div className="space-y-2">
+              <label className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground flex items-center gap-1.5">
+                <Layers className="w-3 h-3" />
+                Format Output
+              </label>
+              <div className="relative">
+                <select
+                  value={targetFormat}
+                  onChange={(e) => setTargetFormat(e.target.value as SpatialFormat)}
+                  className="w-full bg-muted/40 border border-border/50 rounded-xl px-3.5 py-3 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500/50 hover:border-border transition-all appearance-none cursor-pointer"
+                >
+                  <option value="shp">ESRI Shapefile (.shp)</option>
+                  <option value="kml">Keyhole Markup Language (.kml)</option>
+                  <option value="dxf">AutoCAD Exchange (.dxf)</option>
+                  <option value="geojson">GeoJSON (.json)</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Transformasi Koordinat */}
+            <div className="space-y-2">
+              <label className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground flex items-center gap-1.5">
+                <MapPin className="w-3 h-3" />
+                Transformasi Koordinat
+              </label>
+              <div className="relative">
+                <select
+                  value={targetCrs}
+                  onChange={(e) => setTargetCrs(e.target.value)}
+                  className="w-full bg-muted/40 border border-border/50 rounded-xl px-3.5 py-3 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500/50 hover:border-border transition-all appearance-none cursor-pointer pr-8"
+                >
+                  <optgroup label="Standar Internasional">
+                    <option value="EPSG:4326">WGS 84 (Geografis)</option>
+                    <option value="EPSG:3857">Web Mercator (Meter)</option>
+                  </optgroup>
+                  <optgroup label="WGS 84 / UTM (Utara)">
+                    {[46, 47, 48, 49, 50, 51, 52, 53, 54].map(z => (
+                      <option key={`utm-n-${z}`} value={`EPSG:${32600 + z}`}>
+                        UTM Zone {z}N (EPSG:{32600 + z})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="WGS 84 / UTM (Selatan)">
+                    {[46, 47, 48, 49, 50, 51, 52, 53, 54].map(z => (
+                      <option key={`utm-s-${z}`} value={`EPSG:${32700 + z}`}>
+                        UTM Zone {z}S (EPSG:{32700 + z})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="TM-3 Indonesia (BPN)">
+                    {TM3_ZONES.map((z) => (
+                      <option key={z.epsg} value={`EPSG:${z.epsg}`}>
+                        TM-3 Zona {z.zone} (EPSG:{z.epsg})
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Info note ── */}
+          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-muted/30 border border-border/30">
+            <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0 shadow-[0_0_8px_rgba(249,115,22,0.6)]" />
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Konversi ke <span className="text-orange-400 font-bold">SHP</span> menghasilkan file .zip. Untuk <span className="text-orange-400 font-bold">DXF</span>, hindari data dengan jutaan titik koordinat agar performa browser tetap optimal.
+            </p>
+          </div>
+        </div>
+
+        {/* ── Footer actions ── */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border/20 bg-black/10">
+          <button
             onClick={onClose}
-            className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-100 transition-all"
+            className="px-4 py-2 text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
           >
             Batal
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={handleConvert}
             disabled={!file || isProcessing}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2 px-8 h-12 rounded-xl font-bold shadow-lg shadow-emerald-500/10 transition-all active:scale-95 disabled:opacity-50"
+            className={cn(
+              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95",
+              !file || isProcessing
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                : "bg-orange-500 hover:bg-orange-400 text-white shadow-lg shadow-orange-500/20"
+            )}
           >
             {isProcessing ? (
               <RefreshCcw className="w-4 h-4 animate-spin" />
             ) : (
               <Download className="w-4 h-4" />
             )}
-            Mulai Konversi
-          </Button>
+            {isProcessing ? "Memproses..." : "Mulai Konversi"}
+          </button>
         </div>
+
       </DialogContent>
     </Dialog>
-
   );
 }
