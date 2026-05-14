@@ -254,7 +254,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [activeDigitizingLayerId, setActiveDigitizingLayerId] = useState<string | null>(null);
   const [activeEditFeature, setActiveEditFeature] = useState<{ layerId: string, featureIndex: number, properties: any } | null>(null);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
-  const [isDigitizePanelExpanded, setIsDigitizePanelExpanded] = useState(false);
+  const [isDigitizePanelExpanded, setIsDigitizePanelExpanded] = useState(true);
   const [digitizeSettings, setDigitizeSettings] = useState({
     snapping: true,
     snapDistance: 20,

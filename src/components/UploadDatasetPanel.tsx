@@ -250,82 +250,38 @@ export function UploadDatasetPanel() {
   };
 
   return (
-    <div className={cn(
-      "bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl rounded-2xl overflow-hidden flex flex-col transition-all duration-500 ease-in-out group",
-      isPanelPinned ? "w-full" : "w-[68px] hover:w-full"
-    )}>
-      <div className="bg-cyan-pastel/80 dark:bg-[#25282c]/80 p-4 border-b border-border/50 flex flex-col gap-0 group-hover:gap-4 transition-all duration-300">
-        {/* Row 1: Title */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/40 dark:bg-orange-500/20 rounded-xl shadow-sm border border-white/30 shrink-0">
-              <UploadCloud className="w-5 h-5 text-navy dark:text-orange-500" />
-            </div>
-            <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-navy dark:text-white leading-none max-w-0 overflow-hidden opacity-0 group-hover:max-w-[150px] group-hover:opacity-100 transition-all duration-300 ease-in-out whitespace-nowrap">Dataset & Analisis</h3>
-          </div>
-          <div className={cn(
-            "transition-all duration-300 ease-in-out",
-            isPanelPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-          )}>
-            <button 
-              onClick={(e) => { e.stopPropagation(); setIsPanelPinned(!isPanelPinned); }} 
-              className={cn(
-                "p-1.5 rounded-lg transition-colors",
-                isPanelPinned 
-                  ? "text-orange-500 bg-orange-500/10" 
-                  : "text-navy/40 dark:text-gray-500 hover:bg-black/10 dark:hover:bg-white/10"
-              )}
-              title={isPanelPinned ? "Lepas Pin" : "Pin Menu"}
+    <div className="text-card-foreground overflow-hidden flex flex-col">
+      {/* Area unit switcher — compact top bar */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/20 bg-black/10">
+        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Satuan Luas</span>
+        <div className="relative flex items-center bg-black/30 rounded-lg p-0.5 border border-white/5 shadow-inner overflow-hidden">
+          <div 
+            className="absolute h-[calc(100%-4px)] bg-orange-500/80 shadow-lg rounded-md transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+            style={{ 
+              width: 'calc(33.33% - 2px)',
+              left: '2px',
+              transform: `translateX(${areaUnit === 'Ha' ? '0%' : areaUnit === 'm2' ? '106%' : '212%'})`
+            }}
+          />
+          {(['Ha', 'm2', 'km2'] as const).map((unit) => (
+            <button
+              key={unit}
+              onClick={(e) => { e.stopPropagation(); setAreaUnit(unit); }}
+              className={`flex-1 relative z-10 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter transition-colors duration-300 ${
+                areaUnit === unit ? 'text-white' : 'text-white/30 hover:text-white/60'
+              }`}
             >
-              <Pin className="w-3.5 h-3.5" />
+              {unit === 'Ha' ? 'Ha' : unit === 'm2' ? 'm²' : 'km²'}
             </button>
-          </div>
+          ))}
         </div>
-
-        {/* Row 2: Controls */}
-        <div className="flex items-center justify-between gap-2 max-h-0 overflow-hidden opacity-0 group-hover:max-h-20 group-hover:opacity-100 transition-all duration-300 ease-in-out">
-          <div className="relative flex items-center bg-black/10 dark:bg-black/40 rounded-xl p-1 border border-black/5 dark:border-white/5 shadow-inner grow max-w-[200px] overflow-hidden">
-            {/* Animated Background Pill */}
-            <div 
-              className="absolute h-[calc(100%-8px)] bg-white dark:bg-orange-500/80 shadow-lg shadow-black/5 dark:shadow-orange-500/20 rounded-lg transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-              style={{ 
-                width: 'calc(33.33% - 5.33px)',
-                left: '4px',
-                transform: `translateX(${areaUnit === 'Ha' ? '0%' : areaUnit === 'm2' ? '108%' : '216%'})`
-              }}
-            />
-
-            {(['Ha', 'm2', 'km2'] as const).map((unit) => (
-              <button
-                key={unit}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAreaUnit(unit);
-                }}
-                className={`flex-1 relative z-10 px-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors duration-300 active:scale-95 ${
-                  areaUnit === unit
-                    ? 'text-navy dark:text-white'
-                    : 'text-navy/30 dark:text-white/30 hover:text-navy/60 dark:hover:text-white/60'
-                }`}
-              >
-                {unit === 'Ha' ? 'Ha' : unit === 'm2' ? 'm²' : 'km²'}
-              </button>
-            ))}
-          </div>
-          
-          <div className="flex items-center gap-1.5 bg-white/30 dark:bg-white/5 px-3 py-2 rounded-xl border border-white/30 dark:border-white/10 shadow-sm shrink-0">
-             <span className="text-[11px] font-black text-navy dark:text-white/80">{layers.length}</span>
-             <span className="text-[8px] font-black text-navy/40 dark:text-white/30 tracking-widest uppercase">Layer</span>
-          </div>
+        <div className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10">
+          <span className="text-[10px] font-black text-white/80">{layers.length}</span>
+          <span className="text-[8px] text-white/30 uppercase font-bold">Layer</span>
         </div>
       </div>
 
-      <div className={cn(
-        "p-4 space-y-4 overflow-hidden transition-all duration-500 ease-in-out",
-        isPanelPinned 
-          ? "max-h-[1000px] opacity-100" 
-          : "max-h-0 opacity-0 group-hover:max-h-[1000px] group-hover:opacity-100"
-      )}>
+      <div className="p-3 space-y-3">
 
       <ScrollArea className="h-40 rounded-xl border border-border bg-muted/30 dark:bg-black/20 p-2">
         {layers.length === 0 ? (
@@ -380,43 +336,12 @@ export function UploadDatasetPanel() {
         />
       </label>
 
-      {/* Analysis Tools & More (The Grid) */}
-      <div className={cn(
-        "flex flex-col gap-2 pt-2 border-t border-border/30 transition-all duration-500 ease-in-out group/tools",
-        isToolsPinned ? "w-full" : "w-[60px] hover:w-full"
-      )}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1 bg-white/20 dark:bg-orange-500/20 rounded-lg shadow-sm">
-              <Settings2 className="w-3.5 h-3.5 text-navy dark:text-orange-500" />
-            </div>
-            <span className="text-[10px] font-black uppercase text-white tracking-widest max-w-0 overflow-hidden opacity-0 group-hover/tools:max-w-[100px] group-hover/tools:opacity-100 transition-all duration-300 ease-in-out whitespace-nowrap">Tools</span>
-          </div>
-          <div className={cn(
-            "transition-all duration-300 ease-in-out",
-            isToolsPinned ? "opacity-100" : "opacity-0 group-hover/tools:opacity-100"
-          )}>
-            <button 
-              onClick={(e) => { e.stopPropagation(); setIsToolsPinned(!isToolsPinned); }} 
-              className={cn(
-                "p-1.5 rounded-lg transition-colors",
-                isToolsPinned 
-                  ? "text-orange-500 bg-orange-500/10" 
-                  : "text-muted-foreground hover:bg-muted"
-              )}
-              title={isToolsPinned ? "Lepas Pin" : "Pin Menu"}
-            >
-              <Pin className="w-3.5 h-3.5" />
-            </button>
-          </div>
+      {/* Analysis Tools Grid */}
+      <div className="flex flex-col gap-2 pt-2 border-t border-border/20">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Tools Analisis</span>
         </div>
-        
-        <div className={cn(
-          "flex flex-wrap gap-2 p-2 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner justify-center overflow-hidden transition-all duration-500 ease-in-out",
-          isToolsPinned 
-            ? "max-h-[200px] opacity-100" 
-            : "max-h-0 opacity-0 group-hover/tools:max-h-[200px] group-hover/tools:opacity-100"
-        )}>
+        <div className="flex flex-wrap gap-2 p-2 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner justify-center">
           <div className="flex flex-col items-center gap-1">
             <BufferAnalysisButton />
             <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Buffer</span>
