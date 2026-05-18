@@ -33,22 +33,21 @@ async def convert_gpkg(file: UploadFile = File(...)):
             tmp.write(content)
             tmp_path = tmp.name
 
-        # Inspect the GeoPackage file as an SQLite database to look for images/media
         import sqlite3
+        import base64
+        import io
+        import datetime
+        from PIL import Image
+
+        # Inspect the GeoPackage file as an SQLite database to look for images/media
         try:
             conn = sqlite3.connect(tmp_path)
             cursor = conn.cursor()
-            
-            # List all tables
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
             tables = [row[0] for row in cursor.fetchall()]
-            print(f"[GPKG Inspect] All tables: {tables}")
-            
-            # Check for media tables
             media_tables = [t for t in tables if 'media' in t or 'attachment' in t or 'photo' in t]
             if media_tables:
                 print(f"[GPKG Inspect] Found suspected media tables: {media_tables}")
-            
             conn.close()
         except Exception as e:
             print(f"[GPKG Inspect] Failed: {e}")
@@ -58,31 +57,49 @@ async def convert_gpkg(file: UploadFile = File(...)):
         
         if not layers:
             os.unlink(tmp_path)
-            raise HTTPException(status_code=400, detail="GeoPackage tidak memiliki layer")
+            raise HTTPException(status_code=400, detail="GeoPackage tidak memiliki layer spasial")
 
-        # Use Fiona to read features directly from all layers
         all_features = []
         detected_crs = "Unknown"
         
+        def serialize_value(val):
+            if isinstance(val, bytes):
+                try:
+                    image = Image.open(io.BytesIO(val))
+                    image.thumbnail((300, 300))
+                    out_io = io.BytesIO()
+                    image.save(out_io, format=image.format or 'JPEG', quality=80)
+                    val_bytes = out_io.getvalue()
+                    mime_type = "image/jpeg"
+                    if val_bytes.startswith(b'\x89PNG'): mime_type = "image/png"
+                    elif val_bytes.startswith(b'GIF'): mime_type = "image/gif"
+                    encoded = base64.b64encode(val_bytes).decode('utf-8')
+                    return f"data:{mime_type};base64,{encoded}"
+                except Exception:
+                    # Not an image, fallback to generic base64
+                    encoded = base64.b64encode(val).decode('utf-8')
+                    return f"data:application/octet-stream;base64,{encoded}"
+            elif isinstance(val, (datetime.datetime, datetime.date)):
+                return val.isoformat()
+            return val
+
         for layer in layers:
             try:
                 with fiona.open(tmp_path, layer=layer) as src:
-                    detected_crs = str(src.crs) if src.crs else "None"
-                    print(f"Reading layer {layer} via Fiona. CRS: {detected_crs}")
+                    if src.crs:
+                        detected_crs = str(src.crs)
                     
                     for feat in src:
                         try:
-                            if hasattr(feat, '__geo_interface__'):
-                                feat_dict = dict(feat.__geo_interface__)
-                            else:
-                                feat_dict = {
-                                    "type": "Feature",
-                                    "properties": dict(feat.get('properties', {})),
-                                    "geometry": dict(feat.get('geometry', {})) if feat.get('geometry') else None
-                                }
-                                if hasattr(feat, 'id'):
-                                    feat_dict['id'] = feat.id
-                                    
+                            # Build the feature dict cleanly
+                            feat_dict = {
+                                "type": "Feature",
+                                "geometry": dict(feat.get('geometry')) if feat.get('geometry') else None,
+                                "properties": {}
+                            }
+                            if hasattr(feat, 'id'):
+                                feat_dict['id'] = feat.id
+                                
                             # Hapus koordinat Z (3D) agar tidak error di Supabase
                             geom = feat_dict.get('geometry')
                             if geom and 'coordinates' in geom and geom['coordinates']:
@@ -91,42 +108,17 @@ async def convert_gpkg(file: UploadFile = File(...)):
                                     if isinstance(coords[0], (int, float)):
                                         return [coords[0], coords[1]] # Hanya ambil X dan Y
                                     return [remove_z_coords(c) for c in coords]
-                                
                                 geom['coordinates'] = remove_z_coords(geom['coordinates'])
                                 
-                            properties = feat_dict.get('properties', {})
-                            properties['_layer_name'] = layer # Tandai asal layernya
+                            raw_properties = feat.get('properties', {})
+                            new_properties = {}
+                            if raw_properties:
+                                for key, val in raw_properties.items():
+                                    new_properties[key] = serialize_value(val)
                             
-                            # Check for BLOB/bytes in properties (often used for images in GPKG)
-                            for key, val in properties.items():
-                                if isinstance(val, bytes):
-                                    import base64
-                                    from PIL import Image
-                                    import io
-                                    
-                                    # Coba perkecil ukuran gambar agar tidak melebihi limit database
-                                    try:
-                                        image = Image.open(io.BytesIO(val))
-                                        image.thumbnail((300, 300)) # Maksimal 300x300 px
-                                        out_io = io.BytesIO()
-                                        image.save(out_io, format=image.format or 'JPEG', quality=80)
-                                        val = out_io.getvalue()
-                                        print(f"Resized blob image in property '{key}'")
-                                    except Exception as e:
-                                        print(f"Failed to resize blob (might not be an image): {e}")
-                                        
-                                    mime_type = "image/jpeg" # Default fallback
-                                    if val.startswith(b'\x89PNG\r\n\x1a\n'):
-                                        mime_type = "image/png"
-                                    elif val.startswith(b'GIF87a') or val.startswith(b'GIF89a'):
-                                        mime_type = "image/gif"
-                                    elif val.startswith(b'\xff\xd8'):
-                                        mime_type = "image/jpeg"
-                                        
-                                    encoded = base64.b64encode(val).decode('utf-8')
-                                    properties[key] = f"data:{mime_type};base64,{encoded}"
-                                    print(f"Converted property '{key}' to base64 data URL.")
-                                    
+                            new_properties['_layer_name'] = layer
+                            feat_dict['properties'] = new_properties
+                            
                             if feat_dict.get('geometry') is not None:
                                 all_features.append(feat_dict)
                         except Exception as e:
@@ -136,79 +128,117 @@ async def convert_gpkg(file: UploadFile = File(...)):
                 print(f"Error reading layer {layer}: {e}")
                 continue
                 
-        if not all_features:
-            os.unlink(tmp_path)
-            raise HTTPException(status_code=400, detail="Tidak ada fitur valid yang bisa dibaca dari GeoPackage")
-            
-        print(f"Successfully read {len(all_features)} features from all layers")
-        
+        # --- NEW: ADVANCED ATTACHMENT JOINING FOR QGIS/QFIELD GPKG ---
         try:
-            print("Converting features to GeoDataFrame for robust serialization...")
-            import geopandas as gpd
-            gdf = gpd.GeoDataFrame.from_features(all_features, crs=detected_crs)
+            conn = sqlite3.connect(tmp_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
             
-            # Remove Z coordinates
-            from shapely.ops import transform
-            def remove_z(geom):
-                if geom is None: return None
-                if geom.has_z: return transform(lambda x, y, z=None: (x, y), geom)
-                return geom
-            gdf.geometry = gdf.geometry.apply(remove_z)
+            # Get all non-spatial tables (or all tables)
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            db_tables = [row[0] for row in cursor.fetchall()]
             
-            # Convert to GeoJSON string
-            geojson_str = gdf.to_json()
-            geojson_data = json.loads(geojson_str)
-            
-            # Add metadata
-            geojson_data['detected_crs'] = detected_crs
-            geojson_data['total_features'] = len(all_features)
-            
-            return JSONResponse(content=geojson_data)
+            for t in db_tables:
+                if t.startswith('gpkg_') or t.startswith('rtree_') or t == 'sqlite_sequence':
+                    continue
+                    
+                # Check columns of this table
+                cursor.execute(f"PRAGMA table_info('{t}')")
+                columns = cursor.fetchall()
+                
+                # Find BLOB columns
+                blob_cols = [c['name'] for c in columns if 'BLOB' in (c['type'] or '').upper() or 'BYTE' in (c['type'] or '').upper()]
+                # Sometimes QField stores as generic type, so we might just check all columns if needed, but let's stick to BLOB for now
+                if not blob_cols:
+                    continue
+                    
+                print(f"[Attachment Injector] Found BLOB columns in table '{t}': {blob_cols}")
+                
+                # Fetch all rows from this attachment table
+                cursor.execute(f"SELECT * FROM '{t}'")
+                rows = cursor.fetchall()
+                
+                if not rows:
+                    continue
+                    
+                # For each feature, try to find a matching row
+                for feat in all_features:
+                    props = feat.get('properties', {})
+                    # Common identifiers
+                    possible_keys = [
+                        props.get('feature_guid'),
+                        props.get('uuid'),
+                        props.get('globalid'),
+                        props.get('id'),
+                        feat.get('id')
+                    ]
+                    possible_keys = [str(k).lower() for k in possible_keys if k is not None]
+                    
+                    for row in rows:
+                        row_dict = dict(row)
+                        # Check if any value in the row matches a possible key
+                        row_values = [str(v).lower() for v in row_dict.values() if v is not None]
+                        
+                        match_found = False
+                        for pk in possible_keys:
+                            if pk in row_values:
+                                match_found = True
+                                break
+                        
+                        if match_found:
+                            # We found an attachment for this feature!
+                            for bcol in blob_cols:
+                                blob_data = row_dict.get(bcol)
+                                if blob_data and isinstance(blob_data, bytes):
+                                    # Base64 encode it and inject
+                                    b64_str = serialize_value(blob_data)
+                                    props[f"photo_{t}"] = b64_str
+                                    print(f"Successfully joined photo from {t} to feature {props.get('feature_guid', 'Unknown')}")
+                                    
+            conn.close()
         except Exception as e:
-            print(f"Failed to serialize via GeoPandas: {e}. Returning raw features.")
-            return JSONResponse(content={"type": "FeatureCollection", "features": all_features})
-        finally:
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-                
-        if not features:
-            # Fallback to GeoPandas if Fiona failed or returned nothing
-            print("Fiona returned 0 features or failed. Falling back to GeoPandas...")
-            try:
-                gdf = gpd.read_file(tmp_path)
-                if not gdf.empty:
-                    print(f"GeoPandas read successful. Shape: {gdf.shape}")
-                    
-                    # Remove Z coordinates
-                    from shapely.ops import transform
-                    def remove_z(geom):
-                        if geom is None: return None
-                        if geom.has_z: return transform(lambda x, y, z=None: (x, y), geom)
-                        return geom
-                    gdf.geometry = gdf.geometry.apply(remove_z)
-                    
-                    # Convert to GeoJSON
-                    geojson_str = gdf.to_json()
-                    geojson_data = json.loads(geojson_str)
-                    
-                    os.unlink(tmp_path)
-                    return JSONResponse(content=geojson_data)
-            except Exception as e:
-                print(f"GeoPandas fallback also failed: {e}")
-                
-            os.unlink(tmp_path)
-            raise HTTPException(status_code=400, detail="Tidak ada layer dengan geometri valid yang ditemukan")
+            print(f"[Attachment Injector] Failed: {e}")
+        # --- END ADVANCED ATTACHMENT JOINING ---
 
-        # Build GeoJSON
+        if not all_features:
+            # Fallback to pure GeoPandas if Fiona returned 0 features
+            print("Fiona returned 0 features. Falling back to GeoPandas...")
+            try:
+                import geopandas as gpd
+                for layer in layers:
+                    gdf = gpd.read_file(tmp_path, layer=layer)
+                    if not gdf.empty:
+                        # Remove Z coordinates
+                        from shapely.ops import transform
+                        def remove_z(geom):
+                            if geom is None: return None
+                            if geom.has_z: return transform(lambda x, y, z=None: (x, y), geom)
+                            return geom
+                        gdf.geometry = gdf.geometry.apply(remove_z)
+                        
+                        # Convert geometry to feature collection manually to ensure string serialization works
+                        geojson_str = gdf.to_json()
+                        geojson_data = json.loads(geojson_str)
+                        all_features.extend(geojson_data.get('features', []))
+            except Exception as e:
+                print(f"GeoPandas fallback failed: {e}")
+                
+            if not all_features:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+                raise HTTPException(status_code=400, detail="Tidak ada fitur valid yang bisa dibaca dari GeoPackage")
+
+        # Build GeoJSON directly from all_features list to prevent GeoPandas column dropping
         geojson_data = {
             "type": "FeatureCollection",
-            "features": features,
+            "features": all_features,
             "detected_crs": detected_crs,
-            "total_features": len(features)
+            "total_features": len(all_features)
         }
 
         # Clean up temporary file
-        os.unlink(tmp_path)
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
         return JSONResponse(content=geojson_data)
 

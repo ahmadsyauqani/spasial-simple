@@ -8,7 +8,13 @@ import { GpsTrackingTrigger, GpsTrackingPanel } from "@/components/GpsTrackingPa
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchControl } from "@/components/SearchControl";
 import SpatialConverterModal from "@/components/SpatialConverter";
-import { RefreshCcw, Database, UploadCloud, Pin } from "lucide-react";
+import { DeviceHubTrigger, DeviceHubPanel } from "@/components/DeviceHubPanel";
+import dynamic from "next/dynamic";
+const FlightPathPlanner = dynamic(
+  () => import("@/components/FlightPathPlanner").then(m => m.FlightPathPlanner),
+  { ssr: false }
+);
+import { RefreshCcw, Database, UploadCloud, Pin, Cpu } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +23,8 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"digitize" | "dataset">("digitize");
   const [isSidebarPinned, setIsSidebarPinned] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isDeviceHubOpen, setIsDeviceHubOpen] = useState(false);
+  const [isFlightPlannerOpen, setIsFlightPlannerOpen] = useState(false);
 
   const isPanelVisible = isSidebarPinned || isHovered;
 
@@ -86,6 +94,12 @@ export default function Home() {
         {/* Gray divider */}
         <div className="w-5 h-px bg-border/25 rounded-full my-0.5" />
 
+        {/* Device Hub button */}
+        <DeviceHubTrigger isOpen={isDeviceHubOpen} setOpen={setIsDeviceHubOpen} />
+
+        {/* Thin divider */}
+        <div className="w-5 h-px bg-border/25 rounded-full my-0.5" />
+
         {/* Pin button */}
         <button
           onClick={() => setIsSidebarPinned(!isSidebarPinned)}
@@ -104,7 +118,7 @@ export default function Home() {
       {/* ── Content Panel: slides in next to rail on hover/pin ── */}
       <div
         className={cn(
-          "absolute top-4 left-[68px] z-10 flex flex-col rounded-2xl border border-border/50 bg-card/85 backdrop-blur-2xl shadow-xl overflow-hidden w-[268px]",
+          "absolute top-4 left-[68px] z-10 flex flex-col rounded-2xl border border-border/50 bg-card/85 backdrop-blur-2xl shadow-xl overflow-hidden w-[320px]",
           "transition-all duration-300 ease-out",
           isPanelVisible
             ? "opacity-100 translate-x-0 pointer-events-auto"
@@ -185,6 +199,15 @@ export default function Home() {
 
       <CommandPalette />
       <GpsTrackingPanel />
+      <DeviceHubPanel
+        isOpen={isDeviceHubOpen}
+        onClose={() => setIsDeviceHubOpen(false)}
+        onOpenFlightPlanner={() => { setIsFlightPlannerOpen(true); setIsDeviceHubOpen(false); }}
+      />
+      <FlightPathPlanner
+        isOpen={isFlightPlannerOpen}
+        onClose={() => setIsFlightPlannerOpen(false)}
+      />
       <SpatialConverterModal
         isOpen={isConverterOpen}
         onClose={() => setIsConverterOpen(false)}

@@ -53,48 +53,69 @@ export default function MapLayoutComposer() {
   const canvasW = dims.width * PX_PER_MM * state.canvasZoom;
   const canvasH = dims.height * PX_PER_MM * state.canvasZoom;
 
+  /**
+   * Export PNG: capture at CURRENT zoom (no zoom change).
+   * The scale compensation in exportToPNG handles physical output size.
+   */
   const handleExportPNG = async () => {
     if (!printableRef.current) return;
     setIsExporting(true);
     try {
+      // Scroll canvas to top-left so all elements are in the DOM viewport
+      if (canvasRef.current) {
+        canvasRef.current.scrollTop = 0;
+        canvasRef.current.scrollLeft = 0;
+      }
+      // Short wait for scroll to settle
+      await new Promise((r) => setTimeout(r, 200));
+
       toast.info("Mengekspor layout ke PNG...");
       const blob = await exportToPNG(
-        printableRef.current,
+        printableRef.current!,
         state.paperSize,
         state.orientation,
         state.customWidth,
         state.customHeight,
-        exportDpi
+        exportDpi,
+        state.canvasZoom  // pass current zoom for scale compensation
       );
       downloadBlob(blob, `${state.layoutTitle.replace(/\s+/g, "_")}_layout.png`);
       toast.success("Layout berhasil diekspor sebagai PNG!");
     } catch (err: any) {
       toast.error("Gagal export PNG: " + err.message);
-    } finally {
-      setIsExporting(false);
     }
+    setIsExporting(false);
   };
 
+  /**
+   * Export PDF: same approach as PNG.
+   */
   const handleExportPDF = async () => {
     if (!printableRef.current) return;
     setIsExporting(true);
     try {
+      if (canvasRef.current) {
+        canvasRef.current.scrollTop = 0;
+        canvasRef.current.scrollLeft = 0;
+      }
+      await new Promise((r) => setTimeout(r, 200));
+
       toast.info("Mengekspor layout ke PDF...");
       const blob = await exportToPDF(
-        printableRef.current,
+        printableRef.current!,
         state.paperSize,
         state.orientation,
         state.customWidth,
         state.customHeight,
-        exportDpi
+        exportDpi,
+        state.canvasZoom
       );
       downloadBlob(blob, `${state.layoutTitle.replace(/\s+/g, "_")}_layout.pdf`);
       toast.success("Layout berhasil diekspor sebagai PDF!");
     } catch (err: any) {
       toast.error("Gagal export PDF: " + err.message);
-    } finally {
-      setIsExporting(false);
     }
+    setIsExporting(false);
   };
 
   return typeof document !== "undefined" && createPortal(
@@ -383,6 +404,7 @@ function DraggableElement({
       ref={ref}
       className={`layout-element ${isSelected ? "layout-element-selected" : ""} ${isDragging ? "layout-element-dragging" : ""}`}
       data-layout-id={element.id}
+      data-element-type={element.type}
       style={{
         position: "absolute",
         left: element.x + "%",

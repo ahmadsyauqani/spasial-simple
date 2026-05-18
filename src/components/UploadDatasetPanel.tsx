@@ -920,46 +920,77 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
 
   return (
     <div 
-      className="flex flex-col gap-2 bg-white/50 dark:bg-white/5 p-3 rounded-xl border border-border/50 shadow-sm hover:shadow-md hover:border-primary/30 transition-all group cursor-pointer"
-      onDoubleClick={() => {
-        if (layer.id) triggerZoomToLayer(layer.id);
-      }}
+      className={cn(
+        "flex flex-col gap-0 rounded-2xl border transition-all duration-300 group cursor-pointer overflow-hidden",
+        "bg-white dark:bg-white/5 shadow-sm",
+        isPinned
+          ? "border-primary/40 shadow-primary/10 shadow-md"
+          : "border-border/60 hover:border-primary/30 hover:shadow-md"
+      )}
+      onDoubleClick={() => { if (layer.id) triggerZoomToLayer(layer.id); }}
       title="Double klik untuk Zoom ke layer ini"
     >
-      <div className="flex items-center gap-3">
-        {renderGeometryIcon()}
-        <span className="flex-1 font-bold text-[11px] text-navy dark:text-white/90 truncate" title={layer.name}>
-          {layer.name}
-        </span>
-        <button 
-          onClick={(e) => { e.stopPropagation(); setIsPinned(!isPinned); }} 
-          className={cn(
-            "p-1.5 rounded-lg transition-colors",
-            isPinned 
-              ? "text-primary bg-primary/10 hover:bg-primary/20" 
-              : "text-muted-foreground hover:bg-muted"
-          )}
-          title={isPinned ? "Lepas Pin" : "Pin Menu"}
-        >
-          <Pin className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={onDelete} className="p-1.5 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+      {/* Accent bar top */}
+      <div className={cn(
+        "h-0.5 w-full transition-all duration-300",
+        isPinned
+          ? "bg-gradient-to-r from-primary via-primary/50 to-transparent"
+          : "bg-transparent group-hover:bg-gradient-to-r group-hover:from-primary/40 group-hover:via-primary/20 group-hover:to-transparent"
+      )} />
+
+      {/* Main row */}
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        {/* Geometry icon with colored bg */}
+        <div className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center shadow-sm" style={{ backgroundColor: (style.fillColor || '#3b82f6') + '28' }}>
+          {renderGeometryIcon()}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <span className="block font-bold text-[12px] text-navy dark:text-white/95 truncate leading-tight" title={layer.name}>
+            {layer.name}
+          </span>
+          <span className="text-[9px] text-muted-foreground/70 font-medium uppercase tracking-wider">
+            {layer.geometryType || 'Vector'}
+          </span>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setIsPinned(!isPinned); }} 
+            className={cn(
+              "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
+              isPinned 
+                ? "text-primary bg-primary/15 hover:bg-primary/25" 
+                : "text-muted-foreground/50 hover:bg-muted hover:text-foreground"
+            )}
+            title={isPinned ? "Lepas Pin" : "Pin Menu"}
+          >
+            <Pin className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            onClick={onDelete} 
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground/50 hover:bg-red-500/10 hover:text-red-500 transition-all"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
       
+      {/* Expandable action tray */}
       <div className={cn(
         "overflow-hidden transition-all duration-300 ease-in-out",
         isPinned 
-          ? "max-h-20 opacity-100" 
-          : "max-h-0 opacity-0 group-hover:max-h-20 group-hover:opacity-100"
+          ? "max-h-24 opacity-100" 
+          : "max-h-0 opacity-0 group-hover:max-h-24 group-hover:opacity-100"
       )}>
-        <div className="flex items-center justify-between pt-2 border-t border-border/30 mt-2">
-          <div className="flex items-center bg-muted/30 dark:bg-black/20 rounded-lg p-0.5">
-            <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "up"); setTimeout(syncOrder, 100); }} className="p-1.5 hover:bg-white dark:hover:bg-muted rounded-md text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/20 bg-muted/20 dark:bg-black/10">
+          {/* Reorder */}
+          <div className="flex items-center bg-muted/40 dark:bg-black/20 rounded-xl p-0.5 gap-0.5">
+            <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "up"); setTimeout(syncOrder, 100); }} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white dark:hover:bg-muted text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
               <ArrowUp className="w-3.5 h-3.5" />
             </button>
-            <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "down"); setTimeout(syncOrder, 100); }} className="p-1.5 hover:bg-white dark:hover:bg-muted rounded-md text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
+            <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "down"); setTimeout(syncOrder, 100); }} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white dark:hover:bg-muted text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
               <ArrowDown className="w-3.5 h-3.5" />
             </button>
           </div>
