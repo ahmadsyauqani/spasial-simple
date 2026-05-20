@@ -128,6 +128,21 @@ export type SpatialJoinResult = {
   featureCount: number;
 } | null;
 
+export type SliverResult = {
+  geojson: any; // FeatureCollection of sliver polygons
+  areaMetrics: AreaMetrics;
+  layerAName: string;
+  layerBName: string;
+  mode: 'gap' | 'overlap' | 'both';
+  stats: {
+    totalSlivers: number;
+    gaps: number;
+    overlaps: number;
+    avgThinness: number;
+    totalAreaSqm: number;
+  };
+} | null;
+
 export type MapViewState = {
   center: [number, number]; // [lat, lng]
   zoom: number;
@@ -162,6 +177,8 @@ interface MapContextType {
   setDissolveResult: (result: DissolveResult) => void;
   spatialJoinResult: SpatialJoinResult;
   setSpatialJoinResult: (result: SpatialJoinResult) => void;
+  sliverResult: SliverResult;
+  setSliverResult: (result: SliverResult) => void;
   searchResult: SearchResult;
   setSearchResult: (result: SearchResult) => void;
   topologyErrors: any | null;
@@ -227,6 +244,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [unionResult, setUnionResult] = useState<UnionResult>(null);
   const [dissolveResult, setDissolveResult] = useState<DissolveResult>(null);
   const [spatialJoinResult, setSpatialJoinResult] = useState<SpatialJoinResult>(null);
+  const [sliverResult, setSliverResult] = useState<SliverResult>(null);
   const [searchResult, setSearchResult] = useState<SearchResult>(null);
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
 
@@ -359,6 +377,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
       unionResult, setUnionResult, 
       dissolveResult, setDissolveResult, 
       spatialJoinResult, setSpatialJoinResult,
+      sliverResult, setSliverResult,
       searchResult, setSearchResult,
       topologyErrors, setTopologyErrors,
       isLayoutComposerOpen, setLayoutComposerOpen, 

@@ -29,6 +29,7 @@ import { UnionAnalysisButton } from "./UnionAnalysisPanel";
 import { DissolveAnalysisButton } from "./DissolveAnalysisPanel";
 import { SpatialJoinButton } from "./SpatialJoinPanel";
 import { TopologyValidationButton } from "./TopologyValidationPanel";
+import { SliverDetectionButton } from "./SliverDetectionPanel";
 
 const PdfOverlayPanel = dynamic(() => import("./PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
 
@@ -373,6 +374,10 @@ export function UploadDatasetPanel() {
           <div className="flex flex-col items-center gap-1">
             <SpatialJoinButton />
             <span className="text-[7px] font-bold uppercase text-indigo-400">Join</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <SliverDetectionButton />
+            <span className="text-[7px] font-bold uppercase text-yellow-400">Sliver</span>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 mt-2">

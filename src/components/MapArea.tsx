@@ -303,6 +303,7 @@ export default function MapArea() {
         <UnionLayer />
         <DissolveLayer />
         <SpatialJoinLayer />
+        <SliverLayer />
         <SearchResultMarker />
         <TopologyErrorLayer />
 
@@ -1670,6 +1671,75 @@ function SpatialJoinLayer() {
       key={`spatial-join-${Date.now()}`}
       style={() => joinStyle}
       onEachFeature={onEachJoin}
+    />
+  );
+}
+
+// Komponen render hasil Sliver Detection di peta
+function SliverLayer() {
+  const { sliverResult, areaUnit } = useMapContext();
+  const map = useMap();
+
+  useEffect(() => {
+    if (sliverResult?.geojson) {
+      try {
+        const bounds = L.geoJSON(sliverResult.geojson).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } catch(e) {}
+    }
+  }, [sliverResult, map]);
+
+  if (!sliverResult?.geojson) return null;
+
+  const formatUnit = (sqm: number) => {
+    if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 4 })} Ha`;
+    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 6 })} km²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 2 })} m²`;
+  };
+
+  const sliverStyle = (feature: any) => {
+    const isGap = feature?.properties?.sliver_type === 'gap';
+    return {
+      color: isGap ? '#f59e0b' : '#ef4444',
+      fillColor: isGap ? '#f59e0b' : '#ef4444',
+      fillOpacity: 0.5,
+      weight: 2.5,
+      dashArray: '6, 4'
+    };
+  };
+
+  const onEachSliver = (feature: any, mapLayer: any) => {
+    const props = feature.properties || {};
+    const isGap = props.sliver_type === 'gap';
+    const color = isGap ? 'amber' : 'red';
+    const icon = isGap ? '🕳️' : '📐';
+    const label = isGap ? 'Gap (Celah)' : 'Overlap Tipis';
+
+    let html = `<div class="p-2 min-w-[220px]">`;
+    html += `<h4 class="font-bold text-base border-b border-${color}-400/30 pb-1 mb-2 text-${color}-300">${icon} Sliver: ${label}</h4>`;
+
+    html += `<div class="bg-${color}-900/30 p-2 rounded border border-${color}-500/20 text-xs mb-2">`;
+    html += `<div class="flex justify-between mt-0.5"><span class="text-gray-300">Area</span><span class="font-mono text-${color}-300 font-bold">${formatUnit(props.area_sqm || 0)}</span></div>`;
+    html += `<div class="flex justify-between mt-1"><span class="text-gray-300">Thinness Ratio</span><span class="font-mono text-white">${props.thinness_ratio}</span></div>`;
+    html += `<div class="flex justify-between mt-1"><span class="text-gray-300">BBox Elongation</span><span class="font-mono text-white">${props.bbox_ratio}</span></div>`;
+    html += `<div class="flex justify-between mt-1"><span class="text-gray-300">Collapse Test</span><span class="font-mono ${props.collapsed ? 'text-red-400 font-bold' : 'text-green-400'}">${props.collapsed ? '✗ Hilang' : '✓ Bertahan'}</span></div>`;
+    html += `</div>`;
+
+    html += `<div class="text-[10px] text-gray-400">`;
+    html += `<div>Sumber A: <span class="text-white">${props.source_A || '-'}</span></div>`;
+    html += `<div>Sumber B: <span class="text-white">${props.source_B || '-'}</span></div>`;
+    html += `</div>`;
+
+    html += `</div>`;
+    mapLayer.bindPopup(html, { className: 'custom-popup-dark', maxWidth: 320 });
+  };
+
+  return (
+    <GeoJSON
+      data={sliverResult.geojson}
+      key={`sliver-${Date.now()}`}
+      style={sliverStyle}
+      onEachFeature={onEachSliver}
     />
   );
 }
