@@ -8,7 +8,7 @@ import {
   CloudUpload, Loader2, Settings, 
   Database, LayoutList, ChevronRight, Save,
   MapPin, Share2, Square, GripVertical,
-  AlertTriangle, Pin
+  AlertTriangle, Pin, Undo2
 } from "lucide-react";
 import { toast } from "sonner";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, updateFeaturePropertiesInSupabase } from "@/lib/database";
@@ -356,6 +356,31 @@ export function DigitizePanel() {
                             <MousePointer2 className="w-3.5 h-3.5" />
                             {activeDigitizingLayerId === layer.id ? 'Drawing ON' : `Draw ${layer.geometryType}`}
                           </button>
+                          {activeDigitizingLayerId === layer.id && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                try {
+                                  const drawInstance = (map?.pm as any)?.Draw;
+                                  if (!drawInstance) return;
+                                  const activeShapeName = Object.keys(drawInstance).find(key => {
+                                    const shape = drawInstance[key];
+                                    return shape?._enabled === true;
+                                  });
+                                  if (activeShapeName) {
+                                    drawInstance[activeShapeName]._removeLastVertex();
+                                    toast.info("Vertex terakhir dihapus");
+                                  }
+                                } catch (err) {
+                                  console.warn('Undo vertex error:', err);
+                                }
+                              }}
+                              className="p-2 rounded-xl bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-all flex items-center justify-center"
+                              title="Undo Vertex Terakhir (Ctrl+Z)"
+                            >
+                              <Undo2 className="w-4 h-4" />
+                            </button>
+                          )}
                           <button 
                             onClick={(e) => { e.stopPropagation(); publishLayer(layer.id!); }}
                             disabled={isPublishing === layer.id}

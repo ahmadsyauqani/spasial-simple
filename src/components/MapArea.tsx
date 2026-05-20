@@ -76,6 +76,38 @@ function MapController() {
     // Global snap settings
     map.pm.setGlobalOptions({ snapDistance: 20, allowSelfIntersection: false });
 
+    // Undo last vertex dengan Ctrl+Z saat sedang menggambar
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        try {
+          // Geoman menyimpan drawing layer aktif di pm.Draw
+          const drawInstance = (map.pm as any).Draw;
+          // Cek apakah ada mode draw aktif
+          const activeShapeName = Object.keys(drawInstance || {}).find(key => {
+            const shape = drawInstance[key];
+            return shape?._enabled === true;
+          });
+          if (activeShapeName) {
+            const activeShape = drawInstance[activeShapeName];
+            if (activeShape?._layer?.getLatLngs) {
+              const latlngs = activeShape._layer.getLatLngs();
+              const coords = latlngs.flat ? latlngs.flat() : latlngs;
+              if (coords.length > 0) {
+                activeShape._removeLastVertex();
+                e.preventDefault();
+              }
+            } else if (activeShape?._removeLastVertex) {
+              activeShape._removeLastVertex();
+              e.preventDefault();
+            }
+          }
+        } catch (err) {
+          console.warn('Undo vertex error:', err);
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
     // Handle Edit event
     const handleEdit = async (e: any) => {
       const layer = e.layer;
@@ -123,6 +155,7 @@ function MapController() {
 
     return () => {
       map.pm.removeControls();
+      document.removeEventListener('keydown', handleKeyDown);
       map.off('pm:edit', handleEdit);
       map.off('pm:create', handleCreate);
       map.off('moveend', syncViewState);
