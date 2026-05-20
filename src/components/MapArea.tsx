@@ -1275,13 +1275,25 @@ function LayerFeature({ layer }: { layer: any }) {
         });
         if (error) {
           console.error("Fetch Geometry Error:", JSON.stringify(error, null, 2));
-          toast.error("Gagal memuat geometri: " + (error.message || JSON.stringify(error)));
-          return;
+          // Coba fallback ke cache offline jika RPC gagal
+          if (layerGeojsonCache[layer.id]) {
+            console.warn("[LayerFeature] Menggunakan data cache offline untuk layer:", layer.name);
+            finalData = layerGeojsonCache[layer.id];
+          } else {
+            toast.error(`Gagal memuat geometri layer "${layer.name}": ${error.message || JSON.stringify(error)}`);
+            return;
+          }
+        } else {
+          finalData = data;
         }
-        finalData = data;
       }
 
       if (finalData) {
+        // Periksa apakah data kosong (layer ada tapi tidak ada geometri di database)
+        if (!finalData.features || finalData.features.length === 0) {
+          console.warn(`[LayerFeature] Layer "${layer.name}" (${layer.id}) memiliki 0 fitur geometri.`);
+        }
+        
         // 1. Terapkan Definition Query jika ada
         const defQuery = layer.style?.definition_query;
         if (defQuery && finalData.features) {

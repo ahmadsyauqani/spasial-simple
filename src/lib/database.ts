@@ -98,12 +98,20 @@ export async function uploadLayerToSupabase(projectId: string, layerName: string
     });
     
     const results = await Promise.allSettled(promises);
+    let failedCount = 0;
     results.forEach((result, idx) => {
       if (result.status === 'rejected') {
+        failedCount++;
         const err = result.reason;
         console.error(`Gagal menyimpan fitur ke Supabase. Error: ${err.message || err}. Code: ${err.code || 'N/A'}. Details: ${err.details || 'N/A'}`);
       }
     });
+    
+    // Jika SEMUA fitur dalam batch gagal, lempar error
+    if (failedCount > 0 && failedCount === validFeatures.length) {
+      const sampleErr = results.find(r => r.status === 'rejected') as PromiseRejectedResult;
+      throw new Error(`Semua fitur gagal disimpan ke database. Error: ${sampleErr?.reason?.message || 'Unknown'}`);
+    }
   }
 
   return layer;

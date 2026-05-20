@@ -217,6 +217,8 @@ export async function parseSpatialFile(file: File): Promise<any> {
 
     return geojson;
   } catch (error: any) {
+    // Pertahankan properti khusus (isMetric, geojsonData) agar dialog reprojeksi tetap muncul
+    if (error.isMetric) throw error;
     throw new Error(error.message || "Gagal memproses file spasial.");
   }
 }
