@@ -72,6 +72,21 @@ export function parseGeoPackageGeometry(geom: any): any {
   return null;
 }
 
+/**
+ * Rekursif menghapus dimensi Z dari koordinat GeoJSON (3D → 2D)
+ * Menangani semua jenis geometri: Point [x,y,z] → [x,y], 
+ * LineString [[x,y,z],...], Polygon [[[x,y,z],...],...], dst.
+ */
+function stripZ(coords: any): any {
+  if (!Array.isArray(coords)) return coords;
+  // Jika elemen pertama adalah angka, ini adalah koordinat tunggal [x, y, z?]
+  if (typeof coords[0] === 'number') {
+    return coords.slice(0, 2); // Ambil hanya [x, y]
+  }
+  // Jika bukan, ini adalah array bersarang — proses rekursif
+  return coords.map((c: any) => stripZ(c));
+}
+
 export async function parseSpatialFile(file: File): Promise<any> {
   let extension = file.name.split(".").pop()?.toLowerCase();
   
@@ -196,6 +211,21 @@ export async function parseSpatialFile(file: File): Promise<any> {
     } else if (geojson.type !== "FeatureCollection") {
       geojson = turf.featureCollection([geojson as any]);
     }
+
+    // Strip Z-dimension (3D → 2D) agar tidak ditolak PostGIS
+    // Banyak shapefile memiliki koordinat [x, y, z] yang tidak kompatibel dengan kolom 2D
+    geojson.features = geojson.features.map((feature: any) => {
+      if (feature.geometry && feature.geometry.coordinates) {
+        feature = {
+          ...feature,
+          geometry: {
+            ...feature.geometry,
+            coordinates: stripZ(feature.geometry.coordinates)
+          }
+        };
+      }
+      return feature;
+    });
 
     // Memeriksa rentang koordinat untuk memastikan format adalah derajat WGS 84
     const bounds = turf.bbox(geojson);
