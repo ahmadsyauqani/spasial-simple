@@ -1277,7 +1277,7 @@ function LayerFeature({ layer }: { layer: any }) {
   const { 
     setLayerArea, areaUnit, zoomToLayerId, triggerZoomToLayer, 
     cacheLayerGeojson, layerGeojsonCache, setActiveEditFeature,
-    setIsDigitizePanelExpanded 
+    setIsDigitizePanelExpanded, activeDigitizingLayerId 
   } = useMapContext();
   const map = useMap();
 
@@ -1613,11 +1613,14 @@ function LayerFeature({ layer }: { layer: any }) {
     }
   };
 
+  // Saat mode digitasi aktif, nonaktifkan interaksi layer agar klik diteruskan ke Geoman
+  const isDigitizing = !!activeDigitizingLayerId;
+
   return (
     <GeoJSON 
       data={featureCollection}
-      key={`${layer.id}-${featureCollection?.features?.length || 0}-${JSON.stringify(style)}-${areaUnit}`}
-      style={() => style}
+      key={`${layer.id}-${featureCollection?.features?.length || 0}-${JSON.stringify(style)}-${areaUnit}-${isDigitizing}`}
+      style={() => ({ ...style, interactive: !isDigitizing })}
       pointToLayer={(feature, latlng) => {
         return L.circleMarker(latlng, {
           ...style,
@@ -1625,10 +1628,11 @@ function LayerFeature({ layer }: { layer: any }) {
           color: '#ff0000',
           fillColor: '#ff0000',
           fillOpacity: 1,
-          weight: 2
+          weight: 2,
+          interactive: !isDigitizing
         });
       }}
-      onEachFeature={onEachFeature}
+      onEachFeature={isDigitizing ? undefined : onEachFeature}
     />
   );
 }
