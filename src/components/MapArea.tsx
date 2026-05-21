@@ -163,6 +163,23 @@ function MapController() {
     };
   }, [map, setMapViewState]);
 
+  // Saat digitasi aktif, nonaktifkan pointer-events pada overlayPane
+  // agar klik menembus layer GeoJSON yang ada dan diteruskan ke Geoman
+  // Geoman vertex markers ada di markerPane (tidak terpengaruh)
+  useEffect(() => {
+    const pane = map.getPane('overlayPane');
+    if (pane) {
+      if (activeDigitizingLayerId) {
+        pane.style.pointerEvents = 'none';
+      } else {
+        pane.style.pointerEvents = '';
+      }
+    }
+    return () => {
+      if (pane) pane.style.pointerEvents = '';
+    };
+  }, [activeDigitizingLayerId, map]);
+
   useEffect(() => {
     if (activeFeatureToZoom) {
       try {
@@ -1277,7 +1294,7 @@ function LayerFeature({ layer }: { layer: any }) {
   const { 
     setLayerArea, areaUnit, zoomToLayerId, triggerZoomToLayer, 
     cacheLayerGeojson, layerGeojsonCache, setActiveEditFeature,
-    setIsDigitizePanelExpanded, activeDigitizingLayerId 
+    setIsDigitizePanelExpanded 
   } = useMapContext();
   const map = useMap();
 
@@ -1613,14 +1630,11 @@ function LayerFeature({ layer }: { layer: any }) {
     }
   };
 
-  // Saat mode digitasi aktif, nonaktifkan interaksi layer agar klik diteruskan ke Geoman
-  const isDigitizing = !!activeDigitizingLayerId;
-
   return (
     <GeoJSON 
       data={featureCollection}
-      key={`${layer.id}-${featureCollection?.features?.length || 0}-${JSON.stringify(style)}-${areaUnit}-${isDigitizing}`}
-      style={() => ({ ...style, interactive: !isDigitizing })}
+      key={`${layer.id}-${featureCollection?.features?.length || 0}-${JSON.stringify(style)}-${areaUnit}`}
+      style={() => style}
       pointToLayer={(feature, latlng) => {
         return L.circleMarker(latlng, {
           ...style,
@@ -1628,11 +1642,10 @@ function LayerFeature({ layer }: { layer: any }) {
           color: '#ff0000',
           fillColor: '#ff0000',
           fillOpacity: 1,
-          weight: 2,
-          interactive: !isDigitizing
+          weight: 2
         });
       }}
-      onEachFeature={isDigitizing ? undefined : onEachFeature}
+      onEachFeature={onEachFeature}
     />
   );
 }
