@@ -9,6 +9,7 @@ export function DraggableAssistant() {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const nodeRef = React.useRef(null);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -18,6 +19,7 @@ export function DraggableAssistant() {
 
   return (
     <Draggable
+      nodeRef={nodeRef}
       bounds="parent"
       defaultPosition={{ x: window.innerWidth - 100, y: window.innerHeight - 150 }}
       onStart={() => setIsDragging(true)}
@@ -26,7 +28,7 @@ export function DraggableAssistant() {
         setTimeout(() => setIsDragging(false), 100);
       }}
     >
-      <div className="absolute z-[9999] cursor-grab active:cursor-grabbing group">
+      <div ref={nodeRef} className="absolute z-[9999] cursor-grab active:cursor-grabbing group">
         
         {/* Chat Bubble (shows on hover or when open) */}
         {(isHovered || isOpen) && !isDragging && (
