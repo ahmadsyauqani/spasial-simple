@@ -15,8 +15,10 @@ export function DraggableAssistant() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Start at top-right to avoid overlapping bottom map controls
-    setPosition({ x: window.innerWidth - 80, y: 80 });
+    // Start next to the central search bar (SearchControl is at top-6, max-w-[450px])
+    const searchBarWidth = Math.min(window.innerWidth * 0.9, 450);
+    const startX = Math.min(window.innerWidth - 60, window.innerWidth / 2 + searchBarWidth / 2 + 15);
+    setPosition({ x: startX, y: 20 });
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
