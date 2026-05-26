@@ -21,7 +21,7 @@ export function DraggableAssistant() {
 
   const handlePointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
-    e.target.releasePointerCapture(e.pointerId); // Allows dragging outside the element
+    (e.target as Element).releasePointerCapture(e.pointerId); // Allows dragging outside the element
     setIsDragging(true);
     dragRef.current = {
       startX: e.clientX,
