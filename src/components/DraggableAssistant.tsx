@@ -15,7 +15,8 @@ export function DraggableAssistant() {
 
   useEffect(() => {
     setIsMounted(true);
-    setPosition({ x: window.innerWidth - 100, y: window.innerHeight - 150 });
+    // Start at top-right to avoid overlapping bottom map controls
+    setPosition({ x: window.innerWidth - 80, y: 80 });
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -37,7 +38,12 @@ export function DraggableAssistant() {
       const { startX, startY, initialX, initialY } = dragRef.current;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      setPosition({ x: initialX + dx, y: initialY + dy });
+      
+      // Add bounds checking to keep it within the screen
+      const newX = Math.max(0, Math.min(window.innerWidth - 60, initialX + dx));
+      const newY = Math.max(0, Math.min(window.innerHeight - 60, initialY + dy));
+      
+      setPosition({ x: newX, y: newY });
     };
 
     const handlePointerUp = () => {
@@ -74,14 +80,20 @@ export function DraggableAssistant() {
       >
         {/* Chat Bubble (shows on hover or when open) */}
         {(isHovered || isOpen) && !isDragging && (
-          <div className="absolute bottom-[110%] right-0 mb-2 w-48 bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl rounded-2xl p-3 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300 origin-bottom-right pointer-events-auto">
-            <div className="flex justify-between items-start mb-1">
-              <span className="font-bold text-orange-400 text-xs">Asisten SAKAGIS</span>
+          <div className="absolute bottom-[110%] right-0 mb-2 w-52 bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl rounded-2xl p-3.5 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300 origin-bottom-right pointer-events-auto">
+            <div className="flex justify-between items-start mb-2">
+              <span className="font-bold text-orange-400 text-xs flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                </span>
+                Asisten SAKAGIS
+              </span>
               <button 
                 onPointerDown={(e) => { e.stopPropagation(); setIsOpen(false); }}
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
             <p className="text-muted-foreground text-[11px] leading-relaxed">
@@ -89,7 +101,7 @@ export function DraggableAssistant() {
             </p>
             
             {/* Triangle pointer */}
-            <div className="absolute -bottom-2 right-5 w-4 h-4 bg-card/95 border-b border-r border-border/50 transform rotate-45" />
+            <div className="absolute -bottom-2 right-4 w-4 h-4 bg-card/95 border-b border-r border-border/50 transform rotate-45" />
           </div>
         )}
 
@@ -103,9 +115,9 @@ export function DraggableAssistant() {
           }}
         >
           {/* Glowing effect */}
-          <div className="absolute inset-0 bg-orange-500/30 blur-xl rounded-full scale-125 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+          <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full scale-110 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
           
-          <div className="relative flex items-center justify-center w-16 h-16 rounded-full overflow-hidden border-2 border-orange-500/80 shadow-[0_0_20px_rgba(249,115,22,0.4)] bg-black transition-transform hover:scale-110 pointer-events-none">
+          <div className="relative flex items-center justify-center w-12 h-12 rounded-full overflow-hidden border-2 border-orange-500/80 shadow-[0_0_15px_rgba(249,115,22,0.3)] bg-black transition-transform hover:scale-105 pointer-events-none">
             <img 
               src="/small-dancing-white-cat-dance-funny.gif" 
               alt="Asisten SAKAGIS" 
@@ -115,8 +127,8 @@ export function DraggableAssistant() {
           </div>
 
           {/* Badge icon */}
-          <div className="absolute -bottom-1 -right-1 bg-orange-500 text-white rounded-full p-1.5 shadow-lg border-2 border-background pointer-events-none">
-            <MessageCircle className="w-3.5 h-3.5" />
+          <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-full p-1.5 shadow-lg border-[1.5px] border-background pointer-events-none">
+            <MessageCircle className="w-3 h-3" />
           </div>
         </div>
       </div>
