@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchControl } from "@/components/SearchControl";
 import SpatialConverterModal from "@/components/SpatialConverter";
 import { DeviceHubTrigger, DeviceHubPanel } from "@/components/DeviceHubPanel";
+import { DraggableAssistant } from "@/components/DraggableAssistant";
 import dynamic from "next/dynamic";
 const FlightPathPlanner = dynamic(
   () => import("@/components/FlightPathPlanner").then(m => m.FlightPathPlanner),
@@ -199,6 +200,7 @@ export default function Home() {
 
       <CommandPalette />
       <GpsTrackingPanel />
+      <DraggableAssistant />
       <DeviceHubPanel
         isOpen={isDeviceHubOpen}
         onClose={() => setIsDeviceHubOpen(false)}
