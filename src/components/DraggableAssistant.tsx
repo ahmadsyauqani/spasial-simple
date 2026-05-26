@@ -105,11 +105,11 @@ export function DraggableAssistant() {
           {/* Glowing effect */}
           <div className="absolute inset-0 bg-orange-500/30 blur-xl rounded-full scale-125 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
           
-          <div className="relative flex items-center justify-center w-16 h-16 rounded-full overflow-hidden border-2 border-orange-500/80 shadow-[0_0_20px_rgba(249,115,22,0.4)] bg-card/50 backdrop-blur-sm transition-transform hover:scale-110 pointer-events-none">
+          <div className="relative flex items-center justify-center w-16 h-16 rounded-full overflow-hidden border-2 border-orange-500/80 shadow-[0_0_20px_rgba(249,115,22,0.4)] bg-black transition-transform hover:scale-110 pointer-events-none">
             <img 
               src="/small-dancing-white-cat-dance-funny.gif" 
               alt="Asisten SAKAGIS" 
-              className="w-full h-full object-cover scale-[1.2]" 
+              className="w-full h-full object-contain" 
               draggable="false"
             />
           </div>
