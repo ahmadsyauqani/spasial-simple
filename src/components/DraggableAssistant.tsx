@@ -1,96 +1,19 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { X, MessageCircle } from "lucide-react";
 
 export function DraggableAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [hasDragged, setHasDragged] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ startX: number; startY: number; initialX: number; initialY: number; isDragging: boolean }>({
-    startX: 0, startY: 0, initialX: 0, initialY: 0, isDragging: false
-  });
-
-  const AVATAR_SIZE = 48; // w-12 = 48px
-  const MARGIN = 20;
-
-  useEffect(() => {
-    setIsMounted(true);
-    // Position at bottom-right corner, away from all other UI elements
-    const startX = window.innerWidth - AVATAR_SIZE - MARGIN;
-    const startY = window.innerHeight - AVATAR_SIZE - MARGIN;
-    setPosition({ x: startX, y: startY });
-  }, []);
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    e.preventDefault();
-    (e.target as Element).releasePointerCapture(e.pointerId);
-    setIsDragging(true);
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      initialX: position.x,
-      initialY: position.y,
-      isDragging: true
-    };
-  };
-
-  useEffect(() => {
-    const handlePointerMove = (e: PointerEvent) => {
-      if (!dragRef.current.isDragging) return;
-      const { startX, startY, initialX, initialY } = dragRef.current;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-
-      // Mark as dragged if moved more than 5px (to distinguish from click)
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        setHasDragged(true);
-      }
-      
-      const newX = Math.max(8, Math.min(window.innerWidth - AVATAR_SIZE - 8, initialX + dx));
-      const newY = Math.max(8, Math.min(window.innerHeight - AVATAR_SIZE - 8, initialY + dy));
-      
-      setPosition({ x: newX, y: newY });
-    };
-
-    const handlePointerUp = () => {
-      if (dragRef.current.isDragging) {
-        dragRef.current.isDragging = false;
-        setTimeout(() => {
-          setIsDragging(false);
-          setHasDragged(false);
-        }, 80);
-      }
-    };
-
-    if (isDragging) {
-      window.addEventListener("pointermove", handlePointerMove);
-      window.addEventListener("pointerup", handlePointerUp);
-    }
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-  }, [isDragging]);
-
-  if (!isMounted) return null;
-
-  // Determine if bubble should go up or down based on position
-  const isNearBottom = position.y > window.innerHeight / 2;
-  // Determine if bubble should go left or right
-  const isNearRight = position.x > window.innerWidth / 2;
 
   return (
     <>
-      {/* Floating animation keyframes */}
+      {/* Floating animation */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes assistant-float {
           0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-4px); }
+          50% { transform: translateY(-3px); }
         }
         .assistant-float {
           animation: assistant-float 3s ease-in-out infinite;
@@ -99,32 +22,22 @@ export function DraggableAssistant() {
           animation-play-state: paused;
         }
       `}} />
-      
+
+      {/* 
+        Positioned to the right of the search bar.
+        SearchControl = absolute top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[450px]
+        So avatar sits right after it: left-1/2 + half of 450px + gap
+      */}
       <div
-        ref={containerRef}
-        className="fixed z-[9999] touch-none"
+        className="fixed z-[41] top-[18px]"
         style={{
-          left: `${position.x}px`,
-          top: `${position.y}px`,
-          cursor: isDragging ? "grabbing" : "grab",
+          left: "calc(50% + 240px)",
         }}
       >
-        <div 
-          onPointerDown={handlePointerDown}
-          className="relative"
-        >
-          {/* Chat Bubble */}
-          {(isHovered || isOpen) && !isDragging && (
-            <div 
-              className={`absolute w-56 bg-card/95 backdrop-blur-xl border border-border/40 shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-2xl p-4 text-sm pointer-events-auto
-                animate-in fade-in duration-200
-                ${isNearBottom 
-                  ? "bottom-full mb-3 slide-in-from-bottom-2" 
-                  : "top-full mt-3 slide-in-from-top-2"
-                }
-                ${isNearRight ? "right-0 origin-bottom-right" : "left-0 origin-bottom-left"}
-              `}
-            >
+        <div className="relative">
+          {/* Chat Bubble - appears above */}
+          {(isHovered || isOpen) && (
+            <div className="absolute bottom-full mb-3 right-0 w-56 bg-card/95 backdrop-blur-xl border border-border/40 shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-2xl p-4 text-sm pointer-events-auto animate-in fade-in slide-in-from-bottom-2 duration-200 origin-bottom-right">
               <div className="flex justify-between items-start mb-2.5">
                 <span className="font-bold text-orange-400 text-xs flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2">
@@ -134,7 +47,7 @@ export function DraggableAssistant() {
                   Asisten SAKAGIS
                 </span>
                 <button 
-                  onPointerDown={(e) => { e.stopPropagation(); setIsOpen(false); setIsHovered(false); }}
+                  onClick={() => { setIsOpen(false); setIsHovered(false); }}
                   className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded-md hover:bg-white/10"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -144,36 +57,26 @@ export function DraggableAssistant() {
                 Halo bro! Saya siap bantu analisis spasial hari ini. Mau digitasi atau cek peta? 🗺️
               </p>
               
-              {/* Triangle pointer - dynamically positioned */}
-              <div 
-                className={`absolute w-3 h-3 bg-card/95 border-border/40 transform rotate-45 
-                  ${isNearBottom 
-                    ? "-bottom-1.5 border-b border-r" 
-                    : "-top-1.5 border-t border-l"
-                  }
-                  ${isNearRight ? "right-5" : "left-5"}
-                `} 
-              />
+              {/* Triangle pointer */}
+              <div className="absolute -bottom-1.5 right-5 w-3 h-3 bg-card/95 border-b border-r border-border/40 transform rotate-45" />
             </div>
           )}
 
-          {/* Avatar Container */}
+          {/* Avatar */}
           <div 
-            className={`relative pointer-events-auto ${!isDragging ? "assistant-float" : ""}`}
+            className="relative cursor-pointer assistant-float"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            onClick={() => {
-              if (!isDragging && !hasDragged) setIsOpen(!isOpen);
-            }}
+            onClick={() => setIsOpen(!isOpen)}
           >
-            {/* Outer glow ring (visible on hover) */}
+            {/* Glow on hover */}
             <div className="absolute -inset-1.5 rounded-full bg-gradient-to-br from-orange-500/30 to-amber-500/20 blur-md opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
             
-            {/* Pulse ring animation */}
+            {/* Pulse when open */}
             <div className={`absolute -inset-1 rounded-full border-2 border-orange-500/40 pointer-events-none transition-opacity duration-300 ${isOpen ? "animate-ping opacity-30" : "opacity-0"}`} />
 
-            {/* Main avatar circle */}
-            <div className="relative flex items-center justify-center w-12 h-12 rounded-full overflow-hidden border-2 border-orange-500/70 bg-gradient-to-br from-gray-900 to-black shadow-[0_4px_20px_rgba(249,115,22,0.25)] transition-all duration-300 hover:border-orange-400 hover:shadow-[0_4px_24px_rgba(249,115,22,0.4)] pointer-events-none">
+            {/* Avatar circle */}
+            <div className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border-2 border-orange-500/70 bg-gradient-to-br from-gray-900 to-black shadow-[0_4px_20px_rgba(249,115,22,0.25)] transition-all duration-300 hover:border-orange-400 hover:shadow-[0_4px_24px_rgba(249,115,22,0.4)]">
               <img 
                 src="/small-dancing-white-cat-dance-funny.gif" 
                 alt="Asisten SAKAGIS" 
@@ -182,9 +85,9 @@ export function DraggableAssistant() {
               />
             </div>
 
-            {/* Badge icon - smaller and tighter */}
-            <div className="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-full p-1 shadow-lg border-[1.5px] border-background pointer-events-none">
-              <MessageCircle className="w-2.5 h-2.5" />
+            {/* Badge */}
+            <div className="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-full p-[3px] shadow-lg border-[1.5px] border-background pointer-events-none">
+              <MessageCircle className="w-2 h-2" />
             </div>
           </div>
         </div>
@@ -192,4 +95,3 @@ export function DraggableAssistant() {
     </>
   );
 }
-
