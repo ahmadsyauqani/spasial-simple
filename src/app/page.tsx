@@ -7,6 +7,7 @@ import { DigitizePanel } from "@/components/DigitizePanel";
 import { GpsTrackingTrigger, GpsTrackingPanel } from "@/components/GpsTrackingPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchControl } from "@/components/SearchControl";
+import { ClockWidget } from "@/components/ClockWidget";
 import SpatialConverterModal from "@/components/SpatialConverter";
 import { DeviceHubTrigger, DeviceHubPanel } from "@/components/DeviceHubPanel";
 import { DraggableAssistant } from "@/components/DraggableAssistant";
@@ -33,6 +34,7 @@ export default function Home() {
     <main className="relative w-full h-screen overflow-hidden">
       <MapWrapper />
       <SearchControl />
+      <ClockWidget />
 
       {/* ── Icon Rail: compact pill, always visible, h-fit ── */}
       <div
