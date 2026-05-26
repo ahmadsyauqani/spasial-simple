@@ -27,10 +27,10 @@ export function DraggableAssistant() {
         Positioned to the right of the search bar.
         SearchControl = absolute top-6 (24px) left-1/2 -translate-x-1/2 w-[90%] max-w-[450px]
         Input height ~40px, so vertical center = 24 + 20 = 44px
-        Avatar = 40px (w-10 h-10), so top = 44 - 20 = 24px = top-6
+        Avatar = 64px (w-16 h-16), so top = 44 - 32 = 12px = top-3
       */}
       <div
-        className="fixed z-[41] top-6"
+        className="fixed z-[41] top-3"
         style={{
           left: "calc(50% + 240px)",
         }}
@@ -44,7 +44,7 @@ export function DraggableAssistant() {
             onClick={() => setIsOpen(!isOpen)}
           >
             {/* Avatar circle */}
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border-2 border-orange-500/70 bg-gradient-to-br from-gray-900 to-black shadow-[0_4px_20px_rgba(249,115,22,0.25)] transition-all duration-300 hover:border-orange-400 hover:shadow-[0_4px_24px_rgba(249,115,22,0.4)]">
+            <div className="relative flex items-center justify-center w-16 h-16 rounded-full overflow-hidden border-2 border-orange-500/70 bg-gradient-to-br from-gray-900 to-black shadow-[0_4px_24px_rgba(249,115,22,0.3)] transition-all duration-300 hover:border-orange-400 hover:shadow-[0_4px_30px_rgba(249,115,22,0.55)]">
               <img 
                 src="/small-dancing-white-cat-dance-funny.gif" 
                 alt="Asisten SAKAGIS" 
@@ -57,8 +57,11 @@ export function DraggableAssistant() {
           {/* Chat Bubble - appears BELOW the avatar */}
           {(isHovered || isOpen) && (
             <div className="absolute top-full mt-3 right-0 w-56 bg-card/95 backdrop-blur-xl border border-border/40 shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-2xl p-4 text-sm pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
-              {/* Triangle pointer - at top */}
-              <div className="absolute -top-1.5 right-5 w-3 h-3 bg-card/95 border-t border-l border-border/40 transform rotate-45" />
+              {/* Triangle pointer - at top (centered under the 64px avatar) */}
+              <div 
+                className="absolute -top-1.5 w-3 h-3 bg-card/95 border-t border-l border-border/40 transform rotate-45"
+                style={{ right: "26px" }}
+              />
               
               <div className="flex justify-between items-start mb-2.5">
                 <span className="font-bold text-orange-400 text-xs flex items-center gap-1.5">
