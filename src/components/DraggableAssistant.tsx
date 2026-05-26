@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, MessageCircle } from "lucide-react";
+import { X } from "lucide-react";
 
 export function DraggableAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -69,12 +69,6 @@ export function DraggableAssistant() {
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => setIsOpen(!isOpen)}
           >
-            {/* Glow on hover */}
-            <div className="absolute -inset-1.5 rounded-full bg-gradient-to-br from-orange-500/30 to-amber-500/20 blur-md opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-            
-            {/* Pulse when open */}
-            <div className={`absolute -inset-1 rounded-full border-2 border-orange-500/40 pointer-events-none transition-opacity duration-300 ${isOpen ? "animate-ping opacity-30" : "opacity-0"}`} />
-
             {/* Avatar circle */}
             <div className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border-2 border-orange-500/70 bg-gradient-to-br from-gray-900 to-black shadow-[0_4px_20px_rgba(249,115,22,0.25)] transition-all duration-300 hover:border-orange-400 hover:shadow-[0_4px_24px_rgba(249,115,22,0.4)]">
               <img 
@@ -84,8 +78,6 @@ export function DraggableAssistant() {
                 draggable="false"
               />
             </div>
-
-
           </div>
         </div>
       </div>
