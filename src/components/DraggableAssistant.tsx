@@ -85,10 +85,7 @@ export function DraggableAssistant() {
               />
             </div>
 
-            {/* Badge */}
-            <div className="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-full p-[3px] shadow-lg border-[1.5px] border-background pointer-events-none">
-              <MessageCircle className="w-2 h-2" />
-            </div>
+
           </div>
         </div>
       </div>
