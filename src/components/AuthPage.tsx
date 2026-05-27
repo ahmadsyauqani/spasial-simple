@@ -55,10 +55,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Ornaments */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-500/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none" />
+    <div className="w-full h-full flex items-center justify-center p-4 relative">
 
       <div className="w-full max-w-md bg-card/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl p-8 relative z-10">
         

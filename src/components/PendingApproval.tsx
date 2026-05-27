@@ -11,9 +11,7 @@ export default function PendingApproval() {
   const whatsappLink = "https://wa.me/6281378432067?text=Halo%20Admin%20SAKAGIS,%20saya%20sudah%20mendaftar%20dan%20mohon%20untuk%20di-approve%20akun%20saya.%20Terima%20kasih.";
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Ornaments */}
-      <div className="absolute top-1/4 left-1/4 w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="w-full h-full flex flex-col items-center justify-center p-4 relative">
 
       <div className="w-full max-w-md bg-card/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl p-8 text-center relative z-10">
         <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
