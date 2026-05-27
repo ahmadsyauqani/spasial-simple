@@ -19,6 +19,9 @@ const FlightPathPlanner = dynamic(
 import { RefreshCcw, Database, UploadCloud, Pin, Cpu } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import AuthGuard from "@/components/AuthGuard";
+import { supabase } from "@/lib/supabase";
+import { LogOut } from "lucide-react";
 
 export default function Home() {
   const [isConverterOpen, setIsConverterOpen] = useState(false);
@@ -31,8 +34,9 @@ export default function Home() {
   const isPanelVisible = isSidebarPinned || isHovered;
 
   return (
-    <main className="relative w-full h-screen overflow-hidden">
-      <MapWrapper />
+    <AuthGuard>
+      <main className="relative w-full h-screen overflow-hidden">
+        <MapWrapper />
       <SearchControl />
       <ClockWidget />
 
@@ -115,6 +119,18 @@ export default function Home() {
           )}
         >
           <Pin className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Thin divider */}
+        <div className="w-5 h-px bg-border/25 rounded-full my-0.5" />
+
+        {/* Logout button */}
+        <button
+          onClick={async () => await supabase.auth.signOut()}
+          title="Keluar"
+          className="p-2 rounded-xl transition-all duration-200 w-full flex justify-center text-red-400/60 hover:bg-red-500/10 hover:text-red-400"
+        >
+          <LogOut className="w-3.5 h-3.5" />
         </button>
       </div>
 
@@ -216,6 +232,7 @@ export default function Home() {
         isOpen={isConverterOpen}
         onClose={() => setIsConverterOpen(false)}
       />
-    </main>
+      </main>
+    </AuthGuard>
   );
 }

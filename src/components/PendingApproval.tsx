@@ -1,0 +1,48 @@
+"use client";
+
+import { MessageCircle, LogOut } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+
+export default function PendingApproval() {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const whatsappLink = "https://wa.me/6281378432067?text=Halo%20Admin%20SAKAGIS,%20saya%20sudah%20mendaftar%20dan%20mohon%20untuk%20di-approve%20akun%20saya.%20Terima%20kasih.";
+
+  return (
+    <div className="min-h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Ornaments */}
+      <div className="absolute top-1/4 left-1/4 w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="w-full max-w-md bg-card/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl p-8 text-center relative z-10">
+        <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+          <span className="text-2xl">⏳</span>
+        </div>
+        
+        <h2 className="text-xl font-bold text-white mb-2">Menunggu Persetujuan</h2>
+        <p className="text-sm text-white/60 mb-8 leading-relaxed">
+          Akun Anda telah berhasil didaftarkan, namun membutuhkan persetujuan manual dari Admin untuk dapat mengakses SAKAGIS.
+        </p>
+
+        <a 
+          href={whatsappLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#25D366]/20 transition-all flex justify-center items-center gap-2 mb-4"
+        >
+          <MessageCircle className="w-5 h-5" />
+          Hubungi Admin via WhatsApp
+        </a>
+
+        <button 
+          onClick={handleLogout}
+          className="text-xs font-bold text-white/40 hover:text-white uppercase tracking-wider flex items-center gap-1 mx-auto transition-colors mt-6"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Keluar (Logout)
+        </button>
+      </div>
+    </div>
+  );
+}

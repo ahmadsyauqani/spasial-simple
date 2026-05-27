@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 import { MapProvider } from "@/lib/MapContext";
-
+import { AuthProvider } from "@/lib/AuthContext";
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,12 +39,14 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <MapProvider>
-            <TooltipProvider>
-              {children}
-              <Toaster position="top-right" richColors />
-            </TooltipProvider>
-          </MapProvider>
+          <AuthProvider>
+            <MapProvider>
+              <TooltipProvider>
+                {children}
+                <Toaster position="top-right" richColors />
+              </TooltipProvider>
+            </MapProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
