@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import AuthGuard from "@/components/AuthGuard";
 import { supabase } from "@/lib/supabase";
 import { LogOut } from "lucide-react";
+import { UserProfileWidget } from "@/components/UserProfileWidget";
 
 export default function Home() {
   const [isConverterOpen, setIsConverterOpen] = useState(false);
@@ -36,6 +37,7 @@ export default function Home() {
   return (
     <AuthGuard>
       <main className="relative w-full h-screen overflow-hidden">
+        <UserProfileWidget />
         <MapWrapper />
       <SearchControl />
       <ClockWidget />
@@ -112,25 +114,13 @@ export default function Home() {
           onClick={() => setIsSidebarPinned(!isSidebarPinned)}
           title={isSidebarPinned ? "Lepas Pin" : "Pin Panel"}
           className={cn(
-            "p-2 rounded-xl transition-all duration-200 w-full flex justify-center",
+            "p-2 rounded-xl transition-all duration-200 w-full flex justify-center mb-1",
             isSidebarPinned
               ? "bg-orange-500/20 text-orange-400"
               : "text-muted-foreground/40 hover:bg-white/10 hover:text-white"
           )}
         >
           <Pin className="w-3.5 h-3.5" />
-        </button>
-
-        {/* Thin divider */}
-        <div className="w-5 h-px bg-border/25 rounded-full my-0.5" />
-
-        {/* Logout button */}
-        <button
-          onClick={async () => await supabase.auth.signOut()}
-          title="Keluar"
-          className="p-2 rounded-xl transition-all duration-200 w-full flex justify-center text-red-400/60 hover:bg-red-500/10 hover:text-red-400"
-        >
-          <LogOut className="w-3.5 h-3.5" />
         </button>
       </div>
 
