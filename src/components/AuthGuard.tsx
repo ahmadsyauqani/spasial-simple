@@ -13,7 +13,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     return (
       <>
         {children}
-        <div className="fixed inset-0 z-[9999] bg-black/70 flex flex-col items-center justify-center gap-4">
+        <div className="fixed inset-0 z-[9999] bg-transparent flex flex-col items-center justify-center gap-4 pointer-events-auto">
           <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
           <span className="text-white/50 text-xs font-bold uppercase tracking-widest">Memuat SAKAGIS...</span>
         </div>
@@ -25,7 +25,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     return (
       <>
         {children}
-        <div className="fixed inset-0 z-[9999] bg-black/70 flex items-center justify-center">
+        <div className="fixed inset-0 z-[9999] bg-transparent flex items-center justify-center pointer-events-auto">
           <AuthPage />
         </div>
       </>
@@ -36,7 +36,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     return (
       <>
         {children}
-        <div className="fixed inset-0 z-[9999] bg-black/70 flex items-center justify-center">
+        <div className="fixed inset-0 z-[9999] bg-transparent flex items-center justify-center pointer-events-auto">
           <PendingApproval />
         </div>
       </>
