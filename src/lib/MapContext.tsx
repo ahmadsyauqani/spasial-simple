@@ -225,6 +225,10 @@ interface MapContextType {
   isDarkMode: boolean;
   setIsDarkMode: (val: boolean) => void;
   BASEMAP_OPTIONS: Record<BasemapType, { name: string; url: string; attribution: string }>;
+  isAttributeTableOpen: boolean;
+  setIsAttributeTableOpen: (val: boolean) => void;
+  activeTableLayerId: string | null;
+  setActiveTableLayerId: (id: string | null) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -247,6 +251,8 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [sliverResult, setSliverResult] = useState<SliverResult>(null);
   const [searchResult, setSearchResult] = useState<SearchResult>(null);
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
+  const [isAttributeTableOpen, setIsAttributeTableOpen] = useState(false);
+  const [activeTableLayerId, setActiveTableLayerId] = useState<string | null>(null);
 
   // Load cached layers from IndexedDB on startup
   useEffect(() => {
@@ -400,7 +406,9 @@ export function MapProvider({ children }: { children: ReactNode }) {
       fetchLayers,
       isGpsPanelOpen, setIsGpsPanelOpen,
       isDarkMode, setIsDarkMode,
-      BASEMAP_OPTIONS
+      BASEMAP_OPTIONS,
+      isAttributeTableOpen, setIsAttributeTableOpen,
+      activeTableLayerId, setActiveTableLayerId
     }}>
       {children}
     </MapContext.Provider>

@@ -20,8 +20,10 @@ import { RefreshCcw, Database, UploadCloud, Pin, Cpu } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import AuthGuard from "@/components/AuthGuard";
+import { useMapContext } from "@/lib/MapContext";
+import { AttributeTablePanel } from "@/components/AttributeTablePanel";
 import { supabase } from "@/lib/supabase";
-import { LogOut } from "lucide-react";
+import { LogOut, Table2 } from "lucide-react";
 import { UserProfileWidget } from "@/components/UserProfileWidget";
 
 export default function Home() {
@@ -31,6 +33,7 @@ export default function Home() {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeviceHubOpen, setIsDeviceHubOpen] = useState(false);
   const [isFlightPlannerOpen, setIsFlightPlannerOpen] = useState(false);
+  const { isAttributeTableOpen, setIsAttributeTableOpen } = useMapContext();
 
   const isPanelVisible = isSidebarPinned || isHovered;
 
@@ -105,6 +108,23 @@ export default function Home() {
 
         {/* Device Hub button */}
         <DeviceHubTrigger isOpen={isDeviceHubOpen} setOpen={setIsDeviceHubOpen} />
+
+        {/* Thin divider */}
+        <div className="w-5 h-px bg-border/25 rounded-full my-0.5" />
+
+        {/* Attribute Table Toggle */}
+        <button
+          onClick={() => setIsAttributeTableOpen(!isAttributeTableOpen)}
+          title="Tabel Atribut"
+          className={cn(
+            "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
+            isAttributeTableOpen
+              ? "bg-purple-500/20 text-purple-400"
+              : "text-muted-foreground hover:bg-white/10 hover:text-white"
+          )}
+        >
+          <Table2 className="w-[17px] h-[17px]" />
+        </button>
 
         {/* Thin divider */}
         <div className="w-5 h-px bg-border/25 rounded-full my-0.5" />
