@@ -10,7 +10,7 @@ export function UserProfileWidget() {
   if (!profile) return null;
 
   return (
-    <div className="absolute top-4 right-[70px] z-[9000] flex items-center gap-3 bg-card/85 backdrop-blur-xl border border-border/50 rounded-2xl p-1.5 shadow-xl transition-all hover:bg-card/95">
+    <div className="absolute top-4 right-32 z-[9000] flex items-center gap-3 bg-card/85 backdrop-blur-xl border border-border/50 rounded-2xl p-1.5 shadow-xl transition-all hover:bg-card/95">
       <div className="flex flex-col items-end pl-3">
         <span className="text-xs font-bold text-foreground leading-none mb-1">{profile.full_name || "Pengguna SAKAGIS"}</span>
         <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">{profile.organization || "User Aktif"}</span>
