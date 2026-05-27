@@ -242,6 +242,7 @@ export default function Home() {
         isOpen={isConverterOpen}
         onClose={() => setIsConverterOpen(false)}
       />
+      <AttributeTablePanel />
       </main>
     </AuthGuard>
   );
