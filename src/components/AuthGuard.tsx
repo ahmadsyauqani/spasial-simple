@@ -22,7 +22,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     return <AuthPage />;
   }
 
-  if (profile && !profile.is_approved) {
+  if (!profile || !profile.is_approved) {
     return <PendingApproval />;
   }
 
