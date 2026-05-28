@@ -8,7 +8,7 @@ export default function PendingApproval() {
     await supabase.auth.signOut();
   };
 
-  const whatsappLink = "https://wa.me/6281378432067?text=Halo%20Admin%20SAKAGIS,%20saya%20sudah%20mendaftar%20dan%20mohon%20untuk%20di-approve%20akun%20saya.%20Terima%20kasih.";
+  const whatsappLink = "https://wa.me/6281378432067?text=Halo%20Admin%20SAKAGIS,%0ASaya%20telah%20mendaftar%20akun%20PRO.%20Berikut%20saya%20lampirkan%20*bukti%20pendaftaran%20dan%20pembayaran*%20agar%20akun%20saya%20dapat%20segera%20diaktifkan.%20Terima%20kasih.";
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-4 relative">
@@ -20,7 +20,7 @@ export default function PendingApproval() {
         
         <h2 className="text-xl font-bold text-white mb-2">Menunggu Persetujuan</h2>
         <p className="text-sm text-white/60 mb-8 leading-relaxed">
-          Akun Anda telah berhasil didaftarkan, namun membutuhkan persetujuan manual dari Admin untuk dapat mengakses SAKAGIS.
+          Akun Anda telah berhasil didaftarkan. Untuk mengaktifkan akun PRO Anda, silakan hubungi Admin via WhatsApp dengan mengirimkan <b>bukti pendaftaran dan pembayaran</b>.
         </p>
 
         <a 

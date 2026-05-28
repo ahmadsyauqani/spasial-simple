@@ -113,6 +113,7 @@ function GuestTimerBanner({ endTime }: { endTime: number | null }) {
               <button 
                 onClick={() => {
                   setShowModal(false);
+                  localStorage.setItem("defaultAuthTab", "register");
                   logoutGuest();
                 }}
                 className="flex-[2] py-3 px-4 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-white font-black rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"

@@ -8,7 +8,16 @@ import { useAuth } from "@/lib/AuthContext";
 import { GuestLoginModal } from "./GuestLoginModal";
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(() => {
+    if (typeof window !== "undefined") {
+      const tab = localStorage.getItem("defaultAuthTab");
+      if (tab === "register") {
+        localStorage.removeItem("defaultAuthTab");
+        return false;
+      }
+    }
+    return true;
+  });
   const [loading, setLoading] = useState(false);
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
   const { refreshProfile } = useAuth();
@@ -46,7 +55,11 @@ export default function AuthPage() {
           }
         });
         if (error) throw error;
-        toast.success("Pendaftaran berhasil! Silakan hubungi admin untuk aktivasi.");
+        toast.success("Pendaftaran berhasil! Mengarahkan ke WhatsApp untuk verifikasi...");
+        
+        const waText = encodeURIComponent(`Halo Admin SAKAGIS,\nSaya baru saja mendaftar akun PRO dengan data berikut:\n\nNama: ${fullName}\nEmail: ${email}\nInstansi: ${organization}\n\nBerikut saya lampirkan *bukti pendaftaran dan pembayaran* agar akun saya dapat segera diaktifkan. Terima kasih.`);
+        window.open(`https://wa.me/6281378432067?text=${waText}`, "_blank");
+        
         await refreshProfile();
       }
     } catch (err: any) {
