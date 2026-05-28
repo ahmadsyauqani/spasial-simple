@@ -950,13 +950,13 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
       )} />
 
       {/* Main row */}
-      <div className="flex items-center gap-3 px-4 py-3.5">
+      <div className="flex items-center gap-3 px-4 py-3.5 relative">
         {/* Geometry icon with colored bg */}
         <div className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center shadow-sm" style={{ backgroundColor: (style.fillColor || '#3b82f6') + '28' }}>
           {renderGeometryIcon()}
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pr-1">
           <span className="block font-bold text-[12px] text-navy dark:text-white/95 truncate leading-tight" title={layer.name}>
             {layer.name}
           </span>
@@ -965,15 +965,19 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
           </span>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-0.5 shrink-0">
+        {/* Action buttons (Absolute on hover) */}
+        <div className={cn(
+          "absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 shrink-0 transition-opacity duration-200",
+          "bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-border/40",
+          (isPinned || !isVisible) ? "opacity-100" : "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+        )}>
           <button 
             onClick={(e) => { e.stopPropagation(); setIsPinned(!isPinned); }} 
             className={cn(
-              "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
+              "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
               isPinned 
                 ? "text-primary bg-primary/15 hover:bg-primary/25" 
-                : "text-muted-foreground/50 hover:bg-muted hover:text-foreground"
+                : "text-muted-foreground/60 hover:bg-muted hover:text-foreground"
             )}
             title={isPinned ? "Lepas Pin" : "Pin Menu"}
           >
@@ -982,9 +986,9 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
           <button 
             onClick={handleToggleVisibility} 
             className={cn(
-              "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
+              "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
               isVisible 
-                ? "text-muted-foreground/50 hover:bg-muted hover:text-foreground"
+                ? "text-muted-foreground/60 hover:bg-muted hover:text-foreground"
                 : "text-orange-500 bg-orange-500/10 hover:bg-orange-500/20" 
             )}
             title={isVisible ? "Sembunyikan Layer" : "Tampilkan Layer"}
@@ -993,7 +997,7 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
           </button>
           <button 
             onClick={onDelete} 
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground/50 hover:bg-red-500/10 hover:text-red-500 transition-all"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground/60 hover:bg-red-500/10 hover:text-red-500 transition-all"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
