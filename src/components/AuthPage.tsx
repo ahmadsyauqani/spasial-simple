@@ -214,7 +214,7 @@ export default function AuthPage() {
                 onClick={() => setIsGuestModalOpen(true)} 
                 className="text-xs font-bold text-white/60 hover:text-white uppercase tracking-wider underline decoration-white/20 hover:decoration-white/50 underline-offset-4 transition-all"
                >
-                  Atau Masuk Sebagai Guest (5 Menit)
+                  Guest
                </button>
             </div>
           )}
