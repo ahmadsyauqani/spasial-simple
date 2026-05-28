@@ -21,6 +21,7 @@ type AuthContextType = {
   isGuest: boolean;
   loginAsGuest: () => void;
   logoutGuest: () => void;
+  guestEndTime: number | null;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
+  const [guestEndTime, setGuestEndTime] = useState<number | null>(null);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -103,23 +105,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutGuest = () => {
     setIsGuest(false);
+    setGuestEndTime(null);
   };
 
   const loginAsGuest = () => {
     setIsGuest(true);
-    // 5 minutes = 300,000 ms
+    const duration = 5 * 60 * 1000; // 5 minutes
+    setGuestEndTime(Date.now() + duration);
+    
     setTimeout(() => {
       setIsGuest(false);
+      setGuestEndTime(null);
       if (typeof window !== "undefined") {
         import("sonner").then(({ toast }) => {
           toast.error("Sesi Guest Anda (5 Menit) telah habis. Silakan login kembali.");
         });
       }
-    }, 5 * 60 * 1000);
+    }, duration);
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, session, loading, refreshProfile, isGuest, loginAsGuest, logoutGuest }}>
+    <AuthContext.Provider value={{ user, profile, session, loading, refreshProfile, isGuest, loginAsGuest, logoutGuest, guestEndTime }}>
       {children}
     </AuthContext.Provider>
   );
