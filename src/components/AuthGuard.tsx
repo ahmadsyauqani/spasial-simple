@@ -38,7 +38,7 @@ function GuestTimerBanner({ endTime }: { endTime: number | null }) {
   if (!endTime) return null;
 
   return (
-    <div className="fixed top-6 right-6 z-[99999] pointer-events-none">
+    <div className="fixed top-[80px] left-1/2 -translate-x-1/2 z-[99999] pointer-events-none">
       <div className="bg-red-600/95 text-white backdrop-blur-md px-5 py-2.5 rounded-full shadow-2xl shadow-red-600/30 border border-red-500/50 flex items-center gap-3 font-bold text-sm tracking-wider">
         <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
         SISA WAKTU: <span className="font-mono text-base">{timeLeft}</span>
