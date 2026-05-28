@@ -897,7 +897,7 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
     if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
   };
 
   const renderGeometryIcon = () => {

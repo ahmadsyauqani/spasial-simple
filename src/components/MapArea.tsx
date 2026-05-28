@@ -469,7 +469,7 @@ function OverlapLayer() {
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
     if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
   };
 
   const overlapStyle = {
@@ -523,7 +523,7 @@ function ClipLayer() {
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
     if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
   };
 
   const clipStyle = {
@@ -593,7 +593,7 @@ function MergeLayer() {
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
     if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
   };
 
   const mergeStyle = {
@@ -665,7 +665,7 @@ function BufferLayer() {
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
     if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
   };
 
   const bufferStyle = {
@@ -724,7 +724,7 @@ function UnionLayer() {
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
     if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
   };
 
   const unionStyle = {
@@ -791,7 +791,7 @@ function DissolveLayer() {
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
     if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
   };
 
   const dissolveStyle = {
@@ -966,7 +966,7 @@ function CursorCoordinates() {
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
     if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
   };
 
   const formatLength = (meters: number) => {
@@ -1482,7 +1482,7 @@ function LayerFeature({ layer }: { layer: any }) {
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
     if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
   };
 
   const formatLength = (meters: number) => {
