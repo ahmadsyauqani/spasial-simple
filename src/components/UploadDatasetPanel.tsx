@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
-import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
@@ -803,11 +803,17 @@ export function UploadDatasetPanel() {
 import { ExportLayerDialog } from "./ExportLayerDialog";
 
 function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => void }) {
-  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache } = useMapContext();
+  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache, setLayers } = useMapContext();
   const style = layer.style || { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2, dissolve_key: 'none' };
   const colorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
   const [isPinned, setIsPinned] = useState(false);
+  const isVisible = layer.visible !== false;
+
+  const handleToggleVisibility = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLayers(prev => prev.map(l => l.id === layer.id ? { ...l, visible: !isVisible } : l));
+  };
 
   useEffect(() => {
     async function loadKeys() {
@@ -972,6 +978,18 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
             title={isPinned ? "Lepas Pin" : "Pin Menu"}
           >
             <Pin className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            onClick={handleToggleVisibility} 
+            className={cn(
+              "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
+              isVisible 
+                ? "text-muted-foreground/50 hover:bg-muted hover:text-foreground"
+                : "text-orange-500 bg-orange-500/10 hover:bg-orange-500/20" 
+            )}
+            title={isVisible ? "Sembunyikan Layer" : "Tampilkan Layer"}
+          >
+            {isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
           </button>
           <button 
             onClick={onDelete} 

@@ -342,7 +342,7 @@ export default function MapArea() {
         <ZoomControl position="bottomright" />
         <MapController />
         
-        {layers.map(layer => (
+        {layers.filter(layer => layer.visible !== false).map(layer => (
           <LayerFeature key={layer.id!} layer={layer} />
         ))}
 

@@ -26,6 +26,7 @@ type GeoJsonLayer = {
   sort_order?: number;
   fields?: string[]; // Custom attribute schema for digitizing/editing
   geometryType?: 'Point' | 'Line' | 'Polygon'; 
+  visible?: boolean; // Toggles layer visibility
 };
 
 export type AreaUnit = 'Ha' | 'm2' | 'km2';
