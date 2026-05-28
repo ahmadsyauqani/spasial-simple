@@ -452,8 +452,10 @@ function HighlightFeatureLayer() {
 
 // Komponen render hasil tumpang tindih di peta
 function OverlapLayer() {
-  const { overlapResult, areaUnit } = useMapContext();
+  const { overlapResult, areaUnit, setAreaUnit } = useMapContext();
   const map = useMap();
+  const geoJsonRef = useRef<L.GeoJSON>(null);
+  const [activeLayer, setActiveLayer] = useState<any>(null);
 
   useEffect(() => {
     if (overlapResult?.geojson) {
@@ -464,13 +466,52 @@ function OverlapLayer() {
     }
   }, [overlapResult, map]);
 
-  if (!overlapResult?.geojson) return null;
+  useEffect(() => {
+    // Inject the setAreaUnit into window so raw HTML buttons can trigger it
+    (window as any)._changeGlobalUnit = (unit: any) => {
+      if (setAreaUnit) setAreaUnit(unit);
+    };
+  }, [setAreaUnit]);
 
-  const formatUnit = (sqm: number) => {
-    if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
-    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
+  const generatePopupHtml = (feature: any, currentUnit: string) => {
+    const areaSqm = turf.area(feature);
+    const format = (sqm: number) => {
+      if (currentUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
+      if (currentUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
+      return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
+    };
+
+    const isHa = currentUnit === 'Ha';
+    const isM2 = currentUnit === 'm2';
+    const isKm2 = currentUnit === 'km2';
+
+    return `
+      <div class="p-2 min-w-[220px]">
+        <div class="flex justify-between items-center border-b border-red-400/30 pb-2 mb-2 gap-2">
+          <h4 class="font-bold text-sm text-red-300 m-0 leading-none flex items-center">⚠️ Area Tumpang Tindih</h4>
+          <div class="flex bg-black/40 rounded p-0.5 border border-white/10 text-[9px] font-bold">
+             <button onclick="window._changeGlobalUnit('Ha')" class="px-1.5 py-0.5 rounded transition-colors ${isHa ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white hover:bg-red-500/30'}">Ha</button>
+             <button onclick="window._changeGlobalUnit('m2')" class="px-1.5 py-0.5 rounded transition-colors ${isM2 ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white hover:bg-red-500/30'}">m²</button>
+             <button onclick="window._changeGlobalUnit('km2')" class="px-1.5 py-0.5 rounded transition-colors ${isKm2 ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white hover:bg-red-500/30'}">km²</button>
+          </div>
+        </div>
+        <div class="bg-red-900/30 p-2 rounded border border-red-500/20 text-xs mb-2">
+          <div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-red-300 font-bold">${format(areaSqm)}</span></div>
+          <div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${format(areaSqm * 0.9992)}</span></div>
+          <div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${format(areaSqm * 0.9998)}</span></div>
+        </div>
+        <div class="text-[10px] text-gray-400">${overlapResult?.layerAName} ∩ ${overlapResult?.layerBName}</div>
+      </div>
+    `;
   };
+
+  useEffect(() => {
+    if (activeLayer && activeLayer.feature) {
+      activeLayer.setPopupContent(generatePopupHtml(activeLayer.feature, areaUnit));
+    }
+  }, [areaUnit, activeLayer, overlapResult]);
+
+  if (!overlapResult?.geojson) return null;
 
   const overlapStyle = {
     color: '#ef4444',
@@ -481,23 +522,16 @@ function OverlapLayer() {
   };
 
   const onEachOverlap = (feature: any, mapLayer: any) => {
-    const areaSqm = turf.area(feature);
-    let html = `<div class="p-2 min-w-[200px]">`;
-    html += `<h4 class="font-bold text-base border-b border-red-400/30 pb-1 mb-2 text-red-300">⚠️ Area Tumpang Tindih</h4>`;
-    html += `<div class="bg-red-900/30 p-2 rounded border border-red-500/20 text-xs mb-2">`;
-    html += `<div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-red-300 font-bold">${formatUnit(areaSqm)}</span></div>`;
-    html += `<div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9992)}</span></div>`;
-    html += `<div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9998)}</span></div>`;
-    html += `</div>`;
-    html += `<div class="text-[10px] text-gray-400">${overlapResult.layerAName} ∩ ${overlapResult.layerBName}</div>`;
-    html += `</div>`;
-    mapLayer.bindPopup(html, { className: 'custom-popup-dark', maxWidth: 300 });
+    mapLayer.bindPopup(generatePopupHtml(feature, areaUnit), { className: 'custom-popup-dark', maxWidth: 350 });
+    mapLayer.on('popupopen', () => setActiveLayer(mapLayer));
+    mapLayer.on('popupclose', () => setActiveLayer(null));
   };
 
   return (
     <GeoJSON
+      ref={geoJsonRef}
       data={overlapResult.geojson}
-      key={`overlap-${Date.now()}`}
+      key="overlap-layer" // Static key to prevent unmounting
       style={() => overlapStyle}
       onEachFeature={onEachOverlap}
     />
