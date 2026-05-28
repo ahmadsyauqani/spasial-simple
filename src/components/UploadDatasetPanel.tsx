@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useMapContext } from "@/lib/MapContext";
+import { useAuth } from "@/lib/AuthContext";
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ const PdfOverlayPanel = dynamic(() => import("./PdfOverlayPanel").then(mod => mo
 
 export function UploadDatasetPanel() {
   const { layers, setLayers, setZoomFeature, areaUnit, setAreaUnit } = useMapContext();
+  const { isGuest } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
 
   const [metricPayload, setMetricPayload] = useState<{ file: File, geojson: any } | null>(null);
@@ -158,6 +160,11 @@ export function UploadDatasetPanel() {
   const handleDeleteLayer = async (id: string, name: string) => {
     try {
       if (!id) return;
+      if (isGuest) {
+        toast.error("Akses Ditolak: Guest tidak diizinkan menghapus data yang sudah ada di sistem SAKAGIS.");
+        return;
+      }
+      
       await deleteLayerFromSupabase(id);
       setLayers(layers.filter(l => l.id !== id));
       toast.success(`Layer ${name} berhasil dihapus.`);
@@ -167,6 +174,22 @@ export function UploadDatasetPanel() {
   };
 
   const executeUpload = async (file: File, geojsonData: any) => {
+    if (isGuest) {
+      toast.info(`Memuat ${file.name} ke sesi Guest...`);
+      const newLayer = {
+        id: crypto.randomUUID(),
+        name: file.name,
+        geojson: geojsonData,
+        geometryType: geojsonData.features?.[0]?.geometry?.type || "Vector",
+        style: { fillColor: '#3b82f6', color: '#2563eb', weight: 2, fillOpacity: 0.2 },
+        visible: true
+      };
+      setLayers((prev) => [...prev, newLayer as any]);
+      setZoomFeature(geojsonData);
+      toast.success(`Layer ${file.name} sukses dimuat secara lokal!`);
+      return;
+    }
+
     toast.info(`Mulai mengunggah ${file.name} ke Supabase...`);
     const project = await getOrCreateDefaultProject();
     const newLayer = await uploadLayerToSupabase(project.id, file.name, geojsonData);
@@ -833,6 +856,7 @@ import { ExportLayerDialog } from "./ExportLayerDialog";
 
 function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => void }) {
   const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache, setLayers } = useMapContext();
+  const { isGuest } = useAuth();
   const style = layer.style || { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2, dissolve_key: 'none' };
   const colorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -855,7 +879,7 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
         if (keys.length > 0 && layer.style?.dissolve_key === undefined) {
            const newStyle = { ...style, dissolve_key: 'none' };
            updateLayerStyle(layer.id, newStyle);
-           updateLayerStyleInSupabase(layer.id, newStyle);
+           if (!isGuest) updateLayerStyleInSupabase(layer.id, newStyle);
         }
       }
     }
@@ -872,7 +896,7 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
     const newQuery = { field: defField, operator: defOperator, value: defValue };
     const newStyle = { ...style, definition_query: newQuery };
     updateLayerStyle(layer.id, newStyle);
-    if (layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
+    if (!isGuest && layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
   };
 
   const handleClearDefinitionQuery = async () => {
@@ -882,7 +906,7 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
     const newStyle = { ...style };
     delete newStyle.definition_query;
     updateLayerStyle(layer.id, newStyle);
-    if (layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
+    if (!isGuest && layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
   };
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -898,25 +922,26 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
     }
     
     colorTimeoutRef.current = setTimeout(async () => {
-      if (layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
+      if (!isGuest && layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
     }, 500); // 500ms debounce
   };
 
   const handleOpacityChange = async (val: number[]) => {
     const newStyle = { ...style, fillOpacity: val[0] / 100 };
     updateLayerStyle(layer.id, newStyle);
-    if (layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
+    if (!isGuest && layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
   };
 
   const handleDissolveChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStyle = { ...style, dissolve_key: e.target.value };
     updateLayerStyle(layer.id, newStyle);
-    if (layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
+    if (!isGuest && layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
     // Refresh layer visually by triggering a re-render/re-fetch internally via MapArea dependency later
   };
 
   const syncOrder = async () => {
     // Free tier debounce not fully needed for occasional clicks
+    if (isGuest) return;
     const updates = layers.map((l, idx) => ({ id: l.id!, sort_order: idx }));
     await updateLayerOrderInSupabase(updates);
   };

@@ -5,6 +5,7 @@ import { useMapContext } from "@/lib/MapContext";
 import { FileUp, Map as MapIcon, X, Eye, EyeOff, Trash2, Sliders, ChevronDown, Loader2, Edit, Check, RotateCw, Minimize2, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
+import { useAuth } from "@/lib/AuthContext";
 import { 
   getOrCreateDefaultProject, uploadPdfImage, savePdfOverlay, 
   fetchPdfOverlays, deletePdfOverlayFromSupabase, updatePdfOverlaySettings 
@@ -18,6 +19,7 @@ if (typeof window !== 'undefined') {
 }
 
 export function PdfOverlayPanel() {
+  const { isGuest } = useAuth();
   const { 
     pdfOverlays, setPdfOverlays, mapInstance, 
     editingPdfId, setEditingPdfId, updatePdfOverlayRotation,
@@ -154,17 +156,9 @@ export function PdfOverlayPanel() {
 
     try {
       setIsSaving(true);
-      toast.info("Sedang mengunggah gambar peta ke storage...");
-      
-      const project = await getOrCreateDefaultProject();
-      const fileId = `pdf-${Date.now()}`;
-      
-      // 1. Upload image to Storage
-      const publicUrl = await uploadPdfImage(fileId, pendingOverlay.url);
-      
       const newOverlayData = {
         name: pendingOverlay.name,
-        url: publicUrl,
+        url: pendingOverlay.url, // default local URL
         bounds: [sw, ne],
         visible: true,
         opacity: 0.7,
@@ -175,13 +169,24 @@ export function PdfOverlayPanel() {
         native_zoom: pendingOverlay.nativeZoom || 18
       };
 
-      // 2. Save to DB
-      const savedOverlay = await savePdfOverlay(project.id, newOverlayData);
+      let savedOverlay = newOverlayData as any;
+
+      if (!isGuest) {
+        toast.info("Sedang mengunggah gambar peta ke storage...");
+        const project = await getOrCreateDefaultProject();
+        const fileId = `pdf-${Date.now()}`;
+        const publicUrl = await uploadPdfImage(fileId, pendingOverlay.url);
+        newOverlayData.url = publicUrl;
+        savedOverlay = await savePdfOverlay(project.id, newOverlayData);
+      } else {
+        savedOverlay.id = crypto.randomUUID();
+        toast.info("Peta PDF dipasang di sesi lokal Guest.");
+      }
 
       setPdfOverlays([...pdfOverlays, savedOverlay]);
       setPendingOverlay(null);
       setBounds({ swLat: "", swLng: "", neLat: "", neLng: "" });
-      toast.success("Peta PDF berhasil dipasang dan tersimpan!");
+      toast.success("Peta PDF berhasil dipasang!");
 
       if (mapInstance) {
         mapInstance.fitBounds(savedOverlay.bounds as any);
@@ -198,6 +203,10 @@ export function PdfOverlayPanel() {
 
   const removeOverlay = async (id: string) => {
     try {
+      if (isGuest) {
+        toast.error("Akses Ditolak: Guest tidak diizinkan menghapus PDF Overlays dari sistem.");
+        return;
+      }
       await deletePdfOverlayFromSupabase(id);
       setPdfOverlays(pdfOverlays.filter(o => o.id !== id));
       toast.info("Overlay dihapus");
@@ -215,7 +224,7 @@ export function PdfOverlayPanel() {
       o.id === id ? { ...o, visible: newVisible } : o
     ));
     
-    await updatePdfOverlaySettings(id, { visible: newVisible });
+    if (!isGuest) await updatePdfOverlaySettings(id, { visible: newVisible });
   };
 
   const updateOpacity = async (id: string, opacity: number) => {
@@ -229,14 +238,16 @@ export function PdfOverlayPanel() {
     if (!overlay) return;
     
     try {
-      await updatePdfOverlaySettings(id, { 
-        bounds: overlay.bounds,
-        rotation: overlay.rotation || 0,
-        scale: overlay.scale || 1,
-        margins: overlay.margins || { top: 0, right: 0, bottom: 0, left: 0 }
-      });
+      if (!isGuest) {
+        await updatePdfOverlaySettings(id, { 
+          bounds: overlay.bounds,
+          rotation: overlay.rotation || 0,
+          scale: overlay.scale || 1,
+          margins: overlay.margins || { top: 0, right: 0, bottom: 0, left: 0 }
+        });
+      }
       setEditingPdfId(null);
-      toast.success("Posisi overlay diperbarui secara permanen");
+      toast.success("Posisi overlay diperbarui" + (!isGuest ? " secara permanen" : " di sesi lokal"));
     } catch (err: any) {
       toast.error("Gagal menyimpan posisi: " + err.message);
     }
@@ -249,7 +260,7 @@ export function PdfOverlayPanel() {
     setPdfOverlays(pdfOverlays.map(o => 
       o.id === id ? { ...o, blendMode: newMode } : o
     ));
-    await updatePdfOverlaySettings(id, { blendMode: newMode });
+    if (!isGuest) await updatePdfOverlaySettings(id, { blendMode: newMode });
   };
 
   const fitToOverlay = (bounds: any) => {
