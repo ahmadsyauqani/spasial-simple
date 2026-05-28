@@ -1,9 +1,10 @@
 "use client";
 
 import { useMapContext } from "@/lib/MapContext";
-import { useState, useMemo, useEffect } from "react";
-import { X, Search, Table2, Layers, SearchX } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { X, Search, Table2, Layers, SearchX, GripHorizontal, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export function AttributeTablePanel() {
   const {
@@ -14,9 +15,47 @@ export function AttributeTablePanel() {
     activeTableLayerId,
     setActiveTableLayerId,
     setZoomFeature,
+    cacheLayerGeojson,
   } = useMapContext();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [panelHeight, setPanelHeight] = useState(300);
+  const [isResizing, setIsResizing] = useState(false);
+  const [editingCell, setEditingCell] = useState<{ originalIndex: number, key: string } | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Resize handler
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newHeight = window.innerHeight - e.clientY;
+      if (newHeight >= 200 && newHeight <= window.innerHeight * 0.8) {
+        setPanelHeight(newHeight);
+      }
+    };
+    const handleMouseUp = () => setIsResizing(false);
+    
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      // Prevent text selection while resizing
+      document.body.style.userSelect = 'none';
+    } else {
+      document.body.style.userSelect = '';
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (editingCell && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editingCell]);
 
   // Default select the first available layer if none is selected
   useEffect(() => {
@@ -55,11 +94,64 @@ export function AttributeTablePanel() {
       });
   }, [activeGeoJson, searchTerm]);
 
+  const handleEditSave = async (f: any, key: string, originalIndex: number) => {
+    if (!activeTableLayerId || !activeGeoJson) return;
+    
+    // Check if value actually changed
+    const currentValue = f.properties?.[key] !== undefined && f.properties?.[key] !== null ? String(f.properties[key]) : "";
+    if (currentValue === editValue) {
+      setEditingCell(null);
+      return;
+    }
+
+    try {
+      // 1. Update backend if db_id exists
+      if (f.properties.db_id) {
+        const { updateFeaturePropertiesInSupabase } = await import('@/lib/database');
+        const newProps = { ...f.properties, [key]: editValue };
+        await updateFeaturePropertiesInSupabase(f.properties.db_id, newProps);
+      }
+
+      // 2. Update local cache
+      const updatedFC = { ...activeGeoJson };
+      if (!updatedFC.features[originalIndex].properties) {
+        updatedFC.features[originalIndex].properties = {};
+      }
+      updatedFC.features[originalIndex].properties[key] = editValue;
+      cacheLayerGeojson(activeTableLayerId, updatedFC);
+      
+      toast.success(`Atribut diperbarui`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Gagal menyimpan: ${err.message}`);
+    } finally {
+      setEditingCell(null);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, f: any, key: string, originalIndex: number) => {
+    if (e.key === 'Enter') {
+      handleEditSave(f, key, originalIndex);
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
+    }
+  };
+
   if (!isAttributeTableOpen) return null;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/50 shadow-[0_-8px_32px_rgba(0,0,0,0.4)] flex flex-col transition-transform duration-300 h-[35vh] max-h-[500px] min-h-[200px]">
-      
+    <div 
+      className="absolute bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/50 shadow-[0_-8px_32px_rgba(0,0,0,0.4)] flex flex-col"
+      style={{ height: `${panelHeight}px` }}
+    >
+      {/* ── Drag Handle ── */}
+      <div 
+        className="w-full h-1.5 bg-border/20 hover:bg-orange-500/50 cursor-row-resize flex items-center justify-center transition-colors shrink-0"
+        onMouseDown={() => setIsResizing(true)}
+      >
+        <GripHorizontal className="w-4 h-4 text-white/20" />
+      </div>
+
       {/* Header bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-black/20 shrink-0">
         <div className="flex items-center gap-4">
@@ -125,6 +217,7 @@ export function AttributeTablePanel() {
             <thead className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
               <tr>
                 <th className="px-4 py-3 font-bold text-muted-foreground whitespace-nowrap bg-black/20 w-12 text-center">No</th>
+                <th className="px-4 py-3 font-bold text-muted-foreground whitespace-nowrap bg-black/20 w-12 text-center">Aksi</th>
                 {headers.map(h => (
                   <th key={h} className="px-4 py-3 font-bold text-muted-foreground whitespace-nowrap bg-black/20 uppercase tracking-wider text-[10px]">
                     {h}
@@ -136,22 +229,63 @@ export function AttributeTablePanel() {
               {filteredFeatures.map((f: any, idx: number) => (
                 <tr 
                   key={idx} 
-                  className="border-b border-border/30 hover:bg-white/5 transition-colors cursor-pointer group"
-                  onClick={() => {
-                    if (activeTableLayerId) {
-                      setZoomFeature(f);
-                    }
-                  }}
-                  title="Klik untuk zoom ke lokasi"
+                  className="border-b border-border/30 hover:bg-white/5 transition-colors group"
                 >
-                  <td className="px-4 py-2 whitespace-nowrap text-muted-foreground text-center group-hover:text-orange-400">
+                  <td className="px-4 py-2 whitespace-nowrap text-muted-foreground text-center">
                     {f._originalIndex + 1}
                   </td>
-                  {headers.map(h => (
-                    <td key={h} className="px-4 py-2 whitespace-nowrap text-foreground/80 max-w-[200px] truncate">
-                      {f.properties?.[h] !== undefined && f.properties?.[h] !== null ? String(f.properties[h]) : '-'}
-                    </td>
-                  ))}
+                  <td className="px-4 py-2 whitespace-nowrap text-center">
+                    <button
+                      onClick={() => {
+                        if (activeTableLayerId) setZoomFeature(f);
+                      }}
+                      className="text-[10px] px-2 py-1 rounded bg-orange-500/20 text-orange-400 hover:bg-orange-500/40 transition-colors"
+                      title="Zoom ke fitur ini di peta"
+                    >
+                      Zoom
+                    </button>
+                  </td>
+                  {headers.map(h => {
+                    const isEditing = editingCell?.originalIndex === f._originalIndex && editingCell?.key === h;
+                    const val = f.properties?.[h] !== undefined && f.properties?.[h] !== null ? String(f.properties[h]) : '';
+
+                    return (
+                      <td 
+                        key={h} 
+                        className={cn(
+                          "px-4 py-2 whitespace-nowrap max-w-[200px] truncate border-l border-white/5 cursor-text",
+                          isEditing ? "p-1" : "hover:bg-white/10"
+                        )}
+                        onDoubleClick={() => {
+                          if (h !== "db_id" && h !== "FID") {
+                            setEditingCell({ originalIndex: f._originalIndex, key: h });
+                            setEditValue(val);
+                          } else {
+                            toast.warning("ID Internal tidak bisa diedit.");
+                          }
+                        }}
+                      >
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              ref={inputRef}
+                              type="text"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, f, h, f._originalIndex)}
+                              onBlur={() => handleEditSave(f, h, f._originalIndex)}
+                              className="w-full bg-black/60 border border-orange-500/50 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            />
+                            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                          </div>
+                        ) : (
+                          <span className="text-foreground/80 block w-full" title="Double click untuk edit">
+                            {val || <span className="text-muted-foreground/30 italic">-</span>}
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

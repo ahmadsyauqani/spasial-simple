@@ -410,8 +410,43 @@ export default function MapArea() {
 
         <PdfEditMarkers />
         <CursorCoordinates />
+        <HighlightFeatureLayer />
       </MapContainer>
     </div>
+  );
+}
+
+// Komponen render highlight fitur (dari tabel atribut)
+function HighlightFeatureLayer() {
+  const { activeFeatureToZoom } = useMapContext();
+  const [highlightFeature, setHighlightFeature] = useState<any>(null);
+
+  useEffect(() => {
+    if (activeFeatureToZoom) {
+      setHighlightFeature(activeFeatureToZoom);
+      // Hapus highlight setelah 2 detik untuk efek "blink"
+      const timer = setTimeout(() => {
+        setHighlightFeature(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeFeatureToZoom]);
+
+  if (!highlightFeature) return null;
+
+  return (
+    <GeoJSON
+      data={highlightFeature}
+      key={`highlight-${Date.now()}`}
+      style={() => ({
+        color: '#f97316',     // Orange-500
+        fillColor: '#f97316',
+        fillOpacity: 0.6,
+        weight: 4,
+        className: 'animate-pulse' // Tailwind pulse animation
+      })}
+      interactive={false}
+    />
   );
 }
 
