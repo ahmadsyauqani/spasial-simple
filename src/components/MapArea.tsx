@@ -342,7 +342,12 @@ export default function MapArea() {
         <ZoomControl position="bottomright" />
         <MapController />
         
-        {layers.filter(layer => layer.visible !== false).map(layer => (
+        {/* 
+          Reverse array agar layer yang berada di ATAS pada panel (index 0)
+          dirender PALING AKHIR oleh React Leaflet, sehingga secara visual (Z-Index)
+          akan menumpuk di atas layer yang berada di bawahnya.
+        */}
+        {[...layers].reverse().filter(layer => layer.visible !== false).map(layer => (
           <LayerFeature key={layer.id!} layer={layer} />
         ))}
 

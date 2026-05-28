@@ -293,11 +293,40 @@ export function UploadDatasetPanel() {
         ) : (
           <div className="flex flex-col gap-2">
             {layers.map((layer, index) => (
-              <LayerControlItem 
-                key={layer.id || index} 
-                layer={layer} 
-                onDelete={() => handleDeleteLayer(layer.id!, layer.name)} 
-              />
+              <div 
+                key={layer.id || index}
+                draggable
+                onDragStart={(e) => {
+                  (e.target as HTMLDivElement).style.opacity = "0.5";
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", index.toString());
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  (e.target as HTMLDivElement).style.opacity = "1";
+                  const fromIdx = parseInt(e.dataTransfer.getData("text/plain"));
+                  const toIdx = index;
+                  if (fromIdx !== toIdx && !isNaN(fromIdx)) {
+                    const newLayers = [...layers];
+                    const draggedLayer = newLayers[fromIdx];
+                    newLayers.splice(fromIdx, 1);
+                    newLayers.splice(toIdx, 0, draggedLayer);
+                    setLayers(newLayers);
+                    // Sync order to database
+                    const updates = newLayers.map((l, idx) => ({ id: l.id!, sort_order: idx }));
+                    updateLayerOrderInSupabase(updates);
+                  }
+                }}
+                onDragEnd={(e) => {
+                  (e.target as HTMLDivElement).style.opacity = "1";
+                }}
+              >
+                <LayerControlItem 
+                  layer={layer} 
+                  onDelete={() => handleDeleteLayer(layer.id!, layer.name)} 
+                />
+              </div>
             ))}
           </div>
         )}
