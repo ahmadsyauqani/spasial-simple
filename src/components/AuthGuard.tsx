@@ -7,7 +7,11 @@ import PendingApproval from "./PendingApproval";
 import { Loader2 } from "lucide-react";
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, isGuest } = useAuth();
+
+  if (isGuest) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (

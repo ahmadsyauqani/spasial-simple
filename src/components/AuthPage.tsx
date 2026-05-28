@@ -5,10 +5,12 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock, User, Phone, Building2 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { GuestLoginModal } from "./GuestLoginModal";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
   const { refreshProfile } = useAuth();
   
   // Form states
@@ -191,8 +193,22 @@ export default function AuthPage() {
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : isLogin ? "Masuk ke SAKAGIS" : "Daftar Akun"}
           </button>
+
+          {isLogin && (
+            <div className="pt-3 text-center">
+               <button 
+                type="button" 
+                onClick={() => setIsGuestModalOpen(true)} 
+                className="text-xs font-bold text-white/60 hover:text-white uppercase tracking-wider underline decoration-white/20 hover:decoration-white/50 underline-offset-4 transition-all"
+               >
+                  Atau Masuk Sebagai Guest (5 Menit)
+               </button>
+            </div>
+          )}
         </form>
       </div>
+
+      <GuestLoginModal isOpen={isGuestModalOpen} onClose={() => setIsGuestModalOpen(false)} />
     </div>
   );
 }
