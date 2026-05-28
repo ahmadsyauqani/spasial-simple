@@ -22,9 +22,82 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const validateFile = (file: File) => {
+    const validExtensions = ['.zip', '.kml', '.dxf', '.json', '.geojson', '.gpkg'];
+    const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    
+    if (!validExtensions.includes(extension)) {
+      toast.error(`Format ${extension} tidak didukung!`, {
+        description: "Gunakan file .zip (SHP), .kml, .dxf, .gpkg, atau .geojson",
+      });
+      return false;
+    }
+    
+    if (file.size > 50 * 1024 * 1024) { // 50MB limit
+      toast.error("Ukuran file terlalu besar!", {
+        description: "Maksimal ukuran file adalah 50MB",
+      });
+      return false;
+    }
+    
+    toast.success("File siap dikonversi!", {
+      description: `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`
+    });
+    return true;
+  };
+
+  const [detectedCrs, setDetectedCrs] = useState<string | null>(null);
+  const [isDetectingCrs, setIsDetectingCrs] = useState(false);
+
+  const detectCrs = async (fileToDetect: File) => {
+    setIsDetectingCrs(true);
+    setDetectedCrs(null);
+    try {
+      const ext = fileToDetect.name.substring(fileToDetect.name.lastIndexOf('.')).toLowerCase();
+      if (ext === '.kml' || ext === '.json' || ext === '.geojson') {
+        setDetectedCrs("WGS 84 (EPSG:4326)");
+      } else if (ext === '.zip') {
+        const JSZip = (await import('jszip')).default;
+        const zip = await JSZip.loadAsync(fileToDetect);
+        const prjFiles = Object.keys(zip.files).filter(f => f.toLowerCase().endsWith('.prj') && !f.includes('MACOSX'));
+        
+        if (prjFiles.length > 0) {
+          const prjContent = await zip.files[prjFiles[0]].async("string");
+          if (prjContent.includes('WGS_1984_UTM_Zone_')) {
+            const zoneMatch = prjContent.match(/Zone_(\d+)([NS])/);
+            if (zoneMatch) setDetectedCrs(`UTM Zona ${zoneMatch[1]}${zoneMatch[2]} (WGS 84)`);
+            else setDetectedCrs("UTM (WGS 84)");
+          } else if (prjContent.includes('GCS_WGS_1984') || prjContent.includes('WGS 84')) {
+            setDetectedCrs("WGS 84 (Geografis)");
+          } else if (prjContent.includes('DGN_1995') || prjContent.includes('TM3') || prjContent.includes('TM-3')) {
+            setDetectedCrs("TM-3 Indonesia");
+          } else {
+             const nameMatch = prjContent.match(/PROJCS\["([^"]+)"/);
+             if (nameMatch) setDetectedCrs(nameMatch[1]);
+             else setDetectedCrs("Custom Projection");
+          }
+        } else {
+          setDetectedCrs("Tidak ada file .prj");
+        }
+      } else {
+        setDetectedCrs("Tidak diketahui (Bawaan)");
+      }
+    } catch (e) {
+      console.error(e);
+      setDetectedCrs("Gagal membaca CRS");
+    } finally {
+      setIsDetectingCrs(false);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      if (validateFile(selectedFile)) {
+        setFile(selectedFile);
+        detectCrs(selectedFile);
+      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -32,7 +105,11 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setFile(e.dataTransfer.files[0]);
+      const selectedFile = e.dataTransfer.files[0];
+      if (validateFile(selectedFile)) {
+        setFile(selectedFile);
+        detectCrs(selectedFile);
+      }
     }
   };
 
@@ -62,6 +139,7 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
 
       toast.success("Konversi berhasil!", { id: toastId });
       setFile(null);
+      setDetectedCrs(null);
     } catch (err: any) {
       console.error(err);
       toast.error(`Gagal: ${err.message}`, { id: toastId });
@@ -156,13 +234,21 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
                 </div>
                 <div>
                   <p className="text-sm font-bold text-foreground truncate max-w-[260px]">{file.name}</p>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-orange-500/70 mt-0.5">
-                    {(file.size / 1024).toFixed(1)} KB · Siap dikonversi
+                  <p className="text-[10px] font-black uppercase tracking-widest text-orange-500/70 mt-0.5 flex items-center gap-1.5">
+                    {(file.size / 1024).toFixed(1)} KB
+                    <span className="text-orange-500/30">•</span>
+                    <span className="text-orange-400">
+                      {isDetectingCrs ? (
+                         <span className="animate-pulse">Mendeteksi CRS...</span>
+                      ) : (
+                         detectedCrs || "Siap dikonversi"
+                      )}
+                    </span>
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => setFile(null)}
+                onClick={() => { setFile(null); setDetectedCrs(null); }}
                 className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all"
               >
                 <Trash2 className="w-4 h-4" />
