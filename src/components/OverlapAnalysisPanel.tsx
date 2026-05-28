@@ -51,10 +51,8 @@ export function OverlapAnalysisButton() {
       toast.error("Pilih dua layer terlebih dahulu!");
       return;
     }
-    if (layerAId === layerBId) {
-      toast.error("Kedua layer harus berbeda!");
-      return;
-    }
+    
+    const isSelfOverlap = layerAId === layerBId;
 
     const geojsonA = layerGeojsonCache[layerAId];
     const geojsonB = layerGeojsonCache[layerBId];
@@ -80,7 +78,9 @@ export function OverlapAnalysisButton() {
           const fA = featuresA[i];
           if (!fA.geometry || (fA.geometry.type !== "Polygon" && fA.geometry.type !== "MultiPolygon")) continue;
 
-          for (let j = 0; j < featuresB.length; j++) {
+          // Jika self-overlap, mulai j dari i + 1 untuk menghindari duplikasi dan membandingkan poligon dengan dirinya sendiri
+          const startJ = isSelfOverlap ? i + 1 : 0;
+          for (let j = startJ; j < featuresB.length; j++) {
             const fB = featuresB[j];
             if (!fB.geometry || (fB.geometry.type !== "Polygon" && fB.geometry.type !== "MultiPolygon")) continue;
 
@@ -90,6 +90,7 @@ export function OverlapAnalysisButton() {
                 intersection.properties = {
                   source_A: fA.properties || {},
                   source_B: fB.properties || {},
+                  is_self_overlap: isSelfOverlap
                 };
                 intersectionFeatures.push(intersection);
               }
@@ -137,7 +138,7 @@ export function OverlapAnalysisButton() {
           geojson: resultFC,
           areaMetrics: { wgs84_sqm: totalAreaSqm, utm_sqm, utm_epsg, tm3_sqm, tm3_epsg },
           layerAName,
-          layerBName,
+          layerBName: isSelfOverlap ? layerAName + " (Self)" : layerBName,
         });
 
         toast.success(`Ditemukan ${intersectionFeatures.length} area overlap! Total: ${formatUnit(totalAreaSqm)}`);
@@ -175,7 +176,7 @@ export function OverlapAnalysisButton() {
             Analisis Overlap
           </DialogTitle>
           <DialogDescription>
-            Pilih dua layer yang ingin dianalisis. Mesin Turf.js akan menghitung irisan secara presisi di browser — tanpa server.
+            Pilih dua layer yang ingin dianalisis. Anda juga bisa memilih layer yang sama di A & B untuk mencari poligon yang tumpang-tindih (Self-Overlap) di dalam 1 layer.
           </DialogDescription>
         </DialogHeader>
 
