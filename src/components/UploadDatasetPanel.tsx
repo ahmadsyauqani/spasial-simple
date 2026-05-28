@@ -980,10 +980,21 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
 
       {/* Main row */}
       <div className="flex items-center gap-3 px-4 py-3.5 relative">
-        {/* Geometry icon with colored bg */}
-        <div className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center shadow-sm" style={{ backgroundColor: (style.fillColor || '#3b82f6') + '28' }}>
+        {/* Geometry icon with colored bg (Click to change color) */}
+        <label 
+          className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center shadow-sm relative overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all group/icon" 
+          style={{ backgroundColor: (style.fillColor || '#3b82f6') + '28' }}
+          title="Ubah Warna Layer"
+          onClick={(e) => e.stopPropagation()} // Prevent triggering zoom/drag
+        >
+          <input 
+            type="color" 
+            value={style.fillColor || '#3b82f6'} 
+            onChange={handleColorChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+          />
           {renderGeometryIcon()}
-        </div>
+        </label>
 
         <div className="flex-1 min-w-0 pr-1">
           <span className="block font-bold text-[12px] text-navy dark:text-white/95 truncate leading-tight" title={layer.name}>
