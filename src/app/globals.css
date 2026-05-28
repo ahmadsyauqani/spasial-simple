@@ -313,3 +313,23 @@
 input, select, textarea, button {
   font-family: inherit;
 }
+
+/* Bling bling polygon animation */
+@keyframes blingBling {
+  0% {
+    filter: drop-shadow(0 0 2px #00f6ff) brightness(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px #00f6ff) brightness(1.8);
+  }
+  100% {
+    filter: drop-shadow(0 0 2px #00f6ff) brightness(1);
+  }
+}
+
+.bling-bling-polygon {
+  animation: blingBling 0.8s infinite alternate ease-in-out !important;
+  stroke: #00f6ff !important;
+  fill: #00f6ff !important;
+  transition: all 0.3s ease-out;
+}

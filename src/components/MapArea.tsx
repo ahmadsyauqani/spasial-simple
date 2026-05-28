@@ -1649,9 +1649,9 @@ function LayerFeature({ layer }: { layer: any }) {
         const l = e.target;
         l.setStyle({
           weight: 4,
-          color: '#ffffff',
+          color: '#00f6ff',
           fillOpacity: 0.6,
-          dashArray: '5, 10'
+          className: 'bling-bling-polygon'
         });
         if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
           l.bringToFront();
