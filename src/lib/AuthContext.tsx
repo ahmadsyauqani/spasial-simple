@@ -118,7 +118,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setGuestEndTime(null);
       if (typeof window !== "undefined") {
         import("sonner").then(({ toast }) => {
-          toast.error("Sesi Guest Anda (5 Menit) telah habis. Silakan login kembali.");
+          toast("⏳ Waktu Habis!", {
+            description: "Sesi percobaan 5 menit Anda telah usai. Tingkatkan ke Akun SAKAGIS Pro untuk menikmati analisis spasial tanpa batas waktu, fitur edit lanjutan, dan penyimpanan cloud permanen!",
+            duration: 15000,
+            action: {
+              label: "Daftar Akun Pro",
+              onClick: () => console.log("Pro upgrade clicked")
+            },
+            icon: '🚀'
+          });
         });
       }
     }, duration);
