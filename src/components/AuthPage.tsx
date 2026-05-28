@@ -63,7 +63,11 @@ export default function AuthPage() {
         await refreshProfile();
       }
     } catch (err: any) {
-      toast.error(err.message || "Terjadi kesalahan saat autentikasi");
+      if (err.message && err.message.toLowerCase().includes("rate limit")) {
+        toast.error("Terlalu banyak percobaan pendaftaran. Silakan tunggu beberapa saat lagi atau gunakan email lain.");
+      } else {
+        toast.error(err.message || "Terjadi kesalahan saat autentikasi");
+      }
     } finally {
       setLoading(false);
     }
