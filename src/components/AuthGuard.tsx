@@ -130,50 +130,6 @@ function GuestTimerBanner({ endTime }: { endTime: number | null }) {
 }
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
-  const { user, profile, loading, isGuest, guestEndTime } = useAuth();
-
-  if (isGuest) {
-    return (
-      <>
-        {children}
-        <GuestTimerBanner endTime={guestEndTime} />
-      </>
-    );
-  }
-
-  if (loading) {
-    return (
-      <>
-        {children}
-        <div className="fixed inset-0 z-[9999] bg-transparent flex flex-col items-center justify-center gap-4 pointer-events-auto">
-          <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-          <span className="text-white/50 text-xs font-bold uppercase tracking-widest">Memuat SAKAGIS...</span>
-        </div>
-      </>
-    );
-  }
-
-  if (!user) {
-    return (
-      <>
-        {children}
-        <div className="fixed inset-0 z-[9999] bg-transparent flex items-center justify-center pointer-events-auto">
-          <AuthPage />
-        </div>
-      </>
-    );
-  }
-
-  if (!profile || !profile.is_approved) {
-    return (
-      <>
-        {children}
-        <div className="fixed inset-0 z-[9999] bg-transparent flex items-center justify-center pointer-events-auto">
-          <PendingApproval />
-        </div>
-      </>
-    );
-  }
-
+  // Auth checks have been bypassed to allow public access without an account
   return <>{children}</>;
 }
