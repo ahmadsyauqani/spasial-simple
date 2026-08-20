@@ -515,7 +515,6 @@ function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, h
             url={currentBasemap.url}
             attribution=""
             maxZoom={20}
-            crossOrigin="anonymous"
           />
         )}
         {layers.map((layer) => {
@@ -565,6 +564,12 @@ function FitBoundsController({ geojsons }: { geojsons: any[] }) {
 // Controller to compute actual scale in meters per pixel and sync state
 function MapFaceController({ element, composer }: { element: LayoutElement; composer: ReturnType<typeof useLayoutComposer> }) {
   const map = useMap();
+
+  // Recompute map size after mount (fixes grey map when rendered inside the modal)
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 50);
+    return () => clearTimeout(t);
+  }, [map]);
 
   // 1. Sync Composer config -> Leaflet map (when user types in properties panel)
   useEffect(() => {
