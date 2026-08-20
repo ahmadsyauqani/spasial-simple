@@ -792,5 +792,7 @@
     margin: 0 !important;
     box-shadow: none !important;
     transform: none !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
   }
 }

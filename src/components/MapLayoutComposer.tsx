@@ -30,6 +30,7 @@ export default function MapLayoutComposer() {
   const printableRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportDpi, setExportDpi] = useState<ExportDPI>(300);
+  const [isPrintMode, setIsPrintMode] = useState(false);
 
   // Close on Escape
   useEffect(() => {
@@ -49,9 +50,10 @@ export default function MapLayoutComposer() {
 
   const dims = getEffectiveDimensions();
   // Canvas pixel dimensions (scaled). We use 3px per mm as base.
-  const PX_PER_MM = 3;
-  const canvasW = dims.width * PX_PER_MM * state.canvasZoom;
-  const canvasH = dims.height * PX_PER_MM * state.canvasZoom;
+  const PX_PER_MM = isPrintMode ? 96 / 25.4 : 3;
+  const canvasW = dims.width * PX_PER_MM * (isPrintMode ? 1 : state.canvasZoom);
+  const canvasH = dims.height * PX_PER_MM * (isPrintMode ? 1 : state.canvasZoom);
+  const printPageStyle = `@media print { @page { size: ${dims.width}mm ${dims.height}mm; margin: 0; } }`;
 
   const canvasExportBasemaps = new Set(["dark", "citra", "osm"]);
 
@@ -95,6 +97,7 @@ export default function MapLayoutComposer() {
   const handleExportPDF = async () => {
     if (!printableRef.current) return;
     setIsExporting(true);
+    setIsPrintMode(true);
     if (canvasRef.current) {
       canvasRef.current.scrollTop = 0;
       canvasRef.current.scrollLeft = 0;
@@ -102,14 +105,16 @@ export default function MapLayoutComposer() {
     toast.info("Dialog cetak dibuka. Pilih Save to PDF untuk menyimpan layout.");
     const cleanup = () => {
       setIsExporting(false);
+      setIsPrintMode(false);
       window.removeEventListener("afterprint", cleanup);
     };
     window.addEventListener("afterprint", cleanup);
-    window.setTimeout(() => window.print(), 100);
+    window.setTimeout(() => window.print(), 250);
   };
 
   return typeof document !== "undefined" && createPortal(
     <>
+      <style media="print" dangerouslySetInnerHTML={{ __html: printPageStyle }} />
       <div 
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] animate-in fade-in duration-300" 
         onClick={() => setLayoutComposerOpen(false)}
