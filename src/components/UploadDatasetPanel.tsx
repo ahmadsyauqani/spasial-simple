@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
 import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff, Search, GripVertical } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
+import * as turf from "@turf/turf";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -38,6 +39,12 @@ export function UploadDatasetPanel() {
   const { layers, setLayers, setZoomFeature, areaUnit, setAreaUnit } = useMapContext();
   const { isGuest } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(2);
+  const [wizardFile, setWizardFile] = useState<File | null>(null);
+  const [wizardGeojson, setWizardGeojson] = useState<any>(null);
+  const [wizardCrs, setWizardCrs] = useState("WGS84 / EPSG:4326");
+  const [wizardStyle, setWizardStyle] = useState({ color: "#3b82f6", fillColor: "#3b82f6", fillOpacity: 0.2, weight: 2 });
   const [layerQuery, setLayerQuery] = useState("");
   const [showLegend, setShowLegend] = useState(false);
   const [analysisQuery, setAnalysisQuery] = useState("");
@@ -196,7 +203,7 @@ export function UploadDatasetPanel() {
     }
   };
 
-  const executeUpload = async (file: File, geojsonData: any) => {
+  const executeUpload = async (file: File, geojsonData: any, layerStyle = wizardStyle) => {
     if (isGuest) {
       toast.info(`Memuat ${file.name} ke sesi Guest...`);
       const newLayer = {
@@ -204,7 +211,7 @@ export function UploadDatasetPanel() {
         name: file.name,
         geojson: geojsonData,
         geometryType: geojsonData.features?.[0]?.geometry?.type || "Vector",
-        style: { fillColor: '#3b82f6', color: '#2563eb', weight: 2, fillOpacity: 0.2 },
+        style: layerStyle,
         visible: true
       };
       setLayers((prev) => [...prev, newLayer as any]);
@@ -216,7 +223,9 @@ export function UploadDatasetPanel() {
     toast.info(`Mulai mengunggah ${file.name} ke Supabase...`);
     const project = await getOrCreateDefaultProject();
     const newLayer = await uploadLayerToSupabase(project.id, file.name, geojsonData);
-    setLayers((prev) => [...prev, newLayer]);
+    const styledLayer = { ...newLayer, style: layerStyle };
+    if (newLayer?.id) await updateLayerStyleInSupabase(newLayer.id, layerStyle);
+    setLayers((prev) => [...prev, styledLayer]);
     setZoomFeature(geojsonData);
     toast.success(`Layer ${file.name} sukses tersimpan di Supabase!`);
   };
@@ -277,7 +286,15 @@ export function UploadDatasetPanel() {
     try {
       const geojsonData = await parseSpatialFile(file);
       if (!geojsonData) throw new Error("File kosong atau tidak terbaca.");
-      await executeUpload(file, geojsonData);
+      const firstFeature = geojsonData.features?.find((feature: any) => feature.geometry);
+      const geometryType = firstFeature?.geometry?.type || "Vector";
+      const color = geometryType.includes("Line") ? "#10b981" : geometryType.includes("Point") ? "#ef4444" : "#3b82f6";
+      setWizardFile(file);
+      setWizardGeojson(geojsonData);
+      setWizardCrs(geojsonData.detected_crs || "WGS84 / EPSG:4326");
+      setWizardStyle({ color, fillColor: color, fillOpacity: geometryType.includes("Point") ? 0.9 : 0.2, weight: 2 });
+      setWizardStep(2);
+      setWizardOpen(true);
     } catch (error: any) {
       if (error.isMetric && error.geojsonData) {
         toast.warning("Terdeteksi Sistem Proyeksi Metrik!");
@@ -294,6 +311,31 @@ export function UploadDatasetPanel() {
     const file = event.target.files?.[0];
     if (file) await processSelectedFile(file);
     if (event.target) event.target.value = "";
+  };
+
+  const wizardFeatures = wizardGeojson?.features || [];
+  const wizardFirstFeature = wizardFeatures.find((feature: any) => feature.geometry);
+  const wizardGeometryType = wizardFirstFeature?.geometry?.type || "Vector";
+  const wizardBbox = wizardGeojson ? (() => {
+    try { return turf.bbox(wizardGeojson); } catch (_) { return null; }
+  })() : null;
+  const wizardFields = wizardFirstFeature?.properties ? Object.keys(wizardFirstFeature.properties).filter((key) => key !== "db_id" && key !== "FID") : [];
+
+  const saveWizardLayer = async () => {
+    if (!wizardFile || !wizardGeojson) return;
+    setIsUploading(true);
+    setWizardStep(5);
+    try {
+      await executeUpload(wizardFile, wizardGeojson, wizardStyle);
+      setWizardOpen(false);
+      setWizardFile(null);
+      setWizardGeojson(null);
+      setWizardStep(2);
+    } catch (error: any) {
+      toast.error(`Gagal menyimpan layer: ${error.message || error}`);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -505,6 +547,73 @@ export function UploadDatasetPanel() {
 
       </div>
 
+
+      <Dialog open={wizardOpen} onOpenChange={(open) => !isUploading && setWizardOpen(open)}>
+        <DialogContent className="sm:max-w-2xl bg-card text-card-foreground border-border max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-cyan-400"><UploadCloud className="w-5 h-5" /> Upload Data Wizard</DialogTitle>
+            <DialogDescription>{wizardFile?.name || "Siapkan layer baru"}</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-5 gap-1 py-2">
+            {["Pilih File", "Deteksi CRS", "Preview", "Atur Style", "Simpan"].map((label, index) => {
+              const step = index + 1;
+              const active = wizardStep === step;
+              const complete = wizardStep > step;
+              return <div key={label} className={cn("flex flex-col items-center gap-1 text-center", active ? "text-cyan-300" : complete ? "text-emerald-400" : "text-muted-foreground/40")}><span className={cn("flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-black", active ? "border-cyan-400 bg-cyan-500/20" : complete ? "border-emerald-400 bg-emerald-500/15" : "border-border")}>{complete ? "✓" : step}</span><span className="text-[8px] font-bold uppercase tracking-wider">{label}</span></div>;
+            })}
+          </div>
+
+          <div className="min-h-[280px] flex-1 overflow-y-auto rounded-xl border border-border bg-background/40 p-4">
+            {wizardStep === 1 && (
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+                <FileUp className="h-10 w-10 text-cyan-400" />
+                <strong className="text-sm text-foreground">Pilih file spasial</strong>
+                <span className="text-xs">SHP, KML, GPKG, GeoJSON, KMZ, atau format yang didukung.</span>
+              </div>
+            )}
+
+            {wizardStep === 2 && (
+              <div className="space-y-4">
+                <div><h3 className="text-sm font-black uppercase tracking-wider text-foreground">Dataset berhasil dibaca</h3><p className="mt-1 text-xs text-muted-foreground">Periksa sistem koordinat dan ringkasan data sebelum lanjut.</p></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-border bg-muted/30 p-3"><span className="text-[9px] uppercase text-muted-foreground">Format</span><strong className="mt-1 block text-sm">{wizardFile?.name.split('.').pop()?.toUpperCase()}</strong></div>
+                  <div className="rounded-xl border border-border bg-muted/30 p-3"><span className="text-[9px] uppercase text-muted-foreground">Geometry</span><strong className="mt-1 block text-sm">{wizardGeometryType}</strong></div>
+                  <div className="rounded-xl border border-border bg-muted/30 p-3"><span className="text-[9px] uppercase text-muted-foreground">Jumlah fitur</span><strong className="mt-1 block text-sm">{wizardFeatures.length.toLocaleString('id-ID')}</strong></div>
+                  <div className="rounded-xl border border-border bg-muted/30 p-3"><span className="text-[9px] uppercase text-muted-foreground">CRS terdeteksi</span><strong className="mt-1 block text-sm text-cyan-300">{wizardCrs}</strong></div>
+                </div>
+                {wizardBbox && <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground">BBox: <span className="font-mono text-foreground">{wizardBbox.map((value: number) => value.toFixed(6)).join(' · ')}</span></div>}
+              </div>
+            )}
+
+            {wizardStep === 3 && (
+              <div className="space-y-4">
+                <div><h3 className="text-sm font-black uppercase tracking-wider text-foreground">Preview atribut</h3><p className="mt-1 text-xs text-muted-foreground">Contoh data yang akan disimpan sebagai layer.</p></div>
+                {wizardFields.length > 0 ? <div className="overflow-x-auto rounded-xl border border-border"><table className="w-full text-left text-xs"><thead className="bg-muted/50"><tr>{wizardFields.slice(0, 6).map((field) => <th key={field} className="whitespace-nowrap px-3 py-2 font-bold text-muted-foreground">{field}</th>)}</tr></thead><tbody>{wizardFeatures.slice(0, 5).map((feature: any, index: number) => <tr key={index} className="border-t border-border/50"><>{wizardFields.slice(0, 6).map((field) => <td key={field} className="max-w-[180px] truncate px-3 py-2 text-foreground/80">{String(feature.properties?.[field] ?? '-')}</td>)}</></tr>)}</tbody></table></div> : <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-border text-xs text-muted-foreground">Tidak ada atribut tambahan.</div>}
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">Geometri akan tetap disimpan dalam WGS84/EPSG:4326 setelah validasi.</div>
+              </div>
+            )}
+
+            {wizardStep === 4 && (
+              <div className="space-y-5">
+                <div><h3 className="text-sm font-black uppercase tracking-wider text-foreground">Atur tampilan layer</h3><p className="mt-1 text-xs text-muted-foreground">Style ini bisa diubah lagi dari Layer Manager.</p></div>
+                <div className="flex items-center gap-4 rounded-xl border border-border bg-muted/30 p-4"><div className="h-16 w-24 rounded-xl border border-white/10" style={{ backgroundColor: wizardStyle.fillColor, opacity: wizardStyle.fillOpacity }} /><div className="text-xs text-muted-foreground"><strong className="block text-foreground">{wizardFile?.name}</strong><span>{wizardGeometryType} · {wizardFeatures.length} fitur</span></div></div>
+                <div className="grid grid-cols-2 gap-4"><div><label className="layout-props-label">Warna</label><input type="color" value={wizardStyle.color} onChange={(e) => setWizardStyle((style) => ({ ...style, color: e.target.value, fillColor: e.target.value }))} className="h-10 w-full cursor-pointer rounded-lg border-0 bg-transparent" /></div><div><label className="layout-props-label">Ketebalan garis</label><input type="number" min={1} max={10} value={wizardStyle.weight} onChange={(e) => setWizardStyle((style) => ({ ...style, weight: Number(e.target.value) || 1 }))} className="layout-props-input" /></div></div>
+                <div><div className="mb-2 flex justify-between"><label className="layout-props-label">Opacity isi</label><span className="text-xs font-mono text-cyan-300">{Math.round(wizardStyle.fillOpacity * 100)}%</span></div><Slider value={[wizardStyle.fillOpacity * 100]} max={100} step={5} onValueChange={(value) => { const next = Array.isArray(value) ? value[0] : value; setWizardStyle((style) => ({ ...style, fillOpacity: Number(next || 0) / 100 })); }} /></div>
+              </div>
+            )}
+
+            {wizardStep === 5 && (
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-center"><Loader2 className="h-8 w-8 animate-spin text-cyan-400" /><strong className="text-sm">Menyimpan layer...</strong><span className="text-xs text-muted-foreground">Menulis metadata, geometry, dan style ke workspace.</span></div>
+            )}
+          </div>
+
+          <DialogFooter className="flex items-center justify-between border-t pt-4">
+            <Button variant="ghost" onClick={() => wizardStep > 2 ? setWizardStep((step) => step - 1) : setWizardOpen(false)} disabled={isUploading}>Kembali</Button>
+            {wizardStep < 4 ? <Button onClick={() => setWizardStep((step) => step + 1)} disabled={!wizardGeojson} className="bg-cyan-600 text-white hover:bg-cyan-700">Lanjut</Button> : wizardStep === 4 ? <Button onClick={saveWizardLayer} disabled={isUploading} className="bg-cyan-600 text-white hover:bg-cyan-700"><CheckCircle2 className="mr-2 h-4 w-4" />Simpan Layer</Button> : <span className="text-xs text-muted-foreground">Proses selesai</span>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!metricPayload} onOpenChange={(open) => !open && !isFixing && setMetricPayload(null)}>
         <DialogContent className="sm:max-w-md bg-card text-card-foreground border-border">
