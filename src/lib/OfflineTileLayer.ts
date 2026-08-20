@@ -4,6 +4,10 @@ import { db } from './offlineDb';
 export class OfflineTileLayer extends L.TileLayer {
   createTile(coords: L.Coords, done: L.DoneCallback): HTMLElement {
     const tile = document.createElement('img');
+    const crossOrigin = (this.options as any).crossOrigin;
+    if (crossOrigin) {
+      tile.crossOrigin = crossOrigin === true ? 'anonymous' : crossOrigin;
+    }
     const tileId = `${coords.z}-${coords.x}-${coords.y}-${(this as any)._url}`;
 
     db.tiles.get(tileId).then(cached => {

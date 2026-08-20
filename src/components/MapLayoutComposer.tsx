@@ -12,7 +12,7 @@ import { useMapContext } from "@/lib/MapContext";
 import {
   useLayoutComposer, PAPER_SIZES, type LayoutElement, type LayoutElementType, type PaperSize
 } from "@/lib/useLayoutComposer";
-import { type ExportDPI } from "@/lib/layoutExport";
+import { exportToPNG, downloadBlob, type ExportDPI } from "@/lib/layoutExport";
 import { toast } from "sonner";
 import { MapContainer, TileLayer, GeoJSON, useMap, Polyline, Marker } from "react-leaflet";
 import * as L from "leaflet";
@@ -23,7 +23,7 @@ import proj4 from "proj4";
 // MAIN COMPOSER COMPONENT
 // ──────────────────────────────────────────────────────
 export default function MapLayoutComposer() {
-  const { isLayoutComposerOpen, setLayoutComposerOpen, layers, layerGeojsonCache } = useMapContext();
+  const { isLayoutComposerOpen, setLayoutComposerOpen, layers, layerGeojsonCache, activeBasemap } = useMapContext();
   const composer = useLayoutComposer();
   const { state, getEffectiveDimensions, selectElement } = composer;
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -53,66 +53,37 @@ export default function MapLayoutComposer() {
   const canvasW = dims.width * PX_PER_MM * state.canvasZoom;
   const canvasH = dims.height * PX_PER_MM * state.canvasZoom;
 
-  /** Capture the visible paper from the current browser tab. */
+  const canvasExportBasemaps = new Set(["dark", "citra", "osm"]);
+
+  /** Export the current preview without creating another map request. */
   const handleExportPNG = async () => {
     if (!printableRef.current) return;
+    if (!canvasExportBasemaps.has(activeBasemap)) {
+      toast.error("PNG otomatis tidak tersedia untuk basemap ini karena browser memblokir pixel non-CORS. Gunakan PDF untuk hasil persis seperti preview.");
+      return;
+    }
     setIsExporting(true);
     document.body.classList.add("layout-capturing");
-    let stream: MediaStream | null = null;
     try {
       if (canvasRef.current) {
         canvasRef.current.scrollTop = 0;
         canvasRef.current.scrollLeft = 0;
       }
-
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      if (!navigator.mediaDevices?.getDisplayMedia) {
-        throw new Error("Browser tidak mendukung screenshot tab.");
-      }
-
-      toast.info("Pilih 'This tab / Tab ini' pada dialog screenshot browser.");
-      stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: "browser", preferCurrentTab: true } as any,
-        audio: false,
-      });
-
-      const video = document.createElement("video");
-      video.srcObject = stream;
-      video.muted = true;
-      video.playsInline = true;
-      await video.play();
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-
-      const rect = printableRef.current.getBoundingClientRect();
-      const scaleX = video.videoWidth / window.innerWidth;
-      const scaleY = video.videoHeight / window.innerHeight;
-      const sx = Math.max(0, rect.left * scaleX);
-      const sy = Math.max(0, rect.top * scaleY);
-      const sw = Math.min(video.videoWidth - sx, rect.width * scaleX);
-      const sh = Math.min(video.videoHeight - sy, rect.height * scaleY);
-      if (sw <= 0 || sh <= 0) throw new Error("Paper layout tidak terlihat di layar.");
-
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(sw);
-      canvas.height = Math.round(sh);
-      canvas.getContext("2d")!.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Gagal membuat PNG")), "image/png");
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${state.layoutTitle.replace(/\s+/g, "_")}_layout.png`;
-      link.click();
-      URL.revokeObjectURL(url);
-      toast.success("Screenshot layout berhasil disimpan sebagai PNG!");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const blob = await exportToPNG(
+        printableRef.current,
+        state.paperSize,
+        state.orientation,
+        state.customWidth,
+        state.customHeight,
+        exportDpi,
+        state.canvasZoom
+      );
+      downloadBlob(blob, `${state.layoutTitle.replace(/\s+/g, "_")}_layout.png`);
+      toast.success("Layout berhasil diekspor sebagai PNG!");
     } catch (err: any) {
-      if (err?.name !== "AbortError" && err?.name !== "NotAllowedError") {
-        toast.error("Gagal screenshot PNG: " + (err.message || err));
-      }
+      toast.error("Gagal export PNG: " + (err.message || err));
     }
-    stream?.getTracks().forEach((track) => track.stop());
     document.body.classList.remove("layout-capturing");
     setIsExporting(false);
   };

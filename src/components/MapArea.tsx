@@ -197,7 +197,7 @@ function MapController() {
   return null;
 }
 
-function TileLayerWithOffline({ url, attribution }: { url: string, attribution: string }) {
+function TileLayerWithOffline({ url, attribution, crossOrigin }: { url: string, attribution: string; crossOrigin?: boolean }) {
   const map = useMap();
   
   useEffect(() => {
@@ -205,6 +205,7 @@ function TileLayerWithOffline({ url, attribution }: { url: string, attribution: 
       attribution,
       maxZoom: 21,
       maxNativeZoom: 20,
+      ...(crossOrigin ? { crossOrigin: "anonymous" } : {}),
     });
     layer.addTo(map);
     return () => {
@@ -221,6 +222,7 @@ export default function MapArea() {
     isTracking, trackingPath
   } = useMapContext();
   const currentBasemap = BASEMAP_OPTIONS[activeBasemap];
+  const canvasSafeBasemap = activeBasemap === "dark" || activeBasemap === "citra" || activeBasemap === "osm";
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationActive, setLocationActive] = useState(false);
@@ -339,6 +341,7 @@ export default function MapArea() {
           key={activeBasemap}
           url={currentBasemap.url} 
           attribution={currentBasemap.attribution} 
+          crossOrigin={canvasSafeBasemap}
         />
         <ZoomControl position="bottomright" />
         <MapController />
