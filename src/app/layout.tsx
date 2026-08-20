@@ -1,12 +1,26 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
   title: "SAKAGIS",
   description: "Browser-first spatial analysis platform",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "SAKAGIS",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  themeColor: "#6366f1",
 };
 
 import { MapProvider } from "@/lib/MapContext";
@@ -47,6 +61,7 @@ export default function RootLayout({
               </TooltipProvider>
             </MapProvider>
           </AuthProvider>
+          <ServiceWorkerRegister />
         </ThemeProvider>
       </body>
     </html>

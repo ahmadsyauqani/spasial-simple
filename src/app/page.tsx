@@ -38,7 +38,7 @@ export default function Home() {
 
   return (
     <AuthGuard>
-    <main className="relative w-full h-screen overflow-hidden">
+    <main className="relative w-full h-screen overflow-hidden touch-manipulation">
         <UserProfileWidget />
         <MapWrapper />
       <SearchControl />
@@ -146,7 +146,7 @@ export default function Home() {
       {/* ── Content Panel: slides in next to rail on hover/pin ── */}
       <div
         className={cn(
-          "absolute top-4 left-[68px] z-10 flex flex-col rounded-2xl border border-border/50 bg-card/85 backdrop-blur-2xl shadow-xl overflow-hidden w-[320px]",
+          "absolute top-4 left-[68px] z-10 flex flex-col rounded-2xl border border-border/50 bg-card/85 backdrop-blur-2xl shadow-xl overflow-hidden w-[calc(100vw-84px)] max-w-[320px]",
           "transition-all duration-300 ease-out",
           isPanelVisible
             ? "opacity-100 translate-x-0 pointer-events-auto"
