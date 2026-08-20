@@ -338,6 +338,210 @@ input, select, textarea, button {
   }
 }
 
+/* ── Compact coordinate bar ── */
+.coordinate-legacy {
+  display: none !important;
+}
+
+.coordinate-modern {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 5px 7px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  background: rgba(2, 6, 23, 0.88);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+.coordinate-modern-tools {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.coordinate-tool,
+.coordinate-details-toggle,
+.coordinate-unlock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 31px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0 8px;
+  color: rgba(255,255,255,0.48);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.18s ease;
+}
+
+.coordinate-tool:hover,
+.coordinate-details-toggle:hover {
+  color: white;
+  background: rgba(255,255,255,0.08);
+}
+
+.coordinate-tool.active-snap {
+  color: #a5b4fc;
+  background: rgba(99,102,241,0.2);
+  border-color: rgba(99,102,241,0.35);
+}
+
+.coordinate-tool.active-measure {
+  color: #fdba74;
+  background: rgba(249,115,22,0.2);
+  border-color: rgba(249,115,22,0.35);
+}
+
+.coordinate-modern-divider {
+  width: 1px;
+  height: 25px;
+  background: rgba(255,255,255,0.12);
+}
+
+.coordinate-modern-readout,
+.coordinate-modern-metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.15;
+}
+
+.coordinate-modern-readout {
+  min-width: 130px;
+}
+
+.coordinate-modern-readout span,
+.coordinate-modern-metric span {
+  color: rgba(255,255,255,0.32);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.coordinate-modern-readout strong,
+.coordinate-modern-metric strong {
+  color: rgba(255,255,255,0.88);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.coordinate-modern-metric strong {
+  color: #c4b5fd;
+}
+
+.coordinate-details-toggle.active {
+  color: #93c5fd;
+  background: rgba(59,130,246,0.18);
+  border-color: rgba(59,130,246,0.3);
+}
+
+.coordinate-unlock {
+  min-width: 31px;
+  padding: 0;
+  color: #fca5a5;
+  background: rgba(239,68,68,0.16);
+  border-color: rgba(239,68,68,0.3);
+}
+
+.coordinate-details-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 250px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.96);
+  box-shadow: 0 14px 35px rgba(0,0,0,0.45);
+  backdrop-filter: blur(16px);
+}
+
+.coordinate-details-popover div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.coordinate-details-popover span {
+  color: rgba(255,255,255,0.4);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.coordinate-details-popover strong {
+  color: rgba(255,255,255,0.85);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  text-align: right;
+}
+
+.layer-manager-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 13px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(90deg, rgba(6,182,212,0.08), transparent);
+}
+
+.layer-manager-heading strong,
+.layer-manager-heading span {
+  display: block;
+}
+
+.layer-manager-heading strong {
+  color: rgba(255,255,255,0.92);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.layer-manager-heading span {
+  margin-top: 3px;
+  color: rgba(255,255,255,0.4);
+  font-size: 9px;
+}
+
+@media (max-width: 639px) {
+  .coordinate-modern {
+    left: 0;
+    right: 0;
+    justify-content: space-between;
+    gap: 3px;
+    border-radius: 14px;
+  }
+
+  .coordinate-tool span,
+  .coordinate-details-toggle span {
+    display: none;
+  }
+
+  .coordinate-modern-readout {
+    min-width: 94px;
+  }
+
+  .coordinate-modern-readout strong {
+    font-size: 8px;
+  }
+}
+
 /* -- Measurement tooltip -- */
 .measure-tooltip {
   background: #10b981 !important;

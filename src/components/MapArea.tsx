@@ -1007,6 +1007,7 @@ function CursorCoordinates() {
   } = useMapContext();
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [isLocked, setIsLocked] = useState(false);
+  const [showCoordinateDetails, setShowCoordinateDetails] = useState(false);
   const [isSnapEnabled, setIsSnapEnabled] = useState(false);
   const [snapPoint, setSnapPoint] = useState<{lat: number, lng: number} | null>(null);
   const [zoom, setZoom] = useState(13); // Default safely
@@ -1373,8 +1374,9 @@ function CursorCoordinates() {
       )}
 
       {/* ── Coordinate Bar ── */}
-      <div data-map-ui="coordinate-bar" className={`absolute bottom-[calc(72px+env(safe-area-inset-bottom))] sm:bottom-6 left-1/2 -translate-x-1/2 z-[400] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/80 border-primary/50 shadow-primary/20' : 'bg-slate-950/85 border-white/[0.06]'} backdrop-blur-2xl border rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
+      <div data-map-ui="coordinate-bar" className="absolute bottom-[calc(72px+env(safe-area-inset-bottom))] sm:bottom-6 left-1/2 -translate-x-1/2 z-[400] w-[calc(100vw-2rem)] sm:w-auto pointer-events-auto">
 
+        <div className="coordinate-legacy" aria-hidden="true">
         {/* Tool Buttons — Inline */}
         <div className="flex items-center gap-1.5 shrink-0">
           <button 
@@ -1473,6 +1475,75 @@ function CursorCoordinates() {
             <Lock className="w-3.5 h-3.5" />
           </button>
         )}
+        </div>
+
+        <div className="coordinate-modern">
+          <div className="coordinate-modern-tools">
+            <button
+              onClick={() => setIsSnapEnabled(!isSnapEnabled)}
+              className={isSnapEnabled ? "coordinate-tool active-snap" : "coordinate-tool"}
+              title={isSnapEnabled ? "Matikan snap" : "Aktifkan snap ke vertex"}
+            >
+              <Magnet className="w-3.5 h-3.5" />
+              <span>Snap</span>
+            </button>
+            <button
+              onClick={() => isMeasuring && measureType === 'distance' ? cancelMeasure() : (startMeasure('distance'), toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" }))}
+              className={isMeasuring && measureType === 'distance' ? "coordinate-tool active-measure" : "coordinate-tool"}
+              title="Ukur jarak"
+            >
+              <Ruler className="w-3.5 h-3.5" />
+              <span>Jarak</span>
+            </button>
+            <button
+              onClick={() => isMeasuring && measureType === 'area' ? cancelMeasure() : (startMeasure('area'), toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" }))}
+              className={isMeasuring && measureType === 'area' ? "coordinate-tool active-measure" : "coordinate-tool"}
+              title="Ukur luas"
+            >
+              <Square className="w-3.5 h-3.5" />
+              <span>Luas</span>
+            </button>
+          </div>
+
+          <div className="coordinate-modern-divider" />
+
+          <div className="coordinate-modern-readout">
+            <span>WGS 84</span>
+            <strong>{lat.toFixed(5)}, {lng.toFixed(5)}</strong>
+          </div>
+
+          <div className="coordinate-modern-metric">
+            <span>SKALA</span>
+            <strong>1:{new Intl.NumberFormat('id-ID').format(scale)}</strong>
+          </div>
+          <div className="coordinate-modern-metric">
+            <span>ZOOM</span>
+            <strong>{zoom}</strong>
+          </div>
+
+          <button
+            onClick={() => setShowCoordinateDetails((value) => !value)}
+            className={showCoordinateDetails ? "coordinate-details-toggle active" : "coordinate-details-toggle"}
+            title="Tampilkan koordinat UTM dan TM-3"
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+            <span>Detail</span>
+          </button>
+
+          {isLocked && (
+            <button onClick={handleUnlock} className="coordinate-unlock" title="Buka kunci koordinat">
+              <Lock className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {showCoordinateDetails && (
+            <div className="coordinate-details-popover">
+              <div><span>WGS84 DMS</span><strong>{toDMS(lat, true)}<br />{toDMS(lng, false)}</strong></div>
+              <div><span>UTM {utmZone}{isSouth ? 'S' : 'N'}</span><strong>X {utmResult.x.toFixed(2)} · Y {utmResult.y.toFixed(2)}</strong></div>
+              <div><span>TM-3 {tm3ZoneDisplay}</span><strong>X {tm3Result.x.toFixed(2)} · Y {tm3Result.y.toFixed(2)}</strong></div>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );

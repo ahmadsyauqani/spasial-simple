@@ -280,6 +280,13 @@ export function UploadDatasetPanel() {
 
   return (
     <div className="text-card-foreground overflow-hidden flex flex-col">
+      <div className="layer-manager-heading">
+        <div>
+          <strong>Layer Manager</strong>
+          <span>Atur tampilan, urutan, filter, dan legenda</span>
+        </div>
+        <Layers className="h-4 w-4 text-cyan-300" />
+      </div>
       {/* Area unit switcher — compact top bar */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border/20 bg-black/10">
         <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Satuan Luas</span>
@@ -353,12 +360,14 @@ export function UploadDatasetPanel() {
         </div>
       )}
 
-      <ScrollArea className="h-40 rounded-xl border border-border bg-muted/30 dark:bg-black/20 p-2">
+      <ScrollArea className="h-52 rounded-xl border border-border bg-muted/30 dark:bg-black/20 p-2">
         {layers.length === 0 ? (
           <div className="h-full flex items-center justify-center text-xs text-muted-foreground flex-col gap-2 opacity-50 pt-8">
             <Layers className="w-8 h-8" />
             <span>Belum ada layer diunggah</span>
           </div>
+        ) : filteredLayers.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-xs text-muted-foreground">Layer tidak ditemukan.</div>
         ) : (
           <div className="flex flex-col gap-2">
              {filteredLayers.map((layer) => {
@@ -1075,7 +1084,7 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
             {layer.name}
           </span>
           <span className="text-[9px] text-muted-foreground/70 font-medium uppercase tracking-wider">
-            {layer.geometryType || 'Vector'}
+            {layer.geometryType || 'Vector'} · {layerGeojsonCache[layer.id!]?.features?.length || 0} fitur
           </span>
         </div>
 
@@ -1083,7 +1092,7 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
         <div className={cn(
           "absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 shrink-0 transition-opacity duration-200",
           "bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-border/40",
-          (isPinned || !isVisible) ? "opacity-100" : "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+          "opacity-100 pointer-events-auto md:opacity-0 md:group-hover:opacity-100 md:pointer-events-none md:group-hover:pointer-events-auto"
         )}>
           <button 
             onClick={(e) => { e.stopPropagation(); setIsPinned(!isPinned); }} 
