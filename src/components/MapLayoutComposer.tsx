@@ -12,7 +12,7 @@ import { useMapContext } from "@/lib/MapContext";
 import {
   useLayoutComposer, PAPER_SIZES, type LayoutElement, type LayoutElementType, type PaperSize
 } from "@/lib/useLayoutComposer";
-import { exportToPNG, exportToPDF, downloadBlob, type ExportDPI } from "@/lib/layoutExport";
+import { exportToPNG, downloadBlob, type ExportDPI } from "@/lib/layoutExport";
 import { toast } from "sonner";
 import { MapContainer, TileLayer, GeoJSON, useMap, Polyline, Marker } from "react-leaflet";
 import * as L from "leaflet";
@@ -88,34 +88,23 @@ export default function MapLayoutComposer() {
   };
 
   /**
-   * Export PDF: same approach as PNG.
+   * Print the visible layout. Native print keeps already-loaded cross-origin
+   * imagery (BPN/Google) because it does not read pixels through canvas.
    */
   const handleExportPDF = async () => {
     if (!printableRef.current) return;
     setIsExporting(true);
-    try {
-      if (canvasRef.current) {
-        canvasRef.current.scrollTop = 0;
-        canvasRef.current.scrollLeft = 0;
-      }
-      await new Promise((r) => setTimeout(r, 200));
-
-      toast.info("Mengekspor layout ke PDF...");
-      const blob = await exportToPDF(
-        printableRef.current!,
-        state.paperSize,
-        state.orientation,
-        state.customWidth,
-        state.customHeight,
-        exportDpi,
-        state.canvasZoom
-      );
-      downloadBlob(blob, `${state.layoutTitle.replace(/\s+/g, "_")}_layout.pdf`);
-      toast.success("Layout berhasil diekspor sebagai PDF!");
-    } catch (err: any) {
-      toast.error("Gagal export PDF: " + err.message);
+    if (canvasRef.current) {
+      canvasRef.current.scrollTop = 0;
+      canvasRef.current.scrollLeft = 0;
     }
-    setIsExporting(false);
+    toast.info("Dialog cetak dibuka. Pilih Save to PDF untuk menyimpan layout.");
+    const cleanup = () => {
+      setIsExporting(false);
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.setTimeout(() => window.print(), 100);
   };
 
   return typeof document !== "undefined" && createPortal(
