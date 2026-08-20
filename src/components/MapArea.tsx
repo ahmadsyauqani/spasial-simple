@@ -1017,8 +1017,7 @@ function CursorCoordinates() {
   const isMeasuringRef = useRef(isMeasuring);
   const measureTypeRef = useRef<'distance' | 'area'>(measureType);
   const measurePointsRef = useRef<[number, number][]>([]);
-  const measureClickTimer = useRef<number | null>(null);
-  const finishMeasureRef = useRef<() => void>(() => {});
+  const finishMeasureRef = useRef<(points?: [number, number][]) => void>(() => {});
 
   useEffect(() => { isMeasuringRef.current = isMeasuring; }, [isMeasuring]);
   useEffect(() => { measureTypeRef.current = measureType; }, [measureType]);
@@ -1039,10 +1038,11 @@ function CursorCoordinates() {
     setMeasurePoints([]);
     setMeasureResult(null);
     setIsMeasuring(false);
+    try { map.doubleClickZoom.enable(); } catch(e) {}
   };
 
-  const finishMeasure = () => {
-    const points = measurePointsRef.current;
+  const finishMeasure = (finalPoints?: [number, number][]) => {
+    const points = finalPoints || measurePointsRef.current;
     if (points.length < 2) { cancelMeasure(); return; }
     let label = "";
     if (measureTypeRef.current === 'distance') {
@@ -1065,6 +1065,7 @@ function CursorCoordinates() {
     setMeasureResult({ type: measureTypeRef.current, label, points });
     setMeasurePoints([]);
     setIsMeasuring(false);
+    try { map.doubleClickZoom.enable(); } catch(e) {}
   };
 
   useEffect(() => { finishMeasureRef.current = finishMeasure; });
@@ -1152,10 +1153,7 @@ function CursorCoordinates() {
     
     const handleMapClick = (e: L.LeafletMouseEvent) => {
       if (isMeasuringRef.current) {
-        if (measureClickTimer.current) window.clearTimeout(measureClickTimer.current);
-        measureClickTimer.current = window.setTimeout(() => {
-          setMeasurePoints(prev => [...prev, [e.latlng.lat, e.latlng.lng]]);
-        }, 250);
+        setMeasurePoints(prev => [...prev, [e.latlng.lat, e.latlng.lng]]);
         return;
       }
       setCoords(e.latlng);
@@ -1164,8 +1162,10 @@ function CursorCoordinates() {
 
     const handleMapDblClick = () => {
       if (isMeasuringRef.current) {
-        if (measureClickTimer.current) { window.clearTimeout(measureClickTimer.current); measureClickTimer.current = null; }
-        finishMeasureRef.current();
+        // The double-click fires two "click" events first, adding a duplicate last
+        // point — remove it, then finish the measurement.
+        const points = measurePointsRef.current.slice(0, -1);
+        finishMeasureRef.current(points);
       }
     };
     
@@ -1352,6 +1352,7 @@ function CursorCoordinates() {
                 cancelMeasure();
                 setMeasureType('distance');
                 setIsMeasuring(true);
+                try { map.doubleClickZoom.disable(); } catch(e) {}
                 toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" });
               }
             }}
@@ -1372,6 +1373,7 @@ function CursorCoordinates() {
                 cancelMeasure();
                 setMeasureType('area');
                 setIsMeasuring(true);
+                try { map.doubleClickZoom.disable(); } catch(e) {}
                 toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" });
               }
             }}
