@@ -148,7 +148,7 @@ export function SearchControl() {
   };
 
   return (
-    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[40] w-[90%] max-w-[450px]">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[40] w-[min(78vw,380px)] sm:w-[min(70vw,420px)]">
       <form onSubmit={handleSearch} className="relative group">
         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
           {isSearching ? <Loader2 className="h-4 w-4 text-indigo-400 animate-spin" /> : <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-indigo-400 transition-colors" />}
@@ -158,8 +158,8 @@ export function SearchControl() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => query.length > 0 && setShowResults(true)}
-          placeholder="Cari alamat, lat lon, UTM, atau TM-3..."
-          className="block w-full pl-10 pr-24 py-2.5 bg-card/80 backdrop-blur-3xl border border-white/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] shadow-indigo-500/10 text-sm text-white placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40 transition-all hover:border-white/30"
+          placeholder="Cari alamat atau koordinat..."
+          className="block w-full pl-10 pr-24 py-2 bg-card/75 backdrop-blur-3xl border border-white/15 rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.35)] shadow-indigo-500/10 text-sm text-white placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40 transition-all hover:border-white/30"
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
           {searchResult && <button type="button" onClick={clearSearch} className="p-1.5 hover:bg-white/10 rounded-full text-muted-foreground hover:text-red-400 transition-colors" title="Bersihkan hasil"><X className="h-4 w-4" /></button>}

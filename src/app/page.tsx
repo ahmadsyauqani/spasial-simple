@@ -9,14 +9,14 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchControl } from "@/components/SearchControl";
 import { ClockWidget } from "@/components/ClockWidget";
 import SpatialConverterModal from "@/components/SpatialConverter";
-import { DeviceHubTrigger, DeviceHubPanel } from "@/components/DeviceHubPanel";
+import { DeviceHubPanel } from "@/components/DeviceHubPanel";
 import { DraggableAssistant } from "@/components/DraggableAssistant";
 import dynamic from "next/dynamic";
 const FlightPathPlanner = dynamic(
   () => import("@/components/FlightPathPlanner").then(m => m.FlightPathPlanner),
   { ssr: false }
 );
-import { RefreshCcw, Database, UploadCloud, Pin, Cpu, X } from "lucide-react";
+import { RefreshCcw, Database, UploadCloud, Pin, Cpu, X, BarChart3, LayoutGrid, HardDrive } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import AuthGuard from "@/components/AuthGuard";
@@ -32,9 +32,16 @@ export default function Home() {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeviceHubOpen, setIsDeviceHubOpen] = useState(false);
   const [isFlightPlannerOpen, setIsFlightPlannerOpen] = useState(false);
-  const { isAttributeTableOpen, setIsAttributeTableOpen } = useMapContext();
+  const [activeTool, setActiveTool] = useState<"data" | "digitize" | "analysis" | "layout" | "device">("digitize");
+  const { isAttributeTableOpen, setIsAttributeTableOpen, setLayoutComposerOpen } = useMapContext();
 
   const isPanelVisible = isSidebarPinned || isHovered;
+  const openPanel = (tab: "digitize" | "dataset", tool: "data" | "digitize" | "analysis") => {
+    setActiveTool(tool);
+    setActiveTab(tab);
+    setIsSidebarPinned(true);
+    setIsHovered(true);
+  };
 
   return (
     <AuthGuard>
@@ -76,11 +83,12 @@ export default function Home() {
 
         {/* Digitize button */}
         <button
-          onClick={() => { setActiveTab("digitize"); setIsHovered(true); }}
+          onClick={() => openPanel("digitize", "digitize")}
           title="Digitasi Data"
+          aria-label="Digitasi Data"
           className={cn(
             "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
-            activeTab === "digitize"
+            activeTool === "digitize"
               ? "bg-orange-500/20 text-orange-400"
               : "text-muted-foreground hover:bg-white/10 hover:text-white"
           )}
@@ -90,11 +98,12 @@ export default function Home() {
 
         {/* Dataset button */}
         <button
-          onClick={() => { setActiveTab("dataset"); setIsHovered(true); }}
-          title="Dataset & Analisis"
+          onClick={() => openPanel("dataset", "data")}
+          title="Data & Layer"
+          aria-label="Data dan Layer"
           className={cn(
             "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
-            activeTab === "dataset"
+            activeTool === "data"
               ? "bg-cyan-500/20 text-cyan-400"
               : "text-muted-foreground hover:bg-white/10 hover:text-white"
           )}
@@ -102,11 +111,51 @@ export default function Home() {
           <UploadCloud className="w-[17px] h-[17px]" />
         </button>
 
+        <button
+          onClick={() => openPanel("dataset", "analysis")}
+          title="Analisis Spasial"
+          aria-label="Analisis Spasial"
+          className={cn(
+            "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
+            activeTool === "analysis"
+              ? "bg-emerald-500/20 text-emerald-400"
+              : "text-muted-foreground hover:bg-white/10 hover:text-white"
+          )}
+        >
+          <BarChart3 className="w-[17px] h-[17px]" />
+        </button>
+
+        <button
+          onClick={() => { setActiveTool("layout"); setLayoutComposerOpen(true); }}
+          title="Layout Peta"
+          aria-label="Layout Peta"
+          className={cn(
+            "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
+            activeTool === "layout"
+              ? "bg-violet-500/20 text-violet-400"
+              : "text-muted-foreground hover:bg-white/10 hover:text-white"
+          )}
+        >
+          <LayoutGrid className="w-[17px] h-[17px]" />
+        </button>
+
         {/* Gray divider */}
         <div className="w-5 h-px bg-border/25 rounded-full my-0.5" />
 
         {/* Device Hub button */}
-        <DeviceHubTrigger isOpen={isDeviceHubOpen} setOpen={setIsDeviceHubOpen} />
+        <button
+          onClick={() => { setActiveTool("device"); setIsDeviceHubOpen(true); }}
+          title="Perangkat dan GPS"
+          aria-label="Perangkat dan GPS"
+          className={cn(
+            "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
+            activeTool === "device"
+              ? "bg-amber-500/20 text-amber-400"
+              : "text-muted-foreground hover:bg-white/10 hover:text-white"
+          )}
+        >
+          <HardDrive className="w-[17px] h-[17px]" />
+        </button>
 
         {/* Thin divider */}
         <div className="w-5 h-px bg-border/25 rounded-full my-0.5" />
@@ -245,7 +294,7 @@ export default function Home() {
       {/* ── Mobile Bottom Navigation ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex items-stretch bg-card/95 backdrop-blur-xl border-t border-border/50 pb-[env(safe-area-inset-bottom)]">
         <button
-          onClick={() => { setActiveTab("digitize"); setIsSidebarPinned(true); }}
+          onClick={() => { setActiveTool("digitize"); setActiveTab("digitize"); setIsSidebarPinned(true); }}
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",
             activeTab === "digitize" && isSidebarPinned ? "text-orange-400" : "text-muted-foreground"
@@ -255,7 +304,7 @@ export default function Home() {
           <span className="text-[9px] font-bold uppercase tracking-wide">Digitasi</span>
         </button>
         <button
-          onClick={() => { setActiveTab("dataset"); setIsSidebarPinned(true); }}
+          onClick={() => { setActiveTool("data"); setActiveTab("dataset"); setIsSidebarPinned(true); }}
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",
             activeTab === "dataset" && isSidebarPinned ? "text-cyan-400" : "text-muted-foreground"
@@ -263,6 +312,28 @@ export default function Home() {
         >
           <UploadCloud className="w-5 h-5" />
           <span className="text-[9px] font-bold uppercase tracking-wide">Dataset</span>
+        </button>
+        <button
+          onClick={() => { setActiveTool("analysis"); setActiveTab("dataset"); setIsSidebarPinned(true); }}
+          className={cn(
+            "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",
+            activeTool === "analysis" && isSidebarPinned ? "text-emerald-400" : "text-muted-foreground"
+          )}
+          title="Analisis Spasial"
+        >
+          <BarChart3 className="w-5 h-5" />
+          <span className="text-[9px] font-bold uppercase tracking-wide">Analisis</span>
+        </button>
+        <button
+          onClick={() => { setActiveTool("layout"); setLayoutComposerOpen(true); }}
+          className={cn(
+            "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",
+            activeTool === "layout" ? "text-violet-400" : "text-muted-foreground"
+          )}
+          title="Layout Peta"
+        >
+          <LayoutGrid className="w-5 h-5" />
+          <span className="text-[9px] font-bold uppercase tracking-wide">Layout</span>
         </button>
         <button
           onClick={() => setIsAttributeTableOpen(!isAttributeTableOpen)}
@@ -275,7 +346,7 @@ export default function Home() {
           <span className="text-[9px] font-bold uppercase tracking-wide">Tabel</span>
         </button>
         <button
-          onClick={() => setIsDeviceHubOpen(true)}
+          onClick={() => { setActiveTool("device"); setIsDeviceHubOpen(true); }}
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",
             isDeviceHubOpen ? "text-violet-400" : "text-muted-foreground"
