@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap, ImageOverlay, Polyline, Popup, Polygon, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
@@ -1307,11 +1307,6 @@ function CursorCoordinates() {
       } catch(e) {}
     }
   }
-  const liveMeasureIcon = useMemo(
-    () => measureLiveLabel ? measureLabelIcon(measureLiveLabel) : null,
-    [measureLiveLabel]
-  );
-
   return (
     <>
       {isSnapEnabled && snapPoint && !isLocked && (
@@ -1344,8 +1339,8 @@ function CursorCoordinates() {
               pathOptions={{ color: '#f97316', weight: 3, opacity: 0.9, dashArray: '6,6' }}
             />
           )}
-          {liveMeasureIcon && measurePreviewPos && (
-            <Marker position={measurePreviewPos} icon={liveMeasureIcon} interactive={false} />
+          {measureLiveLabel && measurePreviewPos && (
+            <Marker position={measurePreviewPos} icon={measureLabelIcon(measureLiveLabel)} interactive={false} />
           )}
         </>
       )}
