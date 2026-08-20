@@ -591,6 +591,16 @@
   background: rgba(249, 115, 22, 0.9);
 }
 
+.layout-capturing .layout-element-selected {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.layout-capturing .layout-handle,
+.layout-capturing .element-controls {
+  display: none !important;
+}
+
 /* Native print keeps the already-rendered map images intact. */
 @media print {
   @page {
