@@ -65,25 +65,47 @@ async function captureLeafletMapAsDataUrl(container: HTMLElement): Promise<strin
 
     const containerRect = container.getBoundingClientRect();
 
-    // ── Draw tile images ──────────────────────────────────────────────────────
-    // Use getBoundingClientRect() difference: containerRect cancels out any
-    // scroll/viewport offsets, giving the tile position *relative to container*.
-    container.querySelectorAll(".leaflet-tile-pane img").forEach((el) => {
-      const tile = el as HTMLImageElement;
-      if (!tile.complete || tile.naturalWidth === 0) return;
+    // ── Draw tile images (composite only if CORS-safe) ────────────────────────
+    // Tiles are drawn into a separate canvas first. If the browser taints that
+    // canvas (non-CORS basemap like BPN/Google), we skip the basemap so the
+    // export still succeeds and only the vector layers + layout are captured.
+    const tileImgs = container.querySelectorAll(".leaflet-tile-pane img");
+    if (tileImgs.length > 0) {
+      const tileCanvas = document.createElement("canvas");
+      tileCanvas.width = w * dpr;
+      tileCanvas.height = h * dpr;
+      const tctx = tileCanvas.getContext("2d")!;
+      tctx.scale(dpr, dpr);
+      tctx.fillStyle = "#1a1a1a";
+      tctx.fillRect(0, 0, w, h);
+
+      tileImgs.forEach((el) => {
+        const tile = el as HTMLImageElement;
+        if (!tile.complete || tile.naturalWidth === 0) return;
+        try {
+          const r = tile.getBoundingClientRect();
+          const tx = r.left - containerRect.left;
+          const ty = r.top - containerRect.top;
+          tctx.save();
+          tctx.beginPath();
+          tctx.rect(0, 0, w, h);
+          tctx.clip();
+          tctx.drawImage(tile, tx, ty, r.width, r.height);
+          tctx.restore();
+        } catch (e) {}
+      });
+
+      let tainted = false;
       try {
-        const r = tile.getBoundingClientRect();
-        const tx = r.left - containerRect.left;
-        const ty = r.top - containerRect.top;
-        // Clip to container bounds before drawing to avoid overdraw
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, 0, w, h);
-        ctx.clip();
-        ctx.drawImage(tile, tx, ty, r.width, r.height);
-        ctx.restore();
-      } catch (e) {}
-    });
+        tctx.getImageData(0, 0, 1, 1);
+      } catch (e) {
+        tainted = true;
+      }
+
+      if (!tainted) {
+        ctx.drawImage(tileCanvas, 0, 0, w, h);
+      }
+    }
 
     // ── Draw SVG GeoJSON overlay ──────────────────────────────────────────────
     const overlayPane = container.querySelector(".leaflet-overlay-pane") as HTMLElement;
@@ -292,7 +314,7 @@ export async function exportToPNG(
       useCORS: true,
       backgroundColor: null,  // transparent — element's own background shows
       logging: false,
-      allowTaint: true,
+      allowTaint: false,
       ignoreElements: (el) =>
         el.classList?.contains("layout-handle") ||
         el.classList?.contains("layout-toolbar-overlay") ||
@@ -343,7 +365,7 @@ export async function exportToPDF(
       useCORS: true,
       backgroundColor: null,
       logging: false,
-      allowTaint: true,
+      allowTaint: false,
       ignoreElements: (el) =>
         el.classList?.contains("layout-handle") ||
         el.classList?.contains("layout-toolbar-overlay") ||
