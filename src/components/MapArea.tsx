@@ -1021,7 +1021,6 @@ function CursorCoordinates() {
 
   useEffect(() => { isMeasuringRef.current = isMeasuring; }, [isMeasuring]);
   useEffect(() => { measureTypeRef.current = measureType; }, [measureType]);
-  useEffect(() => { measurePointsRef.current = measurePoints; }, [measurePoints]);
 
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
@@ -1034,7 +1033,23 @@ function CursorCoordinates() {
     return `${meters.toLocaleString('id-ID', { maximumFractionDigits: 1 })} m`;
   };
 
+  const startMeasure = (type: 'distance' | 'area') => {
+    setActiveDigitizingLayerId(null);
+    try { map.pm.disableDraw(); } catch(e) {}
+    setIsLocked(false);
+    measureTypeRef.current = type;
+    isMeasuringRef.current = true;
+    measurePointsRef.current = [];
+    setMeasureType(type);
+    setMeasurePoints([]);
+    setMeasureResult(null);
+    setIsMeasuring(true);
+    try { map.doubleClickZoom.disable(); } catch(e) {}
+  };
+
   const cancelMeasure = () => {
+    isMeasuringRef.current = false;
+    measurePointsRef.current = [];
     setMeasurePoints([]);
     setMeasureResult(null);
     setIsMeasuring(false);
@@ -1063,6 +1078,8 @@ function CursorCoordinates() {
       label = `Luas: ${formatUnit(area)} | Keliling: ${formatLength(perimeter)}`;
     }
     setMeasureResult({ type: measureTypeRef.current, label, points });
+    isMeasuringRef.current = false;
+    measurePointsRef.current = [];
     setMeasurePoints([]);
     setIsMeasuring(false);
     try { map.doubleClickZoom.enable(); } catch(e) {}
@@ -1153,7 +1170,9 @@ function CursorCoordinates() {
     
     const handleMapClick = (e: L.LeafletMouseEvent) => {
       if (isMeasuringRef.current) {
-        setMeasurePoints(prev => [...prev, [e.latlng.lat, e.latlng.lng]]);
+        const p: [number, number] = [e.latlng.lat, e.latlng.lng];
+        measurePointsRef.current = [...measurePointsRef.current, p];
+        setMeasurePoints(measurePointsRef.current);
         return;
       }
       setCoords(e.latlng);
@@ -1347,12 +1366,7 @@ function CursorCoordinates() {
               if (isMeasuring && measureType === 'distance') {
                 cancelMeasure();
               } else {
-                setActiveDigitizingLayerId(null);
-                try { map.pm.disableDraw(); } catch(e) {}
-                cancelMeasure();
-                setMeasureType('distance');
-                setIsMeasuring(true);
-                try { map.doubleClickZoom.disable(); } catch(e) {}
+                startMeasure('distance');
                 toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" });
               }
             }}
@@ -1368,12 +1382,7 @@ function CursorCoordinates() {
               if (isMeasuring && measureType === 'area') {
                 cancelMeasure();
               } else {
-                setActiveDigitizingLayerId(null);
-                try { map.pm.disableDraw(); } catch(e) {}
-                cancelMeasure();
-                setMeasureType('area');
-                setIsMeasuring(true);
-                try { map.doubleClickZoom.disable(); } catch(e) {}
+                startMeasure('area');
                 toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" });
               }
             }}
