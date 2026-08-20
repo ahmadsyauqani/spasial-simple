@@ -1,4 +1,4 @@
-const CACHE_NAME = "sakagis-v1";
+const CACHE_NAME = "sakagis-v2";
 const APP_SHELL = ["/", "/manifest.json", "/logo-sakagis.png"];
 
 self.addEventListener("install", (event) => {
@@ -24,6 +24,17 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
+  const isSameOrigin = url.origin === self.location.origin;
+  const isTileRequest = url.pathname.includes("/main/wms/") ||
+    url.hostname.includes("basemap") ||
+    url.hostname.includes("tile") ||
+    url.hostname.includes("cartocdn") ||
+    url.hostname.includes("openstreetmap");
+
+  // Never intercept Supabase, API, fonts, or arbitrary third-party requests.
+  // Let the browser handle them normally so authentication and data loading
+  // cannot be served from an unrelated cache entry.
+  if (!isSameOrigin && !isTileRequest) return;
 
   // Navigations: network-first, fallback to cached shell (offline app load)
   if (request.mode === "navigate") {
@@ -40,7 +51,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Tiles & images: network-first, fallback to cache (offline basemap)
-  if (url.pathname.match(/\.(png|jpe?g|webp|gif|svg)$/i) || url.pathname.includes("/main/wms/")) {
+  if (url.pathname.match(/\.(png|jpe?g|webp|gif|svg)$/i) || isTileRequest) {
     event.respondWith(
       fetch(request)
         .then((response) => {
