@@ -2,10 +2,12 @@
 
 import { useMapContext } from "@/lib/MapContext";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { X, Search, Table2, Layers, SearchX, Check, Minus, Maximize2, Minimize2, GripVertical, Pencil, Save } from "lucide-react";
+import { X, Search, Table2, Layers, SearchX, Check, Minus, Maximize2, Minimize2, GripVertical, Pencil, Save, Merge, Unlink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Draggable from "react-draggable";
+import { supabase } from "@/lib/supabase";
+import { deleteGeometriesFromSupabase, insertGeometryToSupabase } from "@/lib/database";
 
 export function AttributeTablePanel() {
   const {
@@ -29,6 +31,7 @@ export function AttributeTablePanel() {
   const [editingCell, setEditingCell] = useState<{ originalIndex: number, key: string } | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editingFeature, setEditingFeature] = useState<{ originalIndex: number, values: Record<string, string> } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
   const nodeRef = useRef<HTMLDivElement>(null);
   const resizeStartRef = useRef<{ x: number, y: number, w: number, h: number } | null>(null);
@@ -97,6 +100,11 @@ export function AttributeTablePanel() {
       setActiveTableLayerId(layers[0].id || null);
     }
   }, [isAttributeTableOpen, activeTableLayerId, layers, setActiveTableLayerId]);
+
+  // Reset selection when switching layer
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [activeTableLayerId]);
 
   const activeGeoJson = activeTableLayerId ? layerGeojsonCache[activeTableLayerId] : null;
 
@@ -203,6 +211,95 @@ export function AttributeTablePanel() {
 
   if (!isAttributeTableOpen) return null;
 
+  const toggleSelect = (idx: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+
+  const selectedFeatures = filteredFeatures.filter((f: any) => selectedIds.has(f._originalIndex));
+  const selectedCount = selectedFeatures.length;
+  const canMerge = selectedCount >= 2 && selectedFeatures.every((f: any) => f.geometry?.type === "Polygon" || f.geometry?.type === "MultiPolygon");
+  const canSplit = selectedCount === 1 && selectedFeatures[0]?.geometry?.type === "MultiPolygon";
+  const allSelected = filteredFeatures.length > 0 && filteredFeatures.every((f: any) => selectedIds.has(f._originalIndex));
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      if (allSelected) return new Set();
+      return new Set(filteredFeatures.map((f: any) => f._originalIndex));
+    });
+  };
+
+  const refetchLayerGeometry = async () => {
+    if (!activeTableLayerId) return;
+    const { data, error } = await supabase.rpc('get_layer_feature_collection', { p_layer_id: activeTableLayerId, p_group_key: 'none' });
+    if (!error && data) cacheLayerGeojson(activeTableLayerId, data);
+  };
+
+  const mergeSelectedFeatures = async () => {
+    if (!activeTableLayerId || !activeGeoJson) return;
+    const selected = filteredFeatures.filter((f: any) => selectedIds.has(f._originalIndex));
+    if (selected.length < 2) return;
+
+    const polys: any[] = [];
+    for (const f of selected) {
+      if (f.geometry?.type === "Polygon") polys.push(f.geometry.coordinates);
+      else if (f.geometry?.type === "MultiPolygon") polys.push(...f.geometry.coordinates);
+      else { toast.error("Hanya Polygon/MultiPolygon yang bisa digabung."); return; }
+    }
+
+    const mergedGeom = { type: "MultiPolygon", coordinates: polys };
+    const props = { ...(selected[0].properties || {}) };
+    delete props.db_id;
+    delete props.FID;
+
+    const remaining = activeGeoJson.features.filter((_: any, i: number) => !selectedIds.has(i));
+    const mergedFeature = { type: "Feature", properties: props, geometry: mergedGeom };
+    cacheLayerGeojson(activeTableLayerId, { ...activeGeoJson, features: [...remaining, mergedFeature] });
+    setSelectedIds(new Set());
+
+    try {
+      const removedIds = selected.map((f: any) => f.properties?.db_id).filter(Boolean);
+      if (removedIds.length) await deleteGeometriesFromSupabase(removedIds);
+      await insertGeometryToSupabase(activeTableLayerId, props, mergedGeom);
+      await refetchLayerGeometry();
+      toast.success(`${selected.length} fitur digabung jadi MultiPolygon`);
+    } catch (err: any) {
+      toast.error(`Gagal menggabung: ${err.message || err}`);
+    }
+  };
+
+  const splitFeature = async (f: any) => {
+    if (!activeTableLayerId || !activeGeoJson) return;
+    if (f.geometry?.type !== "MultiPolygon") return;
+
+    const parts = f.geometry.coordinates.map((poly: any, i: number) => ({
+      type: "Feature",
+      properties: { ...(f.properties || {}), _part: i + 1 },
+      geometry: { type: "Polygon", coordinates: poly }
+    }));
+
+    const remaining = activeGeoJson.features.filter((_: any, i: number) => i !== f._originalIndex);
+    cacheLayerGeojson(activeTableLayerId, { ...activeGeoJson, features: [...remaining, ...parts] });
+    setSelectedIds(new Set());
+
+    try {
+      if (f.properties?.db_id) await deleteGeometriesFromSupabase([f.properties.db_id]);
+      for (const p of parts) {
+        const props = { ...p.properties };
+        delete props.db_id;
+        delete props.FID;
+        await insertGeometryToSupabase(activeTableLayerId, props, p.geometry);
+      }
+      await refetchLayerGeometry();
+      toast.success(`MultiPolygon dipecah jadi ${parts.length} polygon`);
+    } catch (err: any) {
+      toast.error(`Gagal memecah: ${err.message || err}`);
+    }
+  };
+
   const headerBar = (
     <div className="attr-header flex items-center justify-between gap-2 px-3 py-2 border-b border-border/50 bg-black/20 shrink-0 cursor-grab active:cursor-grabbing select-none">
       <div className="flex items-center gap-3 min-w-0">
@@ -227,6 +324,39 @@ export function AttributeTablePanel() {
             ))}
           </select>
         </div>
+
+        {selectedCount > 0 && (
+          <>
+            <div className="w-px h-4 bg-border/50 shrink-0" />
+            <div className="flex items-center gap-1.5 shrink-0">
+              {canMerge && (
+                <button
+                  onClick={mergeSelectedFeatures}
+                  className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/40 transition-colors"
+                  title="Gabung fitur terpilih jadi MultiPolygon"
+                >
+                  <Merge className="w-3 h-3" /> Gabung ({selectedCount})
+                </button>
+              )}
+              {canSplit && (
+                <button
+                  onClick={() => splitFeature(selectedFeatures[0])}
+                  className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/40 transition-colors"
+                  title="Pecah MultiPolygon jadi polygon terpisah"
+                >
+                  <Unlink className="w-3 h-3" /> Pecah
+                </button>
+              )}
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="text-[10px] px-2 py-1 rounded text-muted-foreground hover:text-white hover:bg-white/10 transition-colors"
+                title="Batalkan pilihan"
+              >
+                Batal
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0">
@@ -308,6 +438,15 @@ export function AttributeTablePanel() {
         <table className="w-full text-left text-xs border-collapse">
           <thead className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
             <tr>
+              <th className="px-2 py-3 font-bold text-muted-foreground bg-black/20 w-8 text-center">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                  className="accent-orange-500 cursor-pointer"
+                  title="Pilih semua"
+                />
+              </th>
               <th className="px-4 py-3 font-bold text-muted-foreground whitespace-nowrap bg-black/20 w-12 text-center">No</th>
               <th className="px-4 py-3 font-bold text-muted-foreground whitespace-nowrap bg-black/20 w-12 text-center">Aksi</th>
               {headers.map(h => (
@@ -323,6 +462,14 @@ export function AttributeTablePanel() {
                 key={idx}
                 className="border-b border-border/30 hover:bg-white/5 transition-colors group"
               >
+                <td className="px-2 py-2 whitespace-nowrap text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(f._originalIndex)}
+                    onChange={() => toggleSelect(f._originalIndex)}
+                    className="accent-orange-500 cursor-pointer"
+                  />
+                </td>
                 <td className="px-4 py-2 whitespace-nowrap text-muted-foreground text-center">
                   {f._originalIndex + 1}
                 </td>

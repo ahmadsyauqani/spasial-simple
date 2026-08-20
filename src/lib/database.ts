@@ -176,10 +176,30 @@ export async function updateGeometryInSupabase(geometryId: string, geojson: any)
 
 export async function updateFeaturePropertiesInSupabase(featureId: string, properties: any) {
   const { error } = await supabase
-    .from("layer_geometries")
+    .from("geometries")
     .update({ properties })
     .eq("id", featureId);
   if (error) throw new Error("Gagal update atribut: " + error.message);
+  return true;
+}
+
+export async function deleteGeometriesFromSupabase(ids: string[]) {
+  if (ids.length === 0) return true;
+  const { error } = await supabase
+    .from("geometries")
+    .delete()
+    .in("id", ids);
+  if (error) throw new Error("Gagal menghapus fitur: " + error.message);
+  return true;
+}
+
+export async function insertGeometryToSupabase(layerId: string, properties: any, geojson: any) {
+  const { error } = await supabase.rpc("insert_subdivided_geometry", {
+    p_layer_id: layerId,
+    p_properties: properties,
+    p_geom_geojson: geojson
+  });
+  if (error) throw new Error("Gagal menyimpan fitur: " + error.message);
   return true;
 }
 
