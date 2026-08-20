@@ -333,3 +333,9 @@ input, select, textarea, button {
   fill: #00f6ff !important;
   transition: all 0.3s ease-out;
 }
+/* -- Mobile: lift Leaflet bottom-right controls above the bottom nav -- */
+@media (max-width: 767px) {
+  .leaflet-bottom.leaflet-right {
+    bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+  }
+}
