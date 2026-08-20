@@ -1375,7 +1375,7 @@ function CursorCoordinates() {
       )}
 
       {/* ── Coordinate Bar ── */}
-      <div className={`absolute bottom-[calc(72px+env(safe-area-inset-bottom))] sm:bottom-6 left-1/2 -translate-x-1/2 z-[400] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/80 border-primary/50 shadow-primary/20' : 'bg-slate-950/85 border-white/[0.06]'} backdrop-blur-2xl border rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
+      <div data-map-ui="coordinate-bar" className={`absolute bottom-[calc(72px+env(safe-area-inset-bottom))] sm:bottom-6 left-1/2 -translate-x-1/2 z-[400] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/80 border-primary/50 shadow-primary/20' : 'bg-slate-950/85 border-white/[0.06]'} backdrop-blur-2xl border rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
 
         {/* Tool Buttons — Inline */}
         <div className="flex items-center gap-1.5 shrink-0">

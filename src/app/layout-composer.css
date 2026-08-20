@@ -549,3 +549,44 @@
     bottom: 12px;
   }
 }
+
+.map-preview-snapshot {
+  position: relative;
+}
+
+.layout-main-map-clone {
+  overflow: hidden !important;
+  background: #1a1a1a !important;
+}
+
+.map-preview-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.layout-map-preview-refresh {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: white;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.layout-map-preview-refresh:hover {
+  background: rgba(249, 115, 22, 0.9);
+}
