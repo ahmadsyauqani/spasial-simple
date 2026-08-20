@@ -11,7 +11,7 @@ export type Profile = {
   is_approved: boolean;
 };
 
-const HARDCODED_EMAIL = "sakagis@sakagis.com";
+const HARDCODED_EMAIL = "123@sakagis.com";
 const HARDCODED_PASSWORD = "sakagis";
 
 type AuthContextType = {
