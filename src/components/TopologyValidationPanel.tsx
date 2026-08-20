@@ -50,6 +50,13 @@ export function TopologyValidationButton() {
     pointTemporal: false,
     pointOnLine: false,
     pointOnBoundary: false,
+    polygonSelfIntersection: true,
+    polygonClosed: true,
+    polygonValid: true,
+    polygonNotMultipart: false,
+    polygonDuplicateId: true,
+    polygonOverlap: true,
+    polygonGap: false,
   });
 
   // States for parameters
@@ -58,6 +65,7 @@ export function TopologyValidationButton() {
   const [requiredFieldName, setRequiredFieldName] = useState("");
   const [dateFieldName, setDateFieldName] = useState("");
   const [snapTolerance, setSnapTolerance] = useState(1); // meters
+  const [parcelIdField, setParcelIdField] = useState("NIB");
 
   const toggleRule = (ruleKey: keyof typeof rules) => {
     setRules(prev => ({ ...prev, [ruleKey]: !prev[ruleKey] }));
@@ -73,6 +81,10 @@ export function TopologyValidationButton() {
     fc?.features?.[0]?.geometry?.type === 'MultiPoint' ||
     selectedLayer?.name?.toLowerCase().includes('point') ||
     selectedLayer?.name?.toLowerCase().includes('titik');
+  const isPolygonLayer =
+    selectedLayer?.geometryType === 'Polygon' ||
+    fc?.features?.[0]?.geometry?.type === 'Polygon' ||
+    fc?.features?.[0]?.geometry?.type === 'MultiPolygon';
 
   const countDecimals = (num: number) => {
     if (Math.floor(num) === num) return 0;
@@ -91,11 +103,17 @@ export function TopologyValidationButton() {
       return;
     }
 
-    const needsRefLayer = rules.pointInsidePolygon || rules.pointCoveredByPolygon || 
-                          rules.pointWithinBoundary || rules.pointSnap || 
-                          rules.pointOnLine || rules.pointOnBoundary;
+    if (!isPointLayer && !isPolygonLayer) {
+      toast.error("Validasi bidang hanya bisa digunakan pada layer Polygon/MultiPolygon.");
+      return;
+    }
 
-    if (isPointLayer && needsRefLayer && !referenceLayerId) {
+    const needsRefLayer = rules.pointInsidePolygon || rules.pointCoveredByPolygon || 
+                           rules.pointWithinBoundary || rules.pointSnap || 
+                           rules.pointOnLine || rules.pointOnBoundary ||
+                           (!isPointLayer && rules.polygonGap);
+
+    if (needsRefLayer && !referenceLayerId) {
       toast.error("Pilih layer referensi untuk aturan spasial yang aktif!");
       return;
     }
@@ -374,20 +392,167 @@ export function TopologyValidationButton() {
           });
 
         } else {
-          // POLYGON VALIDATION (Existing)
+          // POLYGON / PARCEL VALIDATION
+          const polygonFeatures = features.filter((feature: any) => {
+            const type = feature.geometry?.type;
+            return type === 'Polygon' || type === 'MultiPolygon';
+          });
+          const idBuckets = new Map<string, number[]>();
+
+          const ringsOf = (geometry: any): any[][] => {
+            if (geometry?.type === 'Polygon') return geometry.coordinates || [];
+            if (geometry?.type === 'MultiPolygon') return (geometry.coordinates || []).flat();
+            return [];
+          };
+
+          const samePosition = (a: any, b: any) => Array.isArray(a) && Array.isArray(b) && a[0] === b[0] && a[1] === b[1];
+
           features.forEach((feature: any, idx: number) => {
-            if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
-              const kinks = (turf as any).kinks(feature);
-              if (kinks.features.length > 0) {
+            const geom = feature.geometry;
+            const props = feature.properties || {};
+            const type = geom?.type;
+
+            if (rules.polygonValid && (!geom || !['Polygon', 'MultiPolygon'].includes(type))) {
+              errors.push({
+                type: 'polygon-invalid-geometry',
+                featureIndex: idx,
+                geometry: geom,
+                message: `Fitur #${idx + 1} bukan Polygon/MultiPolygon atau geometrinya kosong.`
+              });
+              return;
+            }
+
+            if (type !== 'Polygon' && type !== 'MultiPolygon') return;
+
+            if (rules.polygonNotMultipart && type === 'MultiPolygon') {
+              errors.push({
+                type: 'polygon-multipart',
+                featureIndex: idx,
+                geometry: geom,
+                message: `Fitur #${idx + 1} bertipe MultiPolygon (multipart).`
+              });
+            }
+
+            const rings = ringsOf(geom);
+            if (rules.polygonClosed) {
+              const openRing = rings.find((ring: any[]) => ring.length < 4 || !samePosition(ring[0], ring[ring.length - 1]));
+              if (openRing) {
                 errors.push({
-                  type: 'self-intersection',
+                  type: 'polygon-not-closed',
                   featureIndex: idx,
-                  geometry: kinks.features[0].geometry,
-                  message: `Fitur #${idx + 1} menyilang sendiri.`
+                  geometry: geom,
+                  message: `Fitur #${idx + 1} memiliki ring yang belum tertutup.`
                 });
               }
             }
+
+            if (rules.polygonValid) {
+              let invalidCoordinate = false;
+              try {
+                turf.coordEach(feature, (coord: any) => {
+                  if (!Array.isArray(coord) || !Number.isFinite(coord[0]) || !Number.isFinite(coord[1])) invalidCoordinate = true;
+                });
+              } catch (_) {
+                invalidCoordinate = true;
+              }
+              if (invalidCoordinate) {
+                errors.push({
+                  type: 'polygon-invalid-coordinate',
+                  featureIndex: idx,
+                  geometry: geom,
+                  message: `Fitur #${idx + 1} memiliki koordinat yang tidak valid.`
+                });
+              }
+            }
+
+            if (rules.polygonSelfIntersection) {
+              try {
+                const kinks = (turf as any).kinks(feature);
+                if (kinks.features.length > 0) {
+                  errors.push({
+                    type: 'self-intersection',
+                    featureIndex: idx,
+                    geometry: kinks.features[0].geometry,
+                    message: `Fitur #${idx + 1} menyilang sendiri.`
+                  });
+                }
+              } catch (_) {
+                errors.push({
+                  type: 'polygon-invalid-topology',
+                  featureIndex: idx,
+                  geometry: geom,
+                  message: `Fitur #${idx + 1} gagal diperiksa topologinya.`
+                });
+              }
+            }
+
+            const parcelId = props[parcelIdField] ?? props[parcelIdField.toUpperCase()] ?? props.NIB ?? props.nib;
+            if (rules.polygonDuplicateId && parcelId !== undefined && parcelId !== null && String(parcelId).trim() !== '') {
+              const key = String(parcelId).trim().toLowerCase();
+              idBuckets.set(key, [...(idBuckets.get(key) || []), idx]);
+            }
           });
+
+          if (rules.polygonDuplicateId) {
+            idBuckets.forEach((indices, id) => {
+              if (indices.length > 1) {
+                const first = indices[0];
+                errors.push({
+                  type: 'polygon-duplicate-id',
+                  featureIndex: first,
+                  featureIndices: indices,
+                  geometry: features[first].geometry,
+                  message: `ID ${parcelIdField} '${id}' muncul ${indices.length} kali.`
+                });
+              }
+            });
+          }
+
+          if (rules.polygonOverlap) {
+            for (let i = 0; i < polygonFeatures.length; i++) {
+              for (let j = i + 1; j < polygonFeatures.length; j++) {
+                const a = polygonFeatures[i];
+                const b = polygonFeatures[j];
+                try {
+                  if (!turf.booleanIntersects(a, b)) continue;
+                  const intersection = turf.intersect(turf.featureCollection([a, b]));
+                  if (intersection && turf.area(intersection) > 0.01) {
+                    const indexA = features.indexOf(a);
+                    const indexB = features.indexOf(b);
+                    errors.push({
+                      type: 'polygon-overlap',
+                      featureIndex: indexA,
+                      featureIndices: [indexA, indexB],
+                      geometry: intersection.geometry,
+                      message: `Bidang #${indexA + 1} tumpang tindih dengan bidang #${indexB + 1}.`
+                    });
+                  }
+                } catch (_) {}
+              }
+            }
+          }
+
+          if (rules.polygonGap && refFc?.features?.length) {
+            refFc.features.forEach((reference: any, referenceIndex: number) => {
+              let remainder = reference;
+              for (const parcel of polygonFeatures) {
+                if (!remainder) break;
+                try {
+                  if (turf.booleanIntersects(remainder, parcel)) {
+                    remainder = turf.difference(turf.featureCollection([remainder, parcel]));
+                  }
+                } catch (_) {}
+              }
+              if (remainder && turf.area(remainder) > 0.01) {
+                errors.push({
+                  type: 'polygon-gap',
+                  featureIndex: 0,
+                  geometry: remainder.geometry,
+                  message: `Ditemukan gap/celah pada batas referensi #${referenceIndex + 1}.`
+                });
+              }
+            });
+          }
         }
 
         if (errors.length === 0) {
@@ -453,10 +618,10 @@ export function TopologyValidationButton() {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-amber-400" />
-            Validasi Topologi (Point)
+            Validasi Topologi & Bidang Tanah
           </DialogTitle>
           <DialogDescription>
-            Pilih layer dan aturan validasi yang ingin diterapkan.
+            Periksa geometry, batas bidang, overlap, gap, dan duplikasi ID dalam satu proses.
           </DialogDescription>
         </DialogHeader>
 
@@ -480,7 +645,7 @@ export function TopologyValidationButton() {
               </select>
             </div>
 
-            {isPointLayer && (rules.pointInsidePolygon || rules.pointCoveredByPolygon || rules.pointWithinBoundary || rules.pointSnap || rules.pointOnLine || rules.pointOnBoundary) && (
+            {((isPointLayer && (rules.pointInsidePolygon || rules.pointCoveredByPolygon || rules.pointWithinBoundary || rules.pointSnap || rules.pointOnLine || rules.pointOnBoundary)) || (!isPointLayer && rules.polygonGap)) && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Layer Referensi</label>
                 <select
@@ -561,9 +726,28 @@ export function TopologyValidationButton() {
                 </div>
               </div>
             </div>
+          ) : isPolygonLayer ? (
+            <div className="flex flex-col gap-2 flex-1 overflow-hidden">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Validasi Bidang Tanah</label>
+              <div className="flex flex-col gap-1.5 border-b border-border/50 pb-3">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">Field ID Bidang/NIB</label>
+                <input value={parcelIdField} onChange={(e) => setParcelIdField(e.target.value)} className="w-full text-sm p-2 rounded-md bg-background border border-border text-foreground" placeholder="Contoh: NIB" />
+              </div>
+              <div className="flex-1 overflow-y-auto border rounded-lg p-2 bg-background/50 max-h-[350px]">
+                <div className="space-y-1">
+                  <RuleCheckbox label="Self-intersection" ruleKey="polygonSelfIntersection" description="Batas bidang tidak boleh menyilang dirinya sendiri." />
+                  <RuleCheckbox label="Polygon harus tertutup" ruleKey="polygonClosed" description="Ring harus memiliki minimal 4 titik dan titik awal=akhir." />
+                  <RuleCheckbox label="Geometry valid" ruleKey="polygonValid" description="Koordinat dan tipe geometri harus valid." />
+                  <RuleCheckbox label="Multipart check" ruleKey="polygonNotMultipart" description="Tandai fitur MultiPolygon/multipart." />
+                  <RuleCheckbox label="Duplikasi NIB/ID" ruleKey="polygonDuplicateId" description="ID bidang tidak boleh muncul lebih dari satu kali." />
+                  <RuleCheckbox label="Overlap antar bidang" ruleKey="polygonOverlap" description="Deteksi area bidang yang saling tumpang tindih." />
+                  <RuleCheckbox label="Gap/celah terhadap referensi" ruleKey="polygonGap" description="Cari area kosong di dalam layer batas referensi." />
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-              Pilih layer Point untuk melihat daftar aturan.
+              Pilih layer Polygon/MultiPolygon untuk validasi bidang.
             </div>
           )}
 
