@@ -19,9 +19,11 @@ const FlightPathPlanner = dynamic(
 import { RefreshCcw, Database, UploadCloud, Pin, Cpu } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import AuthGuard from "@/components/AuthGuard";
 import { useMapContext } from "@/lib/MapContext";
 import { AttributeTablePanel } from "@/components/AttributeTablePanel";
 import { Table2 } from "lucide-react";
+import { UserProfileWidget } from "@/components/UserProfileWidget";
 
 export default function Home() {
   const [isConverterOpen, setIsConverterOpen] = useState(false);
@@ -35,8 +37,9 @@ export default function Home() {
   const isPanelVisible = isSidebarPinned || isHovered;
 
   return (
+    <AuthGuard>
     <main className="relative w-full h-screen overflow-hidden">
-
+        <UserProfileWidget />
         <MapWrapper />
       <SearchControl />
       <ClockWidget />
@@ -240,5 +243,6 @@ export default function Home() {
       />
       <AttributeTablePanel />
     </main>
+    </AuthGuard>
   );
 }
