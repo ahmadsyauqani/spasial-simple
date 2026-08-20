@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap, ImageOverlay, Polyline, Popup, Polygon, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
@@ -1018,6 +1018,10 @@ function CursorCoordinates() {
   const measureTypeRef = useRef<'distance' | 'area'>(measureType);
   const measurePointsRef = useRef<[number, number][]>([]);
   const finishMeasureRef = useRef<(points?: [number, number][]) => void>(() => {});
+  const moveFrameRef = useRef<number | null>(null);
+  const pendingMouseRef = useRef<L.LatLng | null>(null);
+  const snapPointRef = useRef<{ lat: number, lng: number } | null>(null);
+  const lastSnapAtRef = useRef(0);
 
   useEffect(() => { isMeasuringRef.current = isMeasuring; }, [isMeasuring]);
   useEffect(() => { measureTypeRef.current = measureType; }, [measureType]);
@@ -1117,55 +1121,67 @@ function CursorCoordinates() {
   }, [isSnapEnabled]);
 
   useEffect(() => {
+    snapPointRef.current = snapPoint;
+  }, [snapPoint]);
+
+  useEffect(() => {
     const handleZoom = () => {
       setZoom(map.getZoom());
       setScale(calculateScale(map.getZoom(), map.getCenter().lat));
     };
 
     const handleMouseMove = (e: L.LeafletMouseEvent) => {
-      // Update scale on move just in case center changed
-      setScale(calculateScale(map.getZoom(), map.getCenter().lat));
       if (isLockedRef.current) return;
+      pendingMouseRef.current = e.latlng;
 
-      let targetLatLng = e.latlng;
-      let currentSnap: {lat: number, lng: number} | null = null;
+      // Update the live cursor/measure preview once per browser frame instead
+      // of once per native mouse event.
+      if (moveFrameRef.current !== null) return;
+      moveFrameRef.current = window.requestAnimationFrame(() => {
+        moveFrameRef.current = null;
+        const rawLatLng = pendingMouseRef.current;
+        if (!rawLatLng || isLockedRef.current) return;
 
-      if (isSnapEnabledRef.current) {
-        let minDistance = Infinity;
-        const snapThreshold = 25; // pixels (increased for easier snapping)
-        const cursorPoint = map.latLngToContainerPoint(e.latlng);
+        let targetLatLng = rawLatLng;
+        let currentSnap: { lat: number, lng: number } | null = null;
 
-        layers.forEach((layer) => {
-          const fc = layerGeojsonCache[layer.id || ""];
-          if (!fc) return;
+        if (isSnapEnabledRef.current) {
+          const now = performance.now();
+          if (now - lastSnapAtRef.current >= 50) {
+            lastSnapAtRef.current = now;
+            let minDistance = Infinity;
+            const snapThreshold = 25;
+            const cursorPoint = map.latLngToContainerPoint(rawLatLng);
 
-          // Optimization: Check bounds first if available
-          try {
-             // For large FCs, we could use a spatial index, but turf.coordEach is okay for medium data
-             turf.coordEach(fc, (coord) => {
-               const latLng = L.latLng(coord[1], coord[0]);
-               
-               // Quick bounding box check in pixels to avoid expensive distanceTo for far points
-               const p = map.latLngToContainerPoint(latLng);
-               if (Math.abs(p.x - cursorPoint.x) < snapThreshold && Math.abs(p.y - cursorPoint.y) < snapThreshold) {
-                 const dist = p.distanceTo(cursorPoint);
-                 if (dist < minDistance && dist < snapThreshold) {
-                   minDistance = dist;
-                   currentSnap = { lat: latLng.lat, lng: latLng.lng };
-                 }
-               }
-             });
-          } catch(err) {}
-        });
+            layers.forEach((layer) => {
+              const fc = layerGeojsonCache[layer.id || ""];
+              if (!fc) return;
+              try {
+                turf.coordEach(fc, (coord) => {
+                  const latLng = L.latLng(coord[1], coord[0]);
+                  const p = map.latLngToContainerPoint(latLng);
+                  if (Math.abs(p.x - cursorPoint.x) < snapThreshold && Math.abs(p.y - cursorPoint.y) < snapThreshold) {
+                    const dist = p.distanceTo(cursorPoint);
+                    if (dist < minDistance && dist < snapThreshold) {
+                      minDistance = dist;
+                      currentSnap = { lat: latLng.lat, lng: latLng.lng };
+                    }
+                  }
+                });
+              } catch (err) {}
+            });
+          } else {
+            currentSnap = snapPointRef.current;
+          }
 
-        if (currentSnap) {
-          const s = currentSnap as { lat: number, lng: number };
-          targetLatLng = L.latLng(s.lat, s.lng);
+          if (currentSnap) {
+            targetLatLng = L.latLng(currentSnap.lat, currentSnap.lng);
+          }
         }
-      }
 
-      setSnapPoint(currentSnap);
-      setCoords(targetLatLng);
+        setSnapPoint(currentSnap);
+        setCoords(targetLatLng);
+      });
     };
     
     const handleMapClick = (e: L.LeafletMouseEvent) => {
@@ -1195,6 +1211,7 @@ function CursorCoordinates() {
     map.on('click', handleMapClick);
     map.on('dblclick', handleMapDblClick);
     map.on('zoomend', handleZoom);
+    map.on('moveend', handleZoom);
     handleZoom(); // Initial calculation
 
     return () => {
@@ -1202,6 +1219,11 @@ function CursorCoordinates() {
       map.off('click', handleMapClick);
       map.off('dblclick', handleMapDblClick);
       map.off('zoomend', handleZoom);
+      map.off('moveend', handleZoom);
+      if (moveFrameRef.current !== null) {
+        window.cancelAnimationFrame(moveFrameRef.current);
+        moveFrameRef.current = null;
+      }
     };
   }, [map, layers, layerGeojsonCache]);
 
@@ -1285,6 +1307,10 @@ function CursorCoordinates() {
       } catch(e) {}
     }
   }
+  const liveMeasureIcon = useMemo(
+    () => measureLiveLabel ? measureLabelIcon(measureLiveLabel) : null,
+    [measureLiveLabel]
+  );
 
   return (
     <>
@@ -1318,8 +1344,8 @@ function CursorCoordinates() {
               pathOptions={{ color: '#f97316', weight: 3, opacity: 0.9, dashArray: '6,6' }}
             />
           )}
-          {measureLiveLabel && measurePreviewPos && (
-            <Marker position={measurePreviewPos} icon={measureLabelIcon(measureLiveLabel)} interactive={false} />
+          {liveMeasureIcon && measurePreviewPos && (
+            <Marker position={measurePreviewPos} icon={liveMeasureIcon} interactive={false} />
           )}
         </>
       )}
