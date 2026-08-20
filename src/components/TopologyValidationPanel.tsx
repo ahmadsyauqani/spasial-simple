@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useMapContext } from "@/lib/MapContext";
 import * as turf from "@turf/turf";
 import { toast } from "sonner";
-import { Loader2, Trash2, ShieldCheck, AlertTriangle, CheckSquare, Square } from "lucide-react";
+import { Loader2, Trash2, ShieldCheck, AlertTriangle, CheckSquare, Square, MapPin, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { updateGeometryInSupabase } from "@/lib/database";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,8 @@ export function TopologyValidationButton() {
     layerGeojsonCache,
     topologyErrors,
     setTopologyErrors,
+    setZoomFeature,
+    cacheLayerGeojson,
   } = useMapContext();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -66,6 +69,7 @@ export function TopologyValidationButton() {
   const [dateFieldName, setDateFieldName] = useState("");
   const [snapTolerance, setSnapTolerance] = useState(1); // meters
   const [parcelIdField, setParcelIdField] = useState("NIB");
+  const [isFixing, setIsFixing] = useState(false);
 
   const toggleRule = (ruleKey: keyof typeof rules) => {
     setRules(prev => ({ ...prev, [ruleKey]: !prev[ruleKey] }));
@@ -90,6 +94,94 @@ export function TopologyValidationButton() {
     if (Math.floor(num) === num) return 0;
     const parts = num.toString().split(".");
     return parts[1] ? parts[1].length : 0;
+  };
+
+  const formatDistance = (meters: number) => meters >= 1000
+    ? `${(meters / 1000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} km`
+    : `${meters.toLocaleString('id-ID', { maximumFractionDigits: 1 })} m`;
+
+  const getFeatureMetrics = (feature: any) => {
+    const type = feature?.geometry?.type;
+    let area = 0;
+    let length = 0;
+    try {
+      if (type === 'Polygon' || type === 'MultiPolygon') {
+        area = turf.area(feature);
+        length = turf.length(turf.polygonToLine(feature), { units: 'meters' });
+      } else if (type === 'LineString' || type === 'MultiLineString') {
+        length = turf.length(feature, { units: 'meters' });
+      }
+    } catch (_) {}
+    return { area, length };
+  };
+
+  const closeGeometryRings = (geometry: any) => {
+    const closeRing = (ring: any[]) => {
+      if (!Array.isArray(ring) || ring.length < 3) return ring;
+      const first = ring[0];
+      const last = ring[ring.length - 1];
+      return first[0] === last[0] && first[1] === last[1] ? ring : [...ring, [...first]];
+    };
+    if (geometry?.type === 'Polygon') {
+      return { ...geometry, coordinates: geometry.coordinates.map(closeRing) };
+    }
+    if (geometry?.type === 'MultiPolygon') {
+      return { ...geometry, coordinates: geometry.coordinates.map((polygon: any[]) => polygon.map(closeRing)) };
+    }
+    return geometry;
+  };
+
+  const canAutoRepair = (error: any) => ['polygon-not-closed', 'self-intersection'].includes(error.properties?.type);
+
+  const zoomToValidationError = (error: any) => {
+    if (!error?.geometry) return;
+    setZoomFeature({ type: 'Feature', properties: error.properties || {}, geometry: error.geometry });
+  };
+
+  const repairValidationError = async (error: any, errorIndex: number) => {
+    if (!targetLayerId || !fc || !canAutoRepair(error)) return;
+    const featureIndex = error.properties?.featureIndex;
+    const original = Number.isInteger(featureIndex) ? fc.features[featureIndex] : null;
+    if (!original?.geometry) {
+      toast.error("Geometri sumber tidak ditemukan.");
+      return;
+    }
+
+    setIsFixing(true);
+    try {
+      let repairedGeometry = closeGeometryRings(original.geometry);
+      if (error.properties?.type === 'self-intersection') {
+        const unkinked = (turf as any).unkinkPolygon({ ...original, geometry: repairedGeometry });
+        if (unkinked?.features?.length === 1) {
+          repairedGeometry = unkinked.features[0].geometry;
+        } else if (unkinked?.features?.length > 1) {
+          repairedGeometry = {
+            type: 'MultiPolygon',
+            coordinates: unkinked.features.map((part: any) => part.geometry.coordinates).flat(),
+          };
+        }
+      }
+
+      const updatedFeature = { ...original, geometry: repairedGeometry };
+      const updatedFeatures = [...fc.features];
+      updatedFeatures[featureIndex] = updatedFeature;
+      cacheLayerGeojson(targetLayerId, { ...fc, features: updatedFeatures });
+
+      if (original.properties?.db_id) {
+        await updateGeometryInSupabase(original.properties.db_id, repairedGeometry);
+      }
+
+      setTopologyErrors((previous: any) => {
+        if (!previous?.features) return null;
+        const remaining = previous.features.filter((_: any, index: number) => index !== errorIndex);
+        return remaining.length > 0 ? { ...previous, features: remaining } : null;
+      });
+      toast.success("Geometri berhasil diperbaiki.");
+    } catch (err: any) {
+      toast.error(`Gagal memperbaiki geometri: ${err.message || err}`);
+    } finally {
+      setIsFixing(false);
+    }
   };
 
   const runValidation = async () => {
@@ -759,7 +851,7 @@ export function TopologyValidationButton() {
           )}
 
           {topologyErrors && (
-            <div className="bg-amber-950/30 border border-amber-500/20 rounded-lg p-3">
+            <div className="bg-amber-950/30 border border-amber-500/20 rounded-lg p-3 flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
                   ⚠️ Hasil Validasi
@@ -768,7 +860,42 @@ export function TopologyValidationButton() {
                   <Trash2 className="w-3 h-3" />
                 </button>
               </div>
-              <div className="text-xs text-amber-200 mt-1">{topologyErrors.features.length} kesalahan ditemukan. Klik di peta untuk detail.</div>
+              <div className="text-xs text-amber-200">{topologyErrors.features.length} kesalahan ditemukan. Pilih item untuk zoom dan tindakan.</div>
+              <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                {topologyErrors.features.map((error: any, errorIndex: number) => {
+                  const props = error.properties || {};
+                  const featureIndex = Number.isInteger(props.featureIndex) ? props.featureIndex : -1;
+                  const original = featureIndex >= 0 ? fc?.features?.[featureIndex] : null;
+                  const metrics = getFeatureMetrics(original || error);
+                  const idValue = original?.properties?.[parcelIdField] ?? original?.properties?.NIB ?? original?.properties?.nib;
+                  return (
+                    <div key={`${props.type}-${errorIndex}`} className="rounded-lg border border-amber-500/20 bg-black/20 p-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-black uppercase tracking-wider text-rose-300">{props.type || "error"}</div>
+                          <div className="mt-1 text-xs leading-relaxed text-white/85">{props.message || "Kesalahan geometri"}</div>
+                        </div>
+                        <span className="shrink-0 rounded bg-rose-500/15 px-1.5 py-0.5 text-[9px] font-bold text-rose-300">#{featureIndex >= 0 ? featureIndex + 1 : "-"}</span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/55">
+                        {idValue !== undefined && <span>ID: <b className="text-white/80">{String(idValue)}</b></span>}
+                        {metrics.area > 0 && <span>Luas: <b className="text-white/80">{(metrics.area / 10000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} Ha</b></span>}
+                        {metrics.length > 0 && <span>Panjang/Keliling: <b className="text-white/80">{formatDistance(metrics.length)}</b></span>}
+                      </div>
+                      <div className="mt-2 flex gap-1.5">
+                        <button type="button" onClick={() => zoomToValidationError(error)} className="flex items-center gap-1 rounded-md border border-indigo-400/20 bg-indigo-500/10 px-2 py-1 text-[10px] font-bold text-indigo-300 hover:bg-indigo-500/20">
+                          <MapPin className="h-3 w-3" /> Zoom
+                        </button>
+                        {canAutoRepair(error) && (
+                          <button type="button" disabled={isFixing} onClick={() => repairValidationError(error, errorIndex)} className="flex items-center gap-1 rounded-md border border-emerald-400/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50">
+                            <Wrench className="h-3 w-3" /> Perbaiki
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
