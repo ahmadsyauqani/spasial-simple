@@ -8,7 +8,7 @@ import {
   Compass, Ruler, Type, Info, Square, Minus, ZoomIn, ZoomOut,
   RotateCcw, Trash2, Lock, Unlock, Move, ChevronDown, Printer
 } from "lucide-react";
-import { useMapContext, BASEMAP_OPTIONS } from "@/lib/MapContext";
+import { useMapContext } from "@/lib/MapContext";
 import {
   useLayoutComposer, PAPER_SIZES, type LayoutElement, type LayoutElementType, type PaperSize
 } from "@/lib/useLayoutComposer";
@@ -449,7 +449,7 @@ function ElementContent({ element, composer, layers, layerGeojsonCache, width, h
 }) {
   switch (element.type) {
     case "mapFace":
-      return <MapFaceElement element={element} composer={composer} layers={layers} layerGeojsonCache={layerGeojsonCache} width={width} height={height} />;
+      return <MapFaceElement element={element} composer={composer} width={width} height={height} />;
     case "legend":
       return <LegendElement element={element} layers={layers} />;
     case "scaleBar":
@@ -469,71 +469,127 @@ function ElementContent({ element, composer, layers, layerGeojsonCache, width, h
 }
 
 // MAP FACE — synced with the main working map
-function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, height }: {
+function MapFaceElement({ element, composer, width, height }: {
   element: LayoutElement;
   composer: ReturnType<typeof useLayoutComposer>;
-  layers: any[];
-  layerGeojsonCache: Record<string, any>;
   width: number;
   height: number;
 }) {
-  const { mapViewState, activeBasemap } = useMapContext();
+  const { mapInstance } = useMapContext();
   const cfg = element.config;
-  const currentBasemap = BASEMAP_OPTIONS[activeBasemap];
 
   // Only render map if has minimum size
   if (width < 30 || height < 30) {
     return <div style={{ width: "100%", height: "100%", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", color: "#94a3b8", border: "1px solid #cbd5e1" }}>Peta (terlalu kecil)</div>;
   }
 
-  // Collect all available geojson for fitting bounds
-  const allGeojsons = layers
-    .map((l) => layerGeojsonCache[l.id!])
-    .filter(Boolean);
+  return (
+    <MapPreviewSnapshot
+      mapInstance={mapInstance}
+      composer={composer}
+      width={width}
+      height={height}
+      showBasemap={cfg.showBasemap !== false}
+    />
+  );
+}
 
-  // Use the main map's current center/zoom as initial position
-  const initialCenter: [number, number] = mapViewState.center;
-  const initialZoom = mapViewState.zoom;
+function MapPreviewSnapshot({
+  mapInstance,
+  composer,
+  width,
+  height,
+  showBasemap,
+}: {
+  mapInstance: L.Map | null;
+  composer: ReturnType<typeof useLayoutComposer>;
+  width: number;
+  height: number;
+  showBasemap: boolean;
+}) {
+  const previewRef = useRef<HTMLDivElement>(null);
+  const setMppRef = useRef(composer.setMapMetersPerPixel);
+  const [refreshKey, setRefreshKey] = useState(0);
+  setMppRef.current = composer.setMapMetersPerPixel;
+
+  const syncPreview = useCallback(() => {
+    const source = mapInstance?.getContainer();
+    const target = previewRef.current;
+    if (!source || !target || source.clientWidth === 0 || source.clientHeight === 0) return;
+
+    const sourceWidth = source.clientWidth;
+    const sourceHeight = source.clientHeight;
+    const targetWidth = target.clientWidth || width;
+    const targetHeight = target.clientHeight || height;
+
+    try {
+      const centerY = sourceHeight / 2;
+      const p1 = mapInstance!.containerPointToLatLng([0, centerY]);
+      const p2 = mapInstance!.containerPointToLatLng([100, centerY]);
+      setMppRef.current(mapInstance!.distance(p1, p2) / 100);
+    } catch (e) {}
+
+    const clone = source.cloneNode(true) as HTMLDivElement;
+    clone.removeAttribute("id");
+    clone.className = "leaflet-container layout-main-map-clone";
+    clone.style.position = "absolute";
+    clone.style.left = "0";
+    clone.style.top = "0";
+    clone.style.width = `${sourceWidth}px`;
+    clone.style.height = `${sourceHeight}px`;
+    clone.style.transformOrigin = "top left";
+    clone.style.transform = `scale(${targetWidth / sourceWidth}, ${targetHeight / sourceHeight})`;
+    clone.style.pointerEvents = "none";
+
+    const sourceImages = Array.from(source.querySelectorAll("img"));
+    const cloneImages = Array.from(clone.querySelectorAll("img"));
+    sourceImages.forEach((image, index) => {
+      if ((!image.complete || image.naturalWidth === 0) && cloneImages[index]) {
+        cloneImages[index].remove();
+      }
+    });
+
+    clone.querySelectorAll(".leaflet-control-container, [data-map-ui='coordinate-bar']").forEach((node) => node.remove());
+    if (!showBasemap) {
+      clone.querySelectorAll(".leaflet-tile-pane").forEach((node) => node.remove());
+    }
+
+    target.replaceChildren(clone);
+  }, [mapInstance, width, height, showBasemap, refreshKey]);
+
+  useEffect(() => {
+    if (!mapInstance) return;
+    const schedule = () => window.setTimeout(syncPreview, 100);
+    const events = ["moveend", "zoomend", "resize", "layeradd", "layerremove", "overlayadd", "overlayremove"];
+    events.forEach((event) => mapInstance.on(event, schedule));
+
+    syncPreview();
+    const first = window.setTimeout(syncPreview, 250);
+    const second = window.setTimeout(syncPreview, 800);
+
+    return () => {
+      events.forEach((event) => mapInstance.off(event, schedule));
+      window.clearTimeout(first);
+      window.clearTimeout(second);
+    };
+  }, [mapInstance, syncPreview]);
 
   return (
-    <div className="map-face-container" style={{ width: "100%", height: "100%", overflow: "hidden", border: "1px solid #cbd5e1", pointerEvents: "auto" }}>
-      <MapContainer
-        center={initialCenter}
-        zoom={initialZoom}
-        zoomControl={false}
-        attributionControl={false}
-        zoomSnap={0}
-        wheelPxPerZoomLevel={60}
-        style={{ width: "100%", height: "100%", background: "#1a1a1a" }}
-        dragging={true}
-        scrollWheelZoom={true}
-        key={`mapface-${element.id}`}
+    <div
+      ref={previewRef}
+      className="map-face-container map-preview-snapshot"
+      style={{ width: "100%", height: "100%", overflow: "hidden", border: "1px solid #cbd5e1", background: "#1a1a1a", pointerEvents: "auto" }}
+    >
+      {!mapInstance && <div className="map-preview-empty">Peta utama belum siap</div>}
+      <button
+        type="button"
+        className="layout-map-preview-refresh element-controls"
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => { event.stopPropagation(); setRefreshKey((value) => value + 1); }}
+        title="Refresh preview dari peta utama"
       >
-        {cfg.showBasemap !== false && (
-          <TileLayer
-            key={activeBasemap}
-            url={currentBasemap.url}
-            attribution=""
-            maxZoom={20}
-          />
-        )}
-        {layers.map((layer) => {
-          const geojson = layerGeojsonCache[layer.id!];
-          if (!geojson) return null;
-          const style = layer.style || { color: "#3b82f6", fillColor: "#3b82f6", fillOpacity: 0.3, weight: 2 };
-          return (
-            <GeoJSON
-              key={`layout-${layer.id}-${JSON.stringify(style)}`}
-              data={geojson}
-              style={() => ({ color: style.color, fillColor: style.fillColor, fillOpacity: style.fillOpacity, weight: style.weight })}
-            />
-          );
-        })}
-        {/* Auto-fit to layer bounds on mount */}
-        <FitBoundsController geojsons={allGeojsons} />
-        <MapFaceController element={element} composer={composer} />
-        <MapGridOverlay element={element} />
-      </MapContainer>
+        <RotateCcw className="w-3 h-3" />
+      </button>
     </div>
   );
 }
