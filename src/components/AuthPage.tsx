@@ -20,7 +20,7 @@ export default function AuthPage() {
   });
   const [loading, setLoading] = useState(false);
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
-  const { login, refreshProfile } = useAuth();
+  const { refreshProfile } = useAuth();
   
   // Form states
   const [email, setEmail] = useState("");
@@ -35,8 +35,11 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        const { error } = await login(email, password);
-        if (error) throw new Error(error);
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
         toast.success("Berhasil masuk!");
         await refreshProfile();
       } else {

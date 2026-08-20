@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 export type Profile = {
   id: string;
@@ -10,9 +11,6 @@ export type Profile = {
   organization: string | null;
   is_approved: boolean;
 };
-
-const HARDCODED_EMAIL = "123@sakagis.com";
-const HARDCODED_PASSWORD = "sakagis";
 
 type AuthContextType = {
   user: User | null;
@@ -24,8 +22,6 @@ type AuthContextType = {
   loginAsGuest: () => void;
   logoutGuest: () => void;
   guestEndTime: number | null;
-  login: (email: string, password: string) => Promise<{ error: string | null }>;
-  logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,35 +29,79 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [guestEndTime, setGuestEndTime] = useState<number | null>(null);
 
-  const login = async (email: string, password: string) => {
-    if (email.trim().toLowerCase() === HARDCODED_EMAIL && password === HARDCODED_PASSWORD) {
-      setUser({
-        id: "sakagis-local",
-        email: HARDCODED_EMAIL,
-      } as User);
-      setProfile({
-        id: "sakagis-local",
-        full_name: "SAKAGIS Admin",
-        phone: null,
-        organization: "SAKAGIS",
-        is_approved: true,
-      });
-      return { error: null };
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching profile:", error);
+      } else {
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error("Profile fetch error:", err);
     }
-    return { error: "Email atau password salah" };
   };
 
-  const logout = () => {
-    setUser(null);
-    setProfile(null);
-    setIsGuest(false);
-    setGuestEndTime(null);
-  };
+  useEffect(() => {
+    let mounted = true;
 
-  const refreshProfile = async () => {};
+    async function initAuth() {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user || null);
+
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          }
+        }
+      } catch (e) {
+        console.error("Auth init error:", e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user || null);
+
+        if (newSession?.user) {
+          await fetchProfile(newSession.user.id);
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
 
   const logoutGuest = () => {
     setIsGuest(false);
@@ -93,19 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      session: null,
-      loading: false,
-      refreshProfile,
-      isGuest,
-      loginAsGuest,
-      logoutGuest,
-      guestEndTime,
-      login,
-      logout
-    }}>
+    <AuthContext.Provider value={{ user, profile, session, loading, refreshProfile, isGuest, loginAsGuest, logoutGuest, guestEndTime }}>
       {children}
     </AuthContext.Provider>
   );

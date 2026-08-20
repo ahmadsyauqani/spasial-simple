@@ -2,9 +2,10 @@
 
 import { useAuth } from "@/lib/AuthContext";
 import { LogOut, User } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export function UserProfileWidget() {
-  const { profile, logout } = useAuth();
+  const { profile } = useAuth();
 
   if (!profile) return null;
 
@@ -19,7 +20,10 @@ export function UserProfileWidget() {
       </div>
       <div className="w-px h-6 bg-border/50 mx-0.5"></div>
       <button
-        onClick={() => logout()}
+        onClick={async () => {
+          await supabase.auth.signOut();
+          window.location.reload();
+        }}
         title="Keluar (Logout)"
         className="w-9 h-9 flex items-center justify-center text-red-400/70 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
       >
