@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
-import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff, Search } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff, Search, GripVertical } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
@@ -1062,10 +1062,13 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
       )} />
 
       {/* Main row */}
-      <div className="flex items-center gap-3 px-4 py-3.5 relative">
+      <div className="layer-card-main flex items-center gap-3 px-3 py-3 relative">
+        <div className="layer-drag-handle" title="Geser untuk mengubah urutan layer">
+          <GripVertical className="h-4 w-4" />
+        </div>
         {/* Geometry icon with colored bg (Click to change color) */}
         <label 
-          className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center shadow-sm relative overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all group/icon" 
+          className="layer-card-thumbnail shrink-0 rounded-xl flex items-center justify-center shadow-sm relative overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all group/icon" 
           style={{ backgroundColor: (style.fillColor || '#3b82f6') + '28' }}
           title="Ubah Warna Layer"
           onClick={(e) => e.stopPropagation()} // Prevent triggering zoom/drag
@@ -1076,7 +1079,8 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
             onChange={handleColorChange}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
           />
-          {renderGeometryIcon()}
+          <span className="layer-thumb-grid" />
+          <span className="relative z-10">{renderGeometryIcon()}</span>
         </label>
 
         <div className="flex-1 min-w-0 pr-1">

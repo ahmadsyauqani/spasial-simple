@@ -505,6 +505,40 @@ input, select, textarea, button {
   display: block;
 }
 
+.layer-card-main {
+  min-height: 72px;
+}
+
+.layer-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  color: rgba(255,255,255,0.22);
+  cursor: grab;
+  transition: color 0.18s ease;
+}
+
+.layer-drag-handle:hover {
+  color: #67e8f9;
+}
+
+.layer-card-thumbnail {
+  position: relative;
+  width: 58px;
+  height: 42px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+}
+
+.layer-thumb-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.32;
+  background-image: linear-gradient(rgba(255,255,255,0.13) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.13) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+
 .layer-manager-heading strong {
   color: rgba(255,255,255,0.92);
   font-size: 11px;
