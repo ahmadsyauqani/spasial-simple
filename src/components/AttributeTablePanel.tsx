@@ -2,7 +2,7 @@
 
 import { useMapContext } from "@/lib/MapContext";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { X, Search, Table2, Layers, SearchX, Check, Minus, Maximize2, Minimize2, GripVertical } from "lucide-react";
+import { X, Search, Table2, Layers, SearchX, Check, Minus, Maximize2, Minimize2, GripVertical, Pencil, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Draggable from "react-draggable";
@@ -28,6 +28,7 @@ export function AttributeTablePanel() {
   const [resizeDir, setResizeDir] = useState<null | "e" | "s" | "se">(null);
   const [editingCell, setEditingCell] = useState<{ originalIndex: number, key: string } | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [editingFeature, setEditingFeature] = useState<{ originalIndex: number, values: Record<string, string> } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const nodeRef = useRef<HTMLDivElement>(null);
   const resizeStartRef = useRef<{ x: number, y: number, w: number, h: number } | null>(null);
@@ -167,6 +168,39 @@ export function AttributeTablePanel() {
     }
   };
 
+  const openEditDialog = (f: any) => {
+    const values: Record<string, string> = {};
+    headers.forEach(h => {
+      if (h === "db_id" || h === "FID") return;
+      const v = f.properties?.[h];
+      values[h] = v !== undefined && v !== null ? String(v) : "";
+    });
+    setEditingFeature({ originalIndex: f._originalIndex, values });
+  };
+
+  const saveEditDialog = async () => {
+    if (!editingFeature || !activeTableLayerId || !activeGeoJson) return;
+    const f = activeGeoJson.features[editingFeature.originalIndex];
+    try {
+      const newProps = { ...(f.properties || {}), ...editingFeature.values };
+
+      if (f.properties?.db_id) {
+        const { updateFeaturePropertiesInSupabase } = await import('@/lib/database');
+        await updateFeaturePropertiesInSupabase(f.properties.db_id, newProps);
+      }
+
+      const updatedFC = { ...activeGeoJson };
+      updatedFC.features[editingFeature.originalIndex].properties = newProps;
+      cacheLayerGeojson(activeTableLayerId, updatedFC);
+
+      toast.success("Atribut diperbarui");
+      setEditingFeature(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Gagal menyimpan: ${err.message}`);
+    }
+  };
+
   if (!isAttributeTableOpen) return null;
 
   const headerBar = (
@@ -293,15 +327,24 @@ export function AttributeTablePanel() {
                   {f._originalIndex + 1}
                 </td>
                 <td className="px-4 py-2 whitespace-nowrap text-center">
-                  <button
-                    onClick={() => {
-                      if (activeTableLayerId) setZoomFeature(f);
-                    }}
-                    className="text-[10px] px-2 py-1 rounded bg-orange-500/20 text-orange-400 hover:bg-orange-500/40 transition-colors"
-                    title="Zoom ke fitur ini di peta"
-                  >
-                    Zoom
-                  </button>
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      onClick={() => {
+                        if (activeTableLayerId) setZoomFeature(f);
+                      }}
+                      className="text-[10px] px-2 py-1 rounded bg-orange-500/20 text-orange-400 hover:bg-orange-500/40 transition-colors"
+                      title="Zoom ke fitur ini di peta"
+                    >
+                      Zoom
+                    </button>
+                    <button
+                      onClick={() => openEditDialog(f)}
+                      className="text-[10px] px-2 py-1 rounded bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/40 transition-colors"
+                      title="Edit atribut fitur ini"
+                    >
+                      Edit
+                    </button>
+                  </div>
                 </td>
                 {headers.map(h => {
                   const isEditing = editingCell?.originalIndex === f._originalIndex && editingCell?.key === h;
@@ -352,52 +395,114 @@ export function AttributeTablePanel() {
     </div>
   );
 
+  // Edit dialog (modal) for editing all attributes of a feature
+  const editDialog = editingFeature ? (
+    <div
+      className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onMouseDown={() => setEditingFeature(null)}
+    >
+      <div
+        className="bg-card border border-border/50 rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-black/20">
+          <div className="flex items-center gap-2 text-orange-400">
+            <Pencil className="w-4 h-4" />
+            <span className="font-bold text-sm">Edit Atribut</span>
+          </div>
+          <button
+            onClick={() => setEditingFeature(null)}
+            className="p-1.5 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-4 overflow-y-auto space-y-3 flex-1">
+          {Object.entries(editingFeature.values).map(([key, value]) => (
+            <label key={key} className="block">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block mb-1">{key}</span>
+              <input
+                type="text"
+                value={value}
+                onChange={(e) => setEditingFeature(prev => prev ? { ...prev, values: { ...prev.values, [key]: e.target.value } } : prev)}
+                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500/50"
+              />
+            </label>
+          ))}
+        </div>
+
+        <div className="flex gap-2 px-4 py-3 border-t border-border/50 bg-black/20">
+          <button
+            onClick={() => setEditingFeature(null)}
+            className="flex-1 py-2 rounded-xl text-xs font-bold text-muted-foreground hover:bg-white/10 transition-colors"
+          >
+            Batal
+          </button>
+          <button
+            onClick={saveEditDialog}
+            className="flex-[2] py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+          >
+            <Save className="w-4 h-4" />
+            Simpan
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   // Maximized: full-screen window
   if (isMaximized) {
     return (
-      <div className="fixed inset-0 z-50 bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl flex flex-col">
-        {headerBar}
-        {tableBody}
-      </div>
+      <>
+        <div className="fixed inset-0 z-50 bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl flex flex-col">
+          {headerBar}
+          {tableBody}
+        </div>
+        {editDialog}
+      </>
     );
   }
 
   // Floating draggable + resizable window
   return (
-    <Draggable
-      handle=".attr-header"
-      bounds="body"
-      nodeRef={nodeRef}
-      position={position}
-      onDrag={(e, data) => setPosition({ x: data.x, y: data.y })}
-      cancel="input, button, select, textarea"
-    >
-      <div
-        ref={nodeRef}
-        className="fixed z-40 bg-card/95 backdrop-blur-xl border border-border/50 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
-        style={{ width: panelWidth, height: isMinimized ? "auto" : panelHeight }}
+    <>
+      <Draggable
+        handle=".attr-header"
+        bounds="body"
+        nodeRef={nodeRef}
+        position={position}
+        onDrag={(e, data) => setPosition({ x: data.x, y: data.y })}
+        cancel="input, button, select, textarea"
       >
-        {isMinimized ? minimizedHeader : headerBar}
+        <div
+          ref={nodeRef}
+          className="fixed z-40 bg-card/95 backdrop-blur-xl border border-border/50 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
+          style={{ width: panelWidth, height: isMinimized ? "auto" : panelHeight }}
+        >
+          {isMinimized ? minimizedHeader : headerBar}
 
-        {!isMinimized && tableBody}
+          {!isMinimized && tableBody}
 
-        {!isMinimized && (
-          <>
-            <div
-              onMouseDown={beginResize("e")}
-              className="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-500/50 z-10"
-            />
-            <div
-              onMouseDown={beginResize("s")}
-              className="absolute bottom-0 left-0 h-1.5 w-full cursor-ns-resize hover:bg-orange-500/50 z-10"
-            />
-            <div
-              onMouseDown={beginResize("se")}
-              className="absolute bottom-0 right-0 w-3.5 h-3.5 cursor-nwse-resize z-20"
-            />
-          </>
-        )}
-      </div>
-    </Draggable>
+          {!isMinimized && (
+            <>
+              <div
+                onMouseDown={beginResize("e")}
+                className="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-500/50 z-10"
+              />
+              <div
+                onMouseDown={beginResize("s")}
+                className="absolute bottom-0 left-0 h-1.5 w-full cursor-ns-resize hover:bg-orange-500/50 z-10"
+              />
+              <div
+                onMouseDown={beginResize("se")}
+                className="absolute bottom-0 right-0 w-3.5 h-3.5 cursor-nwse-resize z-20"
+              />
+            </>
+          )}
+        </div>
+      </Draggable>
+      {editDialog}
+    </>
   );
 }
