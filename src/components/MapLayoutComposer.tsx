@@ -150,11 +150,15 @@ export default function MapLayoutComposer() {
           <div className="p-0.5 bg-orange-500/10 rounded-lg overflow-hidden">
             <img src="/logo-sakagis.png" alt="S" className="w-7 h-7 object-contain dark:invert dark:mix-blend-screen" />
           </div>
-          <span className="layout-header-title">Map Layout Composer</span>
+          <span className="layout-header-title">Layout Studio</span>
           <span className="layout-header-subtitle">
             {PAPER_SIZES[state.paperSize]?.label ?? `Custom (${state.customWidth}×${state.customHeight} mm)`}
             {" · "}
             {state.orientation === "landscape" ? "Landscape" : "Portrait"}
+          </span>
+          <span className="layout-sync-badge">
+            <span className="layout-sync-dot" />
+            View map utama
           </span>
         </div>
         <div className="layout-header-right">
@@ -289,33 +293,51 @@ export default function MapLayoutComposer() {
 // LEFT TOOL PANEL
 // ──────────────────────────────────────────────────────
 function ToolPanel({ composer }: { composer: ReturnType<typeof useLayoutComposer> }) {
-  const tools: { type: LayoutElementType; icon: React.ReactNode; label: string }[] = [
-    { type: "mapFace", icon: <Map className="w-4 h-4" />, label: "Muka Peta" },
-    { type: "legend", icon: <LayoutGrid className="w-4 h-4" />, label: "Legenda" },
-    { type: "scaleBar", icon: <Ruler className="w-4 h-4" />, label: "Skala" },
-    { type: "northArrow", icon: <Compass className="w-4 h-4" />, label: "Arah Utara" },
-    { type: "infoBlock", icon: <Info className="w-4 h-4" />, label: "Info Peta" },
-    { type: "neatline", icon: <Square className="w-4 h-4" />, label: "Garis Tepi" },
-    { type: "title", icon: <Type className="w-4 h-4" />, label: "Judul" },
-    { type: "freeText", icon: <FileText className="w-4 h-4" />, label: "Teks" },
+  const groups: { label: string; tools: { type: LayoutElementType; icon: React.ReactNode; label: string }[] }[] = [
+    {
+      label: "Peta",
+      tools: [
+        { type: "mapFace", icon: <Map className="w-4 h-4" />, label: "Muka Peta" },
+        { type: "legend", icon: <LayoutGrid className="w-4 h-4" />, label: "Legenda" },
+        { type: "scaleBar", icon: <Ruler className="w-4 h-4" />, label: "Skala" },
+        { type: "northArrow", icon: <Compass className="w-4 h-4" />, label: "Arah Utara" },
+      ],
+    },
+    {
+      label: "Informasi",
+      tools: [
+        { type: "infoBlock", icon: <Info className="w-4 h-4" />, label: "Info Peta" },
+        { type: "title", icon: <Type className="w-4 h-4" />, label: "Judul" },
+        { type: "freeText", icon: <FileText className="w-4 h-4" />, label: "Teks" },
+      ],
+    },
+    {
+      label: "Bingkai",
+      tools: [{ type: "neatline", icon: <Square className="w-4 h-4" />, label: "Garis Tepi" }],
+    },
   ];
 
   return (
     <div className="layout-tool-panel">
       <div className="layout-tool-panel-header">
         <Plus className="w-3.5 h-3.5 text-orange-400" />
-        <span>Elemen</span>
+        <span>Tambah elemen</span>
       </div>
-      {tools.map((t) => (
-        <button
-          key={t.type}
-          className="layout-tool-btn"
-          onClick={() => composer.addElement(t.type)}
-          title={`Tambah ${t.label}`}
-        >
-          {t.icon}
-          <span>{t.label}</span>
-        </button>
+      {groups.map((group) => (
+        <div className="layout-tool-group" key={group.label}>
+          <span className="layout-tool-group-label">{group.label}</span>
+          {group.tools.map((t) => (
+            <button
+              key={t.type}
+              className="layout-tool-btn"
+              onClick={() => composer.addElement(t.type)}
+              title={`Tambah ${t.label}`}
+            >
+              {t.icon}
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </div>
       ))}
       <div className="mt-auto pt-4 border-t border-white/10">
         <button
@@ -1272,83 +1294,29 @@ function ElementConfigEditor({ element, composer }: { element: LayoutElement; co
         </div>
       );
 
-    case "mapFace": {
-      // Hitung skala berdasarkan zoom aktual
-      const C = 40075016.686;
-      const lat = cfg.centerLat || -6.2;
-      const currentZoom = cfg.zoom || 12;
-      const currentMpp = (C * Math.cos(lat * Math.PI / 180)) / Math.pow(2, currentZoom + 8);
-      const currentScale = Math.round(currentMpp * 3000 * composer.state.canvasZoom);
-
-      const handleScaleInput = (val: string) => {
-         const targetScale = Number(val);
-         if (targetScale > 0) {
-            const desiredMpp = targetScale / (3000 * composer.state.canvasZoom);
-            const newZoom = Math.log2((C * Math.cos(lat * Math.PI / 180)) / desiredMpp) - 8;
-            updateElementConfig(element.id, { zoom: newZoom });
-         }
-      };
-
+    case "mapFace":
       return (
-        <div className="flex flex-col gap-2">
-          <label className="layout-props-label text-orange-300">Skala Peta 1 : ...</label>
-          <div className="flex items-center gap-1 bg-white/5 rounded px-2 border border-white/10 focus-within:border-primary">
-            <span className="text-white/40 text-xs font-mono">1 :</span>
-            <input 
-              type="number" 
-              value={currentScale} 
-              onChange={(e) => handleScaleInput(e.target.value)} 
-              className="w-full bg-transparent border-0 text-white text-xs font-mono py-1 focus:outline-none focus:ring-0" 
-              step={100} 
-            />
+        <div className="layout-mapface-settings">
+          <div className="layout-live-card">
+            <div className="layout-live-card-dot" />
+            <div>
+              <strong>Terhubung ke Peta Utama</strong>
+              <span>Lokasi, citra, layer, dan zoom mengikuti view yang sedang tampil.</span>
+            </div>
           </div>
-
-          <label className="layout-props-label mt-2">Latitude Pusat</label>
-          <input type="number" value={Number((cfg.centerLat || -6.2).toFixed(6))} onChange={(e) => updateElementConfig(element.id, { centerLat: Number(e.target.value) })} className="layout-props-input" step={0.000001} />
-          
-          <label className="layout-props-label">Longitude Pusat</label>
-          <input type="number" value={Number((cfg.centerLng || 106.8).toFixed(6))} onChange={(e) => updateElementConfig(element.id, { centerLng: Number(e.target.value) })} className="layout-props-input" step={0.000001} />
-          
-          <label className="layout-props-label">Zoom Level (Leaflet)</label>
-          <input type="number" value={Number((cfg.zoom || 12).toFixed(2))} onChange={(e) => updateElementConfig(element.id, { zoom: Number(e.target.value) })} className="layout-props-input" min={1} max={20} step={0.1} />
-          
-          <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer mt-1">
-            <input type="checkbox" checked={cfg.showBasemap !== false} onChange={(e) => updateElementConfig(element.id, { showBasemap: e.target.checked })} className="rounded" />
-            Tampilkan Peta Dasar
+          <div className="layout-settings-hint">
+            Atur Pekanbaru, skala, dan citra di peta utama. Preview di layout akan ikut berubah otomatis. Gunakan tombol refresh di pojok muka peta bila diperlukan.
+          </div>
+          <label className="layout-check-row">
+            <input type="checkbox" checked={cfg.showBasemap !== false} onChange={(e) => updateElementConfig(element.id, { showBasemap: e.target.checked })} />
+            <span>Tampilkan citra/peta dasar</span>
           </label>
-          <div className="pt-2 mt-2 border-t border-white/10 flex flex-col gap-2">
-            <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
-              <input type="checkbox" checked={cfg.showGrid || false} onChange={(e) => updateElementConfig(element.id, { showGrid: e.target.checked })} className="rounded" />
-              Tampilkan Grid Koordinat
-            </label>
-            
-            {cfg.showGrid && (
-              <>
-                <label className="layout-props-label">Jenis Grid</label>
-                <select value={cfg.gridType || "geographic"} onChange={(e) => updateElementConfig(element.id, { gridType: e.target.value })} className="layout-props-select">
-                  <option value="geographic">Geografis (Lintang/Bujur)</option>
-                  <option value="cartesian">Kartesian (Meter UTM)</option>
-                </select>
-
-                <label className="layout-props-label">Interval (opsional)</label>
-                <input 
-                  type="number" 
-                  value={cfg.gridInterval || ""} 
-                  onChange={(e) => updateElementConfig(element.id, { gridInterval: e.target.value ? Number(e.target.value) : 0 })} 
-                  className="layout-props-input" 
-                  placeholder={cfg.gridType === "cartesian" ? "Contoh: 1000 (Meter)" : "Contoh: 0.1 (Derajat)"} 
-                  min={0}
-                  step={cfg.gridType === "cartesian" ? 100 : 0.01}
-                />
-                <span className="text-[9px] text-white/40 leading-tight">
-                  Biarkan kosong atau 0 agar sistem menghitung jarak garis yang paling ideal secara otomatis.
-                </span>
-              </>
-            )}
+          <div className="layout-connected-row">
+            <span>Skala</span>
+            <strong>Otomatis dari view utama</strong>
           </div>
         </div>
       );
-    }
 
     case "legend":
       return (
