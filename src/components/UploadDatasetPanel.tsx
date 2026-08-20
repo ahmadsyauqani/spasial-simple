@@ -40,9 +40,27 @@ export function UploadDatasetPanel() {
   const [isUploading, setIsUploading] = useState(false);
   const [layerQuery, setLayerQuery] = useState("");
   const [showLegend, setShowLegend] = useState(false);
+  const [analysisQuery, setAnalysisQuery] = useState("");
+  const [analysisCategory, setAnalysisCategory] = useState("Semua");
 
   const filteredLayers = layers.filter((layer) => layer.name?.toLowerCase().includes(layerQuery.toLowerCase()));
   const allLayersVisible = layers.length > 0 && layers.every((layer) => layer.visible !== false);
+  const analysisTools = [
+    { key: "buffer", label: "Buffer", category: "Geometry", description: "Buat zona jarak di sekitar fitur.", icon: "◎", component: <BufferAnalysisButton /> },
+    { key: "clip", label: "Clip", category: "Overlay", description: "Potong layer memakai batas layer lain.", icon: "✂", component: <ClipAnalysisButton /> },
+    { key: "union", label: "Union", category: "Overlay", description: "Gabungkan geometri dua layer.", icon: "◈", component: <UnionAnalysisButton /> },
+    { key: "merge", label: "Merge", category: "Geometry", description: "Gabungkan fitur menjadi layer baru.", icon: "⊕", component: <MergeAnalysisButton /> },
+    { key: "overlap", label: "Overlap", category: "Quality", description: "Temukan area yang bertumpuk.", icon: "◌", component: <OverlapAnalysisButton /> },
+    { key: "validasi", label: "Validasi", category: "Quality", description: "Cek topology dan bidang tanah.", icon: "✓", component: <TopologyValidationButton /> },
+    { key: "dissolve", label: "Dissolve", category: "Geometry", description: "Satukan fitur berdasarkan atribut.", icon: "◉", component: <DissolveAnalysisButton /> },
+    { key: "join", label: "Spatial Join", category: "Relation", description: "Hubungkan atribut secara spasial.", icon: "⌘", component: <SpatialJoinButton /> },
+    { key: "sliver", label: "Sliver", category: "Quality", description: "Deteksi gap dan overlap tipis.", icon: "△", component: <SliverDetectionButton /> },
+  ];
+  const analysisCategories = ["Semua", "Overlay", "Geometry", "Quality", "Relation"];
+  const visibleAnalysisTools = analysisTools.filter((tool) =>
+    (analysisCategory === "Semua" || tool.category === analysisCategory) &&
+    `${tool.label} ${tool.description}`.toLowerCase().includes(analysisQuery.toLowerCase())
+  );
 
   const [metricPayload, setMetricPayload] = useState<{ file: File, geojson: any } | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -447,49 +465,38 @@ export function UploadDatasetPanel() {
         />
       </label>
 
-      {/* Analysis Tools Grid */}
-      <div className="flex flex-col gap-2 pt-2 border-t border-border/20">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Tools Analisis</span>
+      {/* Unified Analysis Workspace */}
+      <div className="analysis-workspace">
+        <div className="analysis-workspace-header">
+          <div>
+            <strong>Analysis Workspace</strong>
+            <span>Pilih tool, atur parameter, lalu simpan hasil sebagai layer baru.</span>
+          </div>
+          <span className="analysis-layer-status">{layers.length} layer</span>
         </div>
-        <div className="flex flex-wrap gap-2 p-2 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/5 shadow-inner justify-center">
-          <div className="flex flex-col items-center gap-1">
-            <BufferAnalysisButton />
-            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Buffer</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <ClipAnalysisButton />
-            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Clip</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <UnionAnalysisButton />
-            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Union</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <MergeAnalysisButton />
-            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Merge</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <OverlapAnalysisButton />
-            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Overlap</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <TopologyValidationButton />
-            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Validasi</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <DissolveAnalysisButton />
-            <span className="text-[7px] font-bold uppercase text-muted-foreground/60">Dissolve</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <SpatialJoinButton />
-            <span className="text-[7px] font-bold uppercase text-indigo-400">Join</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <SliverDetectionButton />
-            <span className="text-[7px] font-bold uppercase text-yellow-400">Sliver</span>
-          </div>
+        <div className="analysis-workspace-search">
+          <Search className="h-3.5 w-3.5" />
+          <input value={analysisQuery} onChange={(e) => setAnalysisQuery(e.target.value)} placeholder="Cari tool analisis..." />
         </div>
+        <div className="analysis-category-tabs">
+          {analysisCategories.map((category) => (
+            <button key={category} type="button" onClick={() => setAnalysisCategory(category)} className={analysisCategory === category ? "active" : ""}>{category}</button>
+          ))}
+        </div>
+        <div className="analysis-workspace-grid">
+          {visibleAnalysisTools.map((tool) => (
+            <div className="analysis-tool-card" key={tool.key}>
+              <div className="analysis-tool-icon">{tool.icon}</div>
+              <div className="analysis-tool-copy">
+                <strong>{tool.label}</strong>
+                <span>{tool.description}</span>
+                <small>{tool.category}</small>
+              </div>
+              <div className="analysis-tool-trigger">{tool.component}</div>
+            </div>
+          ))}
+        </div>
+        {visibleAnalysisTools.length === 0 && <div className="analysis-empty">Tool tidak ditemukan.</div>}
         <div className="grid grid-cols-2 gap-2 mt-2">
           <LayoutPetaButton />
           <DownloadAllResultsButton />

@@ -539,6 +539,197 @@ input, select, textarea, button {
   background-size: 10px 10px;
 }
 
+.analysis-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.analysis-workspace-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.analysis-workspace-header strong,
+.analysis-workspace-header span {
+  display: block;
+}
+
+.analysis-workspace-header strong {
+  color: rgba(255,255,255,0.92);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.analysis-workspace-header span {
+  margin-top: 3px;
+  color: rgba(255,255,255,0.4);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.analysis-layer-status {
+  padding: 4px 7px;
+  border: 1px solid rgba(99,102,241,0.25);
+  border-radius: 999px;
+  background: rgba(99,102,241,0.1);
+  color: #a5b4fc !important;
+  font-size: 8px !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.analysis-workspace-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  background: rgba(0,0,0,0.2);
+  color: rgba(255,255,255,0.35);
+}
+
+.analysis-workspace-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: white;
+  font-size: 10px;
+}
+
+.analysis-workspace-search input::placeholder {
+  color: rgba(255,255,255,0.3);
+}
+
+.analysis-category-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.analysis-category-tabs button {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: rgba(255,255,255,0.42);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.analysis-category-tabs button:hover,
+.analysis-category-tabs button.active {
+  border-color: rgba(249,115,22,0.32);
+  background: rgba(249,115,22,0.13);
+  color: #fdba74;
+}
+
+.analysis-workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.analysis-tool-card {
+  position: relative;
+  display: flex;
+  min-height: 75px;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(0,0,0,0.16));
+  transition: border-color 0.18s, background 0.18s, transform 0.18s;
+}
+
+.analysis-tool-card:hover {
+  border-color: rgba(249,115,22,0.35);
+  background: linear-gradient(145deg, rgba(249,115,22,0.1), rgba(0,0,0,0.16));
+  transform: translateY(-1px);
+}
+
+.analysis-tool-icon {
+  display: flex;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 8px;
+  background: rgba(249,115,22,0.12);
+  color: #fdba74;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.analysis-tool-copy {
+  min-width: 0;
+  padding-right: 22px;
+}
+
+.analysis-tool-copy strong,
+.analysis-tool-copy span,
+.analysis-tool-copy small {
+  display: block;
+}
+
+.analysis-tool-copy strong {
+  color: rgba(255,255,255,0.9);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.analysis-tool-copy span {
+  margin-top: 3px;
+  color: rgba(255,255,255,0.42);
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.analysis-tool-copy small {
+  margin-top: 5px;
+  color: #93c5fd;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analysis-tool-trigger {
+  position: absolute;
+  top: 8px;
+  right: 7px;
+}
+
+.analysis-tool-trigger > button {
+  width: 25px !important;
+  height: 25px !important;
+  padding: 0 !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  border-radius: 8px !important;
+}
+
+.analysis-empty {
+  padding: 18px;
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 12px;
+  color: rgba(255,255,255,0.4);
+  font-size: 10px;
+  text-align: center;
+}
+
 .layer-manager-heading strong {
   color: rgba(255,255,255,0.92);
   font-size: 11px;
