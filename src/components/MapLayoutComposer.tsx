@@ -8,7 +8,7 @@ import {
   Compass, Ruler, Type, Info, Square, Minus, ZoomIn, ZoomOut,
   RotateCcw, Trash2, Lock, Unlock, Move, ChevronDown, Printer
 } from "lucide-react";
-import { useMapContext } from "@/lib/MapContext";
+import { useMapContext, BASEMAP_OPTIONS } from "@/lib/MapContext";
 import {
   useLayoutComposer, PAPER_SIZES, type LayoutElement, type LayoutElementType, type PaperSize
 } from "@/lib/useLayoutComposer";
@@ -449,7 +449,7 @@ function ElementContent({ element, composer, layers, layerGeojsonCache, width, h
 }) {
   switch (element.type) {
     case "mapFace":
-      return <MapFaceElement element={element} composer={composer} width={width} height={height} />;
+      return <MapFaceElement element={element} composer={composer} layers={layers} layerGeojsonCache={layerGeojsonCache} width={width} height={height} />;
     case "legend":
       return <LegendElement element={element} layers={layers} />;
     case "scaleBar":
@@ -469,136 +469,71 @@ function ElementContent({ element, composer, layers, layerGeojsonCache, width, h
 }
 
 // MAP FACE — synced with the main working map
-function MapFaceElement({ element, composer, width, height }: {
+function MapFaceElement({ element, composer, layers, layerGeojsonCache, width, height }: {
   element: LayoutElement;
   composer: ReturnType<typeof useLayoutComposer>;
+  layers: any[];
+  layerGeojsonCache: Record<string, any>;
   width: number;
   height: number;
 }) {
-  const { mapInstance } = useMapContext();
+  const { mapViewState, activeBasemap } = useMapContext();
   const cfg = element.config;
+  const currentBasemap = BASEMAP_OPTIONS[activeBasemap];
 
   // Only render map if has minimum size
   if (width < 30 || height < 30) {
     return <div style={{ width: "100%", height: "100%", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", color: "#94a3b8", border: "1px solid #cbd5e1" }}>Peta (terlalu kecil)</div>;
   }
 
-  return (
-    <MapPreviewSnapshot
-      mapInstance={mapInstance}
-      composer={composer}
-      width={width}
-      height={height}
-      showBasemap={cfg.showBasemap !== false}
-    />
-  );
-}
+  // Collect all available geojson for fitting bounds
+  const allGeojsons = layers
+    .map((l) => layerGeojsonCache[l.id!])
+    .filter(Boolean);
 
-function MapPreviewSnapshot({
-  mapInstance,
-  composer,
-  width,
-  height,
-  showBasemap,
-}: {
-  mapInstance: L.Map | null;
-  composer: ReturnType<typeof useLayoutComposer>;
-  width: number;
-  height: number;
-  showBasemap: boolean;
-}) {
-  const previewRef = useRef<HTMLDivElement>(null);
-  const setMppRef = useRef(composer.setMapMetersPerPixel);
-  const [refreshKey, setRefreshKey] = useState(0);
-  setMppRef.current = composer.setMapMetersPerPixel;
-
-  const syncPreview = useCallback(() => {
-    const source = mapInstance?.getContainer();
-    const target = previewRef.current;
-    if (!source || !target || source.clientWidth === 0 || source.clientHeight === 0) return;
-
-    const sourceWidth = source.clientWidth;
-    const sourceHeight = source.clientHeight;
-    const targetWidth = target.clientWidth || width;
-    const targetHeight = target.clientHeight || height;
-
-    try {
-      const centerY = sourceHeight / 2;
-      const p1 = mapInstance!.containerPointToLatLng([0, centerY]);
-      const p2 = mapInstance!.containerPointToLatLng([100, centerY]);
-      setMppRef.current(mapInstance!.distance(p1, p2) / 100);
-    } catch (e) {}
-
-    const clone = source.cloneNode(true) as HTMLDivElement;
-    clone.removeAttribute("id");
-    clone.className = "leaflet-container layout-main-map-clone";
-    clone.style.position = "absolute";
-    clone.style.left = "0";
-    clone.style.top = "0";
-    clone.style.width = `${sourceWidth}px`;
-    clone.style.height = `${sourceHeight}px`;
-    clone.style.transformOrigin = "top left";
-    clone.style.transform = `scale(${targetWidth / sourceWidth}, ${targetHeight / sourceHeight})`;
-    clone.style.pointerEvents = "none";
-
-    const sourceImages = Array.from(source.querySelectorAll("img"));
-    const cloneImages = Array.from(clone.querySelectorAll("img"));
-    sourceImages.forEach((image, index) => {
-      if ((!image.complete || image.naturalWidth === 0) && cloneImages[index]) {
-        cloneImages[index].remove();
-      }
-    });
-
-    clone.querySelectorAll(".leaflet-control-container, [data-map-ui='coordinate-bar']").forEach((node) => node.remove());
-    if (!showBasemap) {
-      clone.querySelectorAll(".leaflet-tile-pane").forEach((node) => node.remove());
-    }
-
-    target.replaceChildren(clone);
-  }, [mapInstance, width, height, showBasemap, refreshKey]);
-
-  useEffect(() => {
-    if (!mapInstance) return;
-    let timer: number | null = null;
-    const schedule = () => {
-      if (timer !== null) window.clearTimeout(timer);
-      timer = window.setTimeout(syncPreview, 80);
-    };
-    const events = ["moveend", "zoomend", "resize", "layeradd", "layerremove", "overlayadd", "overlayremove"];
-    events.forEach((event) => mapInstance.on(event, schedule));
-    const source = mapInstance.getContainer();
-    const observer = new MutationObserver(schedule);
-    observer.observe(source, { childList: true, subtree: true, attributes: true, attributeFilter: ["src", "style"] });
-
-    syncPreview();
-    const first = window.setTimeout(syncPreview, 120);
-    const second = window.setTimeout(syncPreview, 500);
-
-    return () => {
-      events.forEach((event) => mapInstance.off(event, schedule));
-      observer.disconnect();
-      window.clearTimeout(first);
-      window.clearTimeout(second);
-      if (timer !== null) window.clearTimeout(timer);
-    };
-  }, [mapInstance, syncPreview]);
+  // Use the main map's current center/zoom as initial position
+  const initialCenter: [number, number] = mapViewState.center;
+  const initialZoom = mapViewState.zoom;
 
   return (
-    <div
-      ref={previewRef}
-      className="map-face-container map-preview-snapshot"
-      style={{ width: "100%", height: "100%", overflow: "hidden", border: "1px solid #cbd5e1", background: "#1a1a1a", pointerEvents: "auto" }}
-    >
-      {!mapInstance && <div className="map-preview-empty">Buka peta utama terlebih dahulu</div>}
-      <button
-        type="button"
-        className="layout-map-preview-refresh element-controls"
-        onMouseDown={(event) => event.stopPropagation()}
-        onClick={(event) => { event.stopPropagation(); setRefreshKey((value) => value + 1); }}
-        title="Refresh preview dari peta utama"
+    <div className="map-face-container" style={{ width: "100%", height: "100%", overflow: "hidden", border: "1px solid #cbd5e1", pointerEvents: "auto" }}>
+      <MapContainer
+        center={initialCenter}
+        zoom={initialZoom}
+        zoomControl={false}
+        attributionControl={false}
+        zoomSnap={0}
+        wheelPxPerZoomLevel={60}
+        style={{ width: "100%", height: "100%", background: "#1a1a1a" }}
+        dragging={true}
+        scrollWheelZoom={true}
+        key={`mapface-${element.id}`}
       >
-        <RotateCcw className="w-3 h-3" />
-      </button>
+        {cfg.showBasemap !== false && (
+          <TileLayer
+            key={activeBasemap}
+            url={currentBasemap.url}
+            attribution=""
+            maxZoom={20}
+          />
+        )}
+        {layers.map((layer) => {
+          const geojson = layerGeojsonCache[layer.id!];
+          if (!geojson) return null;
+          const style = layer.style || { color: "#3b82f6", fillColor: "#3b82f6", fillOpacity: 0.3, weight: 2 };
+          return (
+            <GeoJSON
+              key={`layout-${layer.id}-${JSON.stringify(style)}`}
+              data={geojson}
+              style={() => ({ color: style.color, fillColor: style.fillColor, fillOpacity: style.fillOpacity, weight: style.weight })}
+            />
+          );
+        })}
+        {/* Auto-fit to layer bounds on mount */}
+        <FitBoundsController geojsons={allGeojsons} />
+        <MapFaceController element={element} composer={composer} />
+        <MapGridOverlay element={element} />
+      </MapContainer>
     </div>
   );
 }
@@ -1262,26 +1197,83 @@ function ElementConfigEditor({ element, composer }: { element: LayoutElement; co
         </div>
       );
 
-    case "mapFace":
+    case "mapFace": {
+      // Hitung skala berdasarkan zoom aktual
+      const C = 40075016.686;
+      const lat = cfg.centerLat || -6.2;
+      const currentZoom = cfg.zoom || 12;
+      const currentMpp = (C * Math.cos(lat * Math.PI / 180)) / Math.pow(2, currentZoom + 8);
+      const currentScale = Math.round(currentMpp * 3000 * composer.state.canvasZoom);
+
+      const handleScaleInput = (val: string) => {
+         const targetScale = Number(val);
+         if (targetScale > 0) {
+            const desiredMpp = targetScale / (3000 * composer.state.canvasZoom);
+            const newZoom = Math.log2((C * Math.cos(lat * Math.PI / 180)) / desiredMpp) - 8;
+            updateElementConfig(element.id, { zoom: newZoom });
+         }
+      };
+
       return (
-        <div className="flex flex-col gap-3">
-          <div className="rounded-lg border border-orange-500/20 bg-orange-500/10 p-3 text-[10px] leading-relaxed text-orange-200/80">
-            Muka peta memakai preview dari peta utama saat ini. Tidak membuat request tile baru.
-          </div>
-          <div className="text-[10px] leading-relaxed text-white/45">
-            Untuk mengganti citra, geser atau zoom peta utama, lalu tekan tombol refresh di pojok muka peta.
-          </div>
-          <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={cfg.showBasemap !== false}
-              onChange={(e) => updateElementConfig(element.id, { showBasemap: e.target.checked })}
-              className="rounded"
+        <div className="flex flex-col gap-2">
+          <label className="layout-props-label text-orange-300">Skala Peta 1 : ...</label>
+          <div className="flex items-center gap-1 bg-white/5 rounded px-2 border border-white/10 focus-within:border-primary">
+            <span className="text-white/40 text-xs font-mono">1 :</span>
+            <input 
+              type="number" 
+              value={currentScale} 
+              onChange={(e) => handleScaleInput(e.target.value)} 
+              className="w-full bg-transparent border-0 text-white text-xs font-mono py-1 focus:outline-none focus:ring-0" 
+              step={100} 
             />
+          </div>
+
+          <label className="layout-props-label mt-2">Latitude Pusat</label>
+          <input type="number" value={Number((cfg.centerLat || -6.2).toFixed(6))} onChange={(e) => updateElementConfig(element.id, { centerLat: Number(e.target.value) })} className="layout-props-input" step={0.000001} />
+          
+          <label className="layout-props-label">Longitude Pusat</label>
+          <input type="number" value={Number((cfg.centerLng || 106.8).toFixed(6))} onChange={(e) => updateElementConfig(element.id, { centerLng: Number(e.target.value) })} className="layout-props-input" step={0.000001} />
+          
+          <label className="layout-props-label">Zoom Level (Leaflet)</label>
+          <input type="number" value={Number((cfg.zoom || 12).toFixed(2))} onChange={(e) => updateElementConfig(element.id, { zoom: Number(e.target.value) })} className="layout-props-input" min={1} max={20} step={0.1} />
+          
+          <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer mt-1">
+            <input type="checkbox" checked={cfg.showBasemap !== false} onChange={(e) => updateElementConfig(element.id, { showBasemap: e.target.checked })} className="rounded" />
             Tampilkan Peta Dasar
           </label>
+          <div className="pt-2 mt-2 border-t border-white/10 flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
+              <input type="checkbox" checked={cfg.showGrid || false} onChange={(e) => updateElementConfig(element.id, { showGrid: e.target.checked })} className="rounded" />
+              Tampilkan Grid Koordinat
+            </label>
+            
+            {cfg.showGrid && (
+              <>
+                <label className="layout-props-label">Jenis Grid</label>
+                <select value={cfg.gridType || "geographic"} onChange={(e) => updateElementConfig(element.id, { gridType: e.target.value })} className="layout-props-select">
+                  <option value="geographic">Geografis (Lintang/Bujur)</option>
+                  <option value="cartesian">Kartesian (Meter UTM)</option>
+                </select>
+
+                <label className="layout-props-label">Interval (opsional)</label>
+                <input 
+                  type="number" 
+                  value={cfg.gridInterval || ""} 
+                  onChange={(e) => updateElementConfig(element.id, { gridInterval: e.target.value ? Number(e.target.value) : 0 })} 
+                  className="layout-props-input" 
+                  placeholder={cfg.gridType === "cartesian" ? "Contoh: 1000 (Meter)" : "Contoh: 0.1 (Derajat)"} 
+                  min={0}
+                  step={cfg.gridType === "cartesian" ? 100 : 0.01}
+                />
+                <span className="text-[9px] text-white/40 leading-tight">
+                  Biarkan kosong atau 0 agar sistem menghitung jarak garis yang paling ideal secara otomatis.
+                </span>
+              </>
+            )}
+          </div>
         </div>
       );
+    }
 
     case "legend":
       return (
