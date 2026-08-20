@@ -203,7 +203,8 @@ function TileLayerWithOffline({ url, attribution }: { url: string, attribution: 
   useEffect(() => {
     const layer = createOfflineTileLayer(url, {
       attribution,
-      maxZoom: 20,
+      maxZoom: 21,
+      maxNativeZoom: 20,
     });
     layer.addTo(map);
     return () => {
@@ -1019,7 +1020,7 @@ function CursorCoordinates() {
     
     // Standard professional scales list
     const standardScales = [
-      10, 20, 50, 100, 200, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 
+      10, 20, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 
       100000, 200000, 250000, 500000, 1000000, 2000000, 2500000, 5000000, 10000000
     ];
 
