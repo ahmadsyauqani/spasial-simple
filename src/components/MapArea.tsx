@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap, ImageOverlay, Polyline, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap, ImageOverlay, Polyline, Popup, Polygon, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import * as turf from "@turf/turf";
@@ -420,6 +420,15 @@ export default function MapArea() {
       </MapContainer>
     </div>
   );
+}
+
+function measureLabelIcon(text: string) {
+  return L.divIcon({
+    className: "measure-label-icon",
+    html: `<div style="background:#f97316;color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,0.5);font-family:ui-monospace,SFMono-Regular,monospace">${text}</div>`,
+    iconSize: [0, 0],
+    iconAnchor: [8, 28],
+  });
 }
 
 // Komponen render highlight fitur (dari tabel atribut)
@@ -1002,6 +1011,18 @@ function CursorCoordinates() {
   
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [measureType, setMeasureType] = useState<'distance' | 'area'>('distance');
+  const [measurePoints, setMeasurePoints] = useState<[number, number][]>([]);
+  const [measureResult, setMeasureResult] = useState<{ type: 'distance' | 'area'; label: string; points: [number, number][] } | null>(null);
+
+  const isMeasuringRef = useRef(isMeasuring);
+  const measureTypeRef = useRef<'distance' | 'area'>(measureType);
+  const measurePointsRef = useRef<[number, number][]>([]);
+  const measureClickTimer = useRef<number | null>(null);
+  const finishMeasureRef = useRef<() => void>(() => {});
+
+  useEffect(() => { isMeasuringRef.current = isMeasuring; }, [isMeasuring]);
+  useEffect(() => { measureTypeRef.current = measureType; }, [measureType]);
+  useEffect(() => { measurePointsRef.current = measurePoints; }, [measurePoints]);
 
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
@@ -1013,6 +1034,40 @@ function CursorCoordinates() {
     if (meters >= 1000) return `${(meters / 1000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} km`;
     return `${meters.toLocaleString('id-ID', { maximumFractionDigits: 1 })} m`;
   };
+
+  const cancelMeasure = () => {
+    setMeasurePoints([]);
+    setMeasureResult(null);
+    setIsMeasuring(false);
+  };
+
+  const finishMeasure = () => {
+    const points = measurePointsRef.current;
+    if (points.length < 2) { cancelMeasure(); return; }
+    let label = "";
+    if (measureTypeRef.current === 'distance') {
+      let len = 0;
+      for (let i = 0; i < points.length - 1; i++) {
+        len += turf.distance(turf.point([points[i][1], points[i][0]]), turf.point([points[i+1][1], points[i+1][0]]), { units: 'meters' });
+      }
+      label = `Panjang: ${formatLength(len)}`;
+    } else {
+      if (points.length < 3) { cancelMeasure(); return; }
+      const ring = [...points, points[0]];
+      const polygon = turf.polygon([ring.map(([lat, lng]) => [lng, lat])]);
+      const area = turf.area(polygon);
+      let perimeter = 0;
+      for (let i = 0; i < ring.length - 1; i++) {
+        perimeter += turf.distance(turf.point([ring[i][1], ring[i][0]]), turf.point([ring[i+1][1], ring[i+1][0]]), { units: 'meters' });
+      }
+      label = `Luas: ${formatUnit(area)} | Keliling: ${formatLength(perimeter)}`;
+    }
+    setMeasureResult({ type: measureTypeRef.current, label, points });
+    setMeasurePoints([]);
+    setIsMeasuring(false);
+  };
+
+  useEffect(() => { finishMeasureRef.current = finishMeasure; });
 
   const calculateScale = (z: number, l: number) => {
     const metersPerPixel = 156543.03392 * Math.cos(l * Math.PI / 180) / Math.pow(2, z);
@@ -1096,8 +1151,22 @@ function CursorCoordinates() {
     };
     
     const handleMapClick = (e: L.LeafletMouseEvent) => {
+      if (isMeasuringRef.current) {
+        if (measureClickTimer.current) window.clearTimeout(measureClickTimer.current);
+        measureClickTimer.current = window.setTimeout(() => {
+          setMeasurePoints(prev => [...prev, [e.latlng.lat, e.latlng.lng]]);
+        }, 250);
+        return;
+      }
       setCoords(e.latlng);
       setIsLocked(true);
+    };
+
+    const handleMapDblClick = () => {
+      if (isMeasuringRef.current) {
+        if (measureClickTimer.current) { window.clearTimeout(measureClickTimer.current); measureClickTimer.current = null; }
+        finishMeasureRef.current();
+      }
     };
     
     // Set initial coords to center
@@ -1105,68 +1174,17 @@ function CursorCoordinates() {
     
     map.on('mousemove', handleMouseMove);
     map.on('click', handleMapClick);
+    map.on('dblclick', handleMapDblClick);
     map.on('zoomend', handleZoom);
     handleZoom(); // Initial calculation
 
     return () => {
       map.off('mousemove', handleMouseMove);
       map.off('click', handleMapClick);
+      map.off('dblclick', handleMapDblClick);
       map.off('zoomend', handleZoom);
     };
   }, [map, layers, layerGeojsonCache]);
-
-  useEffect(() => {
-    if (!isMeasuring) return;
-
-    const handleMeasureCreate = (e: any) => {
-      const { layer } = e;
-      const geojson = layer.toGeoJSON();
-      toast.info(`Tipe Geometri: ${geojson.geometry.type}`, { id: "measure-debug" });
-      
-      if (measureType === 'distance') {
-        try {
-          const coords = geojson.geometry.coordinates;
-          let lengthM = 0;
-          for (let i = 0; i < coords.length - 1; i++) {
-            lengthM += turf.distance(turf.point(coords[i]), turf.point(coords[i+1]), { units: 'meters' });
-          }
-          toast.success(`Panjang: ${formatLength(lengthM)}`, { id: "measure", duration: 5000 });
-        } catch (err: any) {
-          console.error("Gagal menghitung panjang:", err);
-          toast.error("Gagal menghitung panjang", { id: "measure" });
-        }
-      } else {
-        try {
-          const area = turf.area(geojson);
-          let perimeterM = 0;
-          try {
-            const coords = geojson.geometry.coordinates[0]; // Exterior ring for polygon
-            for (let i = 0; i < coords.length - 1; i++) {
-              perimeterM += turf.distance(turf.point(coords[i]), turf.point(coords[i+1]), { units: 'meters' });
-            }
-          } catch(err) {
-            console.warn("Gagal menghitung keliling:", err);
-          }
-          toast.success(`Luas: ${formatUnit(area)} | Keliling: ${formatLength(perimeterM)}`, { id: "measure", duration: 5000 });
-        } catch (err: any) {
-          console.error("Gagal menghitung luas:", err);
-          toast.error("Gagal menghitung luas", { id: "measure" });
-        }
-      }
-      
-      setTimeout(() => {
-        layer.remove();
-      }, 2000);
-      
-      setIsMeasuring(false);
-      try { map.pm.disableDraw(); } catch(e) {}
-    };
-
-    map.on('pm:create', handleMeasureCreate);
-    return () => {
-      map.off('pm:create', handleMeasureCreate);
-    };
-  }, [map, isMeasuring, measureType, areaUnit]);
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1229,6 +1247,26 @@ function CursorCoordinates() {
     iconAnchor: [16, 16]
   });
 
+  let measureLiveLabel = "";
+  let measurePreviewPos: [number, number] | null = null;
+  if (isMeasuring && coords && measurePoints.length >= 1) {
+    measurePreviewPos = [coords.lat, coords.lng];
+    const pts = [...measurePoints, measurePreviewPos];
+    if (measureType === 'distance') {
+      let len = 0;
+      for (let i = 0; i < pts.length - 1; i++) {
+        len += turf.distance(turf.point([pts[i][1], pts[i][0]]), turf.point([pts[i+1][1], pts[i+1][0]]), { units: 'meters' });
+      }
+      measureLiveLabel = formatLength(len);
+    } else if (pts.length >= 3) {
+      try {
+        const ring = [...pts, pts[0]];
+        const area = turf.area(turf.polygon([ring.map(([lat, lng]) => [lng, lat])]));
+        measureLiveLabel = formatUnit(area);
+      } catch(e) {}
+    }
+  }
+
   return (
     <>
       {isSnapEnabled && snapPoint && !isLocked && (
@@ -1241,6 +1279,56 @@ function CursorCoordinates() {
       {isLocked && coords && (
         <Marker position={[coords.lat, coords.lng]} icon={customIcon} />
       )}
+
+      {/* ── Measurement overlay (live + result) ── */}
+      {isMeasuring && measurePoints.length >= 1 && (
+        <>
+          {measureType === 'distance' ? (
+            <Polyline
+              positions={measurePreviewPos ? [...measurePoints, measurePreviewPos] : measurePoints}
+              pathOptions={{ color: '#f97316', weight: 4, opacity: 0.9 }}
+            />
+          ) : measurePoints.length >= 3 ? (
+            <Polygon
+              positions={measurePreviewPos ? [...measurePoints, measurePreviewPos] : measurePoints}
+              pathOptions={{ color: '#f97316', fillColor: '#f97316', fillOpacity: 0.15, weight: 3 }}
+            />
+          ) : (
+            <Polyline
+              positions={measurePreviewPos ? [...measurePoints, measurePreviewPos] : measurePoints}
+              pathOptions={{ color: '#f97316', weight: 3, opacity: 0.9, dashArray: '6,6' }}
+            />
+          )}
+          {measureLiveLabel && measurePreviewPos && (
+            <Marker position={measurePreviewPos} icon={measureLabelIcon(measureLiveLabel)} interactive={false} />
+          )}
+        </>
+      )}
+
+      {measureResult && (
+        <>
+          {measureResult.type === 'distance' ? (
+            <Polyline
+              positions={measureResult.points}
+              pathOptions={{ color: '#10b981', weight: 4, opacity: 0.95 }}
+            >
+              <Tooltip permanent direction="top" offset={[0, -12]} className="measure-tooltip">
+                {measureResult.label}
+              </Tooltip>
+            </Polyline>
+          ) : (
+            <Polygon
+              positions={[...measureResult.points, measureResult.points[0]]}
+              pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.2, weight: 3 }}
+            >
+              <Tooltip permanent direction="top" offset={[0, -12]} className="measure-tooltip">
+                {measureResult.label}
+              </Tooltip>
+            </Polygon>
+          )}
+        </>
+      )}
+
       {/* ── Coordinate Bar ── */}
       <div className={`absolute bottom-[calc(72px+env(safe-area-inset-bottom))] sm:bottom-6 left-1/2 -translate-x-1/2 z-[400] w-[calc(100vw-2rem)] sm:w-auto ${isLocked ? 'bg-primary/80 border-primary/50 shadow-primary/20' : 'bg-slate-950/85 border-white/[0.06]'} backdrop-blur-2xl border rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs select-none transition-all duration-300 pointer-events-auto`}>
 
@@ -1257,19 +1345,14 @@ function CursorCoordinates() {
           <button 
             onClick={() => {
               if (isMeasuring && measureType === 'distance') {
-                try { map.pm.disableDraw(); } catch(e) {}
-                setIsMeasuring(false);
+                cancelMeasure();
               } else {
                 setActiveDigitizingLayerId(null);
-                setIsMeasuring(true);
+                try { map.pm.disableDraw(); } catch(e) {}
+                cancelMeasure();
                 setMeasureType('distance');
-                try {
-                  map.pm.enableDraw('Line', { snappable: isSnapEnabled, finishOn: 'dblclick' });
-                } catch(e) {
-                  console.warn('Geoman enableDraw fallback:', e);
-                  try { map.pm.enableDraw('Polyline', { snappable: isSnapEnabled, finishOn: 'dblclick' }); } catch(e2) {}
-                }
-                toast.info("Mode Ukur Jarak Aktif. Klik di peta. Double-click untuk selesai.", { id: "measure-info" });
+                setIsMeasuring(true);
+                toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" });
               }
             }}
             className={`px-2.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-1.5 ${isMeasuring && measureType === 'distance' ? 'bg-orange-500/20 text-orange-400 ring-1 ring-orange-500/40' : 'text-white/30 hover:text-white/60 hover:bg-white/5'}`}
@@ -1282,18 +1365,14 @@ function CursorCoordinates() {
           <button 
             onClick={() => {
               if (isMeasuring && measureType === 'area') {
-                try { map.pm.disableDraw(); } catch(e) {}
-                setIsMeasuring(false);
+                cancelMeasure();
               } else {
                 setActiveDigitizingLayerId(null);
-                setIsMeasuring(true);
+                try { map.pm.disableDraw(); } catch(e) {}
+                cancelMeasure();
                 setMeasureType('area');
-                try {
-                  map.pm.enableDraw('Polygon', { snappable: isSnapEnabled, finishOn: 'dblclick' });
-                } catch(e) {
-                  console.warn('Geoman enableDraw Polygon error:', e);
-                }
-                toast.info("Mode Ukur Luas Aktif. Klik di peta. Double-click untuk selesai.", { id: "measure-info" });
+                setIsMeasuring(true);
+                toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" });
               }
             }}
             className={`px-2.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-1.5 ${isMeasuring && measureType === 'area' ? 'bg-orange-500/20 text-orange-400 ring-1 ring-orange-500/40' : 'text-white/30 hover:text-white/60 hover:bg-white/5'}`}

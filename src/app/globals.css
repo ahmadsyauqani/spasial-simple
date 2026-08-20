@@ -339,3 +339,19 @@ input, select, textarea, button {
     bottom: calc(76px + env(safe-area-inset-bottom)) !important;
   }
 }
+
+/* -- Measurement tooltip -- */
+.measure-tooltip {
+  background: #10b981 !important;
+  color: #fff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  font-family: ui-monospace, SFMono-Regular, monospace !important;
+  font-size: 12px !important;
+  border-radius: 8px !important;
+  padding: 4px 10px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
+}
+.measure-tooltip::before {
+  display: none !important;
+}
