@@ -9,6 +9,18 @@ import Draggable from "react-draggable";
 import { supabase } from "@/lib/supabase";
 import { deleteGeometriesFromSupabase, insertGeometryToSupabase } from "@/lib/database";
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return isMobile;
+}
+
 export function AttributeTablePanel() {
   const {
     isAttributeTableOpen,
@@ -32,6 +44,7 @@ export function AttributeTablePanel() {
   const [editValue, setEditValue] = useState("");
   const [editingFeature, setEditingFeature] = useState<{ originalIndex: number, values: Record<string, string> } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const isMobile = useIsMobile();
   const inputRef = useRef<HTMLInputElement>(null);
   const nodeRef = useRef<HTMLDivElement>(null);
   const resizeStartRef = useRef<{ x: number, y: number, w: number, h: number } | null>(null);
@@ -378,13 +391,15 @@ export function AttributeTablePanel() {
         >
           <Minus className="w-4 h-4" />
         </button>
-        <button
-          onClick={() => setIsMaximized(v => !v)}
-          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground hover:text-white"
-          title={isMaximized ? "Kembalikan Ukuran" : "Maximize"}
-        >
-          {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-        </button>
+        {!isMobile && (
+          <button
+            onClick={() => setIsMaximized(v => !v)}
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground hover:text-white"
+            title={isMaximized ? "Kembalikan Ukuran" : "Maximize"}
+          >
+            {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+        )}
         <button
           onClick={() => setIsAttributeTableOpen(false)}
           className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground hover:text-white"
@@ -598,13 +613,18 @@ export function AttributeTablePanel() {
     </div>
   ) : null;
 
-  // Maximized: full-screen window
-  if (isMaximized) {
+  // Maximized / mobile: full-screen window
+  if (isMaximized || isMobile) {
     return (
       <>
-        <div className="fixed inset-0 z-50 bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl flex flex-col">
-          {headerBar}
-          {tableBody}
+        <div
+          className={cn(
+            "fixed z-50 bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl flex flex-col",
+            isMinimized ? "top-0 left-0 right-0" : "inset-0"
+          )}
+        >
+          {isMinimized ? minimizedHeader : headerBar}
+          {!isMinimized && tableBody}
         </div>
         {editDialog}
       </>
