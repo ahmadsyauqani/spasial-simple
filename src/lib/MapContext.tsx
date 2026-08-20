@@ -31,7 +31,7 @@ type GeoJsonLayer = {
 
 export type AreaUnit = 'Ha' | 'm2' | 'km2';
 
-export type BasemapType = "dark" | "citra" | "hybrid" | "citra_terang" | "osm";
+export type BasemapType = "dark" | "citra" | "hybrid" | "citra_terang" | "osm" | "bpn";
 
 export const BASEMAP_OPTIONS: Record<BasemapType, { url: string, attribution: string, name: string }> = {
   dark: {
@@ -58,6 +58,11 @@ export const BASEMAP_OPTIONS: Record<BasemapType, { url: string, attribution: st
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors",
     name: "OpenStreetMap"
+  },
+  bpn: {
+    url: "https://petadasar.atrbpn.go.id/main/wms/{x}/{y}/{z}",
+    attribution: "&copy; ATR/BPN (Model Dasar Pertanahan)",
+    name: "Peta BPN"
   }
 };
 
