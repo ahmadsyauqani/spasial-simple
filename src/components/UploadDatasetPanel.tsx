@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
-import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff, Search } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
@@ -38,6 +38,11 @@ export function UploadDatasetPanel() {
   const { layers, setLayers, setZoomFeature, areaUnit, setAreaUnit } = useMapContext();
   const { isGuest } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
+  const [layerQuery, setLayerQuery] = useState("");
+  const [showLegend, setShowLegend] = useState(false);
+
+  const filteredLayers = layers.filter((layer) => layer.name?.toLowerCase().includes(layerQuery.toLowerCase()));
+  const allLayersVisible = layers.length > 0 && layers.every((layer) => layer.visible !== false);
 
   const [metricPayload, setMetricPayload] = useState<{ file: File, geojson: any } | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -307,6 +312,47 @@ export function UploadDatasetPanel() {
 
       <div className="p-3 space-y-3">
 
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={layerQuery}
+            onChange={(e) => setLayerQuery(e.target.value)}
+            placeholder="Cari layer..."
+            className="w-full rounded-lg border border-border bg-background/60 py-2 pl-8 pr-2 text-[10px] text-foreground outline-none focus:border-primary"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowLegend((value) => !value)}
+          className={cn("flex h-8 items-center gap-1 rounded-lg border px-2 text-[9px] font-bold uppercase", showLegend ? "border-primary/40 bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-muted")}
+          title="Tampilkan legenda otomatis"
+        >
+          <LayoutGrid className="h-3.5 w-3.5" />
+          Legenda
+        </button>
+        <button
+          type="button"
+          onClick={() => setLayers((prev) => prev.map((layer) => ({ ...layer, visible: !allLayersVisible })))}
+          className="flex h-8 items-center gap-1 rounded-lg border border-border px-2 text-[9px] font-bold uppercase text-muted-foreground hover:bg-muted"
+          title={allLayersVisible ? "Sembunyikan semua layer" : "Tampilkan semua layer"}
+        >
+          {allLayersVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+
+      {showLegend && (
+        <div className="rounded-xl border border-border bg-background/50 p-2">
+          <div className="mb-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Legenda layer</div>
+          <div className="grid grid-cols-1 gap-1">
+            {layers.filter((layer) => layer.visible !== false).map((layer) => {
+              const style = layer.style || { fillColor: "#3b82f6", fillOpacity: 0.2 };
+              return <div key={layer.id} className="flex items-center gap-2 text-[10px] text-foreground/80"><span className="h-3 w-3 shrink-0 rounded-sm border border-black/10" style={{ backgroundColor: style.fillColor, opacity: style.fillOpacity ?? 0.5 }} /><span className="truncate">{layer.name}</span></div>;
+            })}
+          </div>
+        </div>
+      )}
+
       <ScrollArea className="h-40 rounded-xl border border-border bg-muted/30 dark:bg-black/20 p-2">
         {layers.length === 0 ? (
           <div className="h-full flex items-center justify-center text-xs text-muted-foreground flex-col gap-2 opacity-50 pt-8">
@@ -315,7 +361,9 @@ export function UploadDatasetPanel() {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {layers.map((layer, index) => (
+             {filteredLayers.map((layer) => {
+               const index = layers.findIndex((item) => item.id === layer.id);
+               return (
               <div 
                 key={layer.id || index}
                 draggable
@@ -350,7 +398,8 @@ export function UploadDatasetPanel() {
                   onDelete={() => handleDeleteLayer(layer.id!, layer.name)} 
                 />
               </div>
-            ))}
+               );
+             })}
           </div>
         )}
       </ScrollArea>
