@@ -226,6 +226,7 @@ export default function MapArea() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationActive, setLocationActive] = useState(false);
+  const [isBasemapGalleryOpen, setIsBasemapGalleryOpen] = useState(false);
 
   const handleLocateMe = useCallback(() => {
     if (!navigator.geolocation) {
@@ -287,23 +288,21 @@ export default function MapArea() {
         className="absolute bottom-28 sm:bottom-6 left-4 sm:left-[340px] flex items-end gap-2 transition-all duration-300"
         style={{ zIndex: 9999 }}
       >
-        {/* Basemap Selector */}
-        <div className="flex flex-col gap-2 group">
-          <button className="bg-card/70 backdrop-blur-xl text-card-foreground border border-border/50 rounded-full p-2.5 shadow-2xl hover:bg-muted/80 transition-colors flex items-center justify-center">
+        {/* Basemap Gallery */}
+        <div className="relative flex flex-col gap-2">
+          <button onClick={() => setIsBasemapGalleryOpen((value) => !value)} title="Pilih peta dasar" className={`bg-card/70 backdrop-blur-xl text-card-foreground border rounded-full p-2.5 shadow-2xl transition-colors flex items-center justify-center ${isBasemapGalleryOpen ? 'border-primary bg-primary/15' : 'border-border/50 hover:bg-muted/80'}`}>
             <Layers className="w-5 h-5 text-primary" />
           </button>
-          <div className="absolute bottom-full left-0 mb-3 bg-card/70 backdrop-blur-xl border border-border/50 rounded-xl p-1.5 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col gap-0.5 min-w-[140px]">
-            <div className="text-[9px] font-black text-muted-foreground px-2 py-1 uppercase tracking-widest mb-1 opacity-50">Peta Dasar</div>
-            {(Object.keys(BASEMAP_OPTIONS) as BasemapType[]).map((key) => (
-              <button
-                key={key}
-                onClick={() => setActiveBasemap(key)}
-                className={`text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${activeBasemap === key ? 'bg-primary/20 text-primary' : 'hover:bg-muted/80 text-card-foreground/80 hover:text-card-foreground'}`}
-              >
-                {BASEMAP_OPTIONS[key].name}
-              </button>
-            ))}
+          {isBasemapGalleryOpen && <div className="basemap-gallery absolute bottom-full left-0 mb-3 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-border/50 bg-card/90 p-3 shadow-2xl backdrop-blur-2xl">
+            <div className="mb-2 flex items-center justify-between"><div><strong className="block text-[10px] font-black uppercase tracking-widest text-foreground">Basemap Gallery</strong><span className="text-[9px] text-muted-foreground">Pilih sumber peta dasar</span></div><span className="rounded-full bg-primary/15 px-2 py-1 text-[8px] font-bold uppercase text-primary">{BASEMAP_OPTIONS[activeBasemap].name}</span></div>
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(BASEMAP_OPTIONS) as BasemapType[]).map((key) => {
+                const swatches: Record<BasemapType, string> = { dark: 'linear-gradient(135deg,#111827,#374151)', citra: 'linear-gradient(135deg,#6b8e63,#d4a373)', hybrid: 'linear-gradient(135deg,#365c87,#8ca66b)', citra_terang: 'linear-gradient(135deg,#89a878,#e4c28c)', osm: 'linear-gradient(135deg,#d9e7d4,#f5f1df)', bpn: 'linear-gradient(135deg,#222,#6b7280)' };
+                return <button key={key} type="button" onClick={() => setActiveBasemap(key)} className={`basemap-card ${activeBasemap === key ? 'active' : ''}`}><span className="basemap-card-thumb" style={{ background: swatches[key] }} /><span className="min-w-0 text-left"><strong>{BASEMAP_OPTIONS[key].name}</strong><small>{activeBasemap === key ? 'Aktif' : 'Pilih basemap'}</small></span></button>;
+              })}
+            </div>
           </div>
+          }
         </div>
 
         {/* My Location Button */}
@@ -601,6 +600,8 @@ function ClipLayer() {
 
     // Tampilkan properti input layer
     if (feature.properties) {
+      const parcelId = feature.properties.NIB ?? feature.properties.nib ?? feature.properties.id_bidang ?? feature.properties.ID ?? feature.properties.FID ?? "Tanpa ID";
+      const featureGeometryType = feature.geometry?.type || "Unknown";
       html += `<div class="max-h-32 overflow-y-auto text-xs">`;
       html += `<table class="w-full text-left border-collapse"><tbody>`;
       for (const key in feature.properties) {
@@ -1727,6 +1728,8 @@ function LayerFeature({ layer }: { layer: any }) {
     });
 
     if (feature.properties) {
+      const parcelId = feature.properties.NIB ?? feature.properties.nib ?? feature.properties.id_bidang ?? feature.properties.ID ?? feature.properties.FID ?? "Tanpa ID";
+      const featureGeometryType = feature.geometry?.type || "Unknown";
       
       // Hitung luas, panjang, keliling menggunakan Turf
       let localAreaHtml = "";
@@ -1800,8 +1803,9 @@ function LayerFeature({ layer }: { layer: any }) {
       }
 
       // Build an elegant HTML table for the properties
-      let popupContent = `<div class="p-2 min-w-[200px] flex flex-col gap-2">`;
-      popupContent += `<h4 class="font-bold text-base border-b border-white/20 pb-1 mb-1 text-white">Atribut Data</h4>`;
+      let popupContent = `<div class="p-2 min-w-[230px] flex flex-col gap-2">`;
+      popupContent += `<div class="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-2.5"><div class="flex items-center justify-between gap-2"><h4 class="font-black text-sm text-white tracking-wide">Detail Bidang</h4><span class="rounded-full bg-cyan-400/15 px-2 py-0.5 text-[9px] font-bold uppercase text-cyan-300">${featureGeometryType}</span></div><div class="mt-1 font-mono text-[11px] font-bold text-cyan-200">${parcelId}</div></div>`;
+      popupContent += `<h4 class="font-bold text-[10px] uppercase tracking-widest border-b border-white/20 pb-1 mb-1 text-white/60">Informasi Atribut</h4>`;
       popupContent += localAreaHtml;
       popupContent += `<div class="max-h-48 overflow-y-auto pr-2 text-sm">`;
       popupContent += `<table class="w-full text-left border-collapse"><tbody>`;

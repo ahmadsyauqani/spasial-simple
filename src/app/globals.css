@@ -730,6 +730,52 @@ input, select, textarea, button {
   text-align: center;
 }
 
+.basemap-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 11px;
+  background: rgba(255,255,255,0.04);
+  transition: all 0.18s ease;
+}
+
+.basemap-card:hover,
+.basemap-card.active {
+  border-color: rgba(99,102,241,0.5);
+  background: rgba(99,102,241,0.14);
+}
+
+.basemap-card-thumb {
+  width: 42px;
+  height: 30px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 7px;
+}
+
+.basemap-card strong,
+.basemap-card small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.basemap-card strong {
+  color: rgba(255,255,255,0.88);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.basemap-card small {
+  margin-top: 3px;
+  color: rgba(255,255,255,0.38);
+  font-size: 8px;
+}
+
 .layer-manager-heading strong {
   color: rgba(255,255,255,0.92);
   font-size: 11px;
@@ -746,11 +792,30 @@ input, select, textarea, button {
 
 @media (max-width: 639px) {
   .coordinate-modern {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
     left: 0;
     right: 0;
+    width: 100%;
     justify-content: space-between;
     gap: 3px;
     border-radius: 14px;
+  }
+
+  .coordinate-modern-tools {
+    gap: 1px;
+  }
+
+  .coordinate-tool,
+  .coordinate-details-toggle,
+  .coordinate-unlock {
+    min-width: 28px;
+    min-height: 30px;
+    padding: 0 5px;
+  }
+
+  .coordinate-modern-divider {
+    display: none;
   }
 
   .coordinate-tool span,
@@ -759,10 +824,21 @@ input, select, textarea, button {
   }
 
   .coordinate-modern-readout {
-    min-width: 94px;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .coordinate-modern-readout strong {
+    overflow: hidden;
+    font-size: 8px;
+    text-overflow: ellipsis;
+  }
+
+  .coordinate-modern-metric {
+    min-width: 40px;
+  }
+
+  .coordinate-modern-metric strong {
     font-size: 8px;
   }
 }
