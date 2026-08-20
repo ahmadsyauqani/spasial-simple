@@ -137,13 +137,11 @@
 
 /* ── Geoman toolbar container ── */
 .leaflet-pm-toolbar {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 4px !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
+  display: none !important;
+}
+
+.leaflet-top.leaflet-right::before {
+  display: none !important;
 }
 
 /* ── Each Geoman button group ── */
