@@ -1375,7 +1375,7 @@ function CursorCoordinates() {
       )}
 
       {/* ── Coordinate Bar ── */}
-      <div data-map-ui="coordinate-bar" className="absolute bottom-[calc(72px+env(safe-area-inset-bottom))] sm:bottom-6 left-1/2 -translate-x-1/2 z-[400] w-[calc(100vw-2rem)] sm:w-auto pointer-events-auto">
+      <div data-map-ui="coordinate-bar" className="absolute bottom-[calc(132px+env(safe-area-inset-bottom))] sm:bottom-6 left-1/2 -translate-x-1/2 z-[500] w-[calc(100vw-2rem)] sm:w-auto pointer-events-auto">
 
         <div className="coordinate-legacy" aria-hidden="true">
         {/* Tool Buttons — Inline */}

@@ -148,7 +148,7 @@ export function SearchControl() {
   };
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[40] w-[min(78vw,380px)] sm:w-[min(70vw,420px)]">
+    <div className="absolute top-4 left-3 right-[88px] z-[40] w-auto sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-[min(70vw,420px)]">
       <form onSubmit={handleSearch} className="relative group">
         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
           {isSearching ? <Loader2 className="h-4 w-4 text-indigo-400 animate-spin" /> : <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-indigo-400 transition-colors" />}
