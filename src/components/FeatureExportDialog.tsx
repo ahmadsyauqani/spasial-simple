@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronsUpDown, DownloadCloud, FileJson, FileText, Loader2, Map as MapIcon } from "lucide-react";
+import { DownloadCloud, FileJson, FileText, Loader2, Map as MapIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PROJECTIONS, reprojectCoords } from "./ExportLayerDialog";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import * as turf from "@turf/turf";
@@ -50,7 +48,6 @@ function FeatureExportDialog({ request, onClose }: { request: ExportRequest; onC
   const [fileName, setFileName] = useState("");
   const [includeInternal, setIncludeInternal] = useState(false);
   const [prettyJson, setPrettyJson] = useState(true);
-  const [projectionOpen, setProjectionOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
@@ -132,7 +129,7 @@ function FeatureExportDialog({ request, onClose }: { request: ExportRequest; onC
 
   return (
     <Dialog open={!!request} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg bg-card/95 backdrop-blur-xl text-card-foreground border-border/50 shadow-2xl rounded-2xl">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[88vh] overflow-y-auto bg-card/95 backdrop-blur-xl text-card-foreground border-border/50 shadow-2xl rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><DownloadCloud className="h-5 w-5 text-cyan-400" /> Export Studio</DialogTitle>
           <DialogDescription>Export satu bidang dengan format, proyeksi, dan atribut sesuai kebutuhan.</DialogDescription>
@@ -145,7 +142,7 @@ function FeatureExportDialog({ request, onClose }: { request: ExportRequest; onC
 
           <div><label className="mb-1.5 block text-xs font-bold text-muted-foreground">Nama file</label><Input value={fileName} onChange={(e) => setFileName(e.target.value)} placeholder="nama_bidang" /></div>
 
-          <div><label className="mb-1.5 block text-xs font-bold text-muted-foreground">Proyeksi output</label><Popover open={projectionOpen} onOpenChange={setProjectionOpen}><PopoverTrigger className="flex h-10 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-left text-xs"><span className="truncate">{selectedProjection}</span><ChevronsUpDown className="h-4 w-4 opacity-50" /></PopoverTrigger><PopoverContent className="w-[420px] max-w-[calc(100vw-2rem)] p-0"><Command><CommandInput placeholder="Cari EPSG..." /><CommandList className="max-h-64"><CommandEmpty>EPSG tidak ditemukan.</CommandEmpty>{PROJECTIONS.map((group) => <CommandGroup key={group.group} heading={group.group}>{group.items.map((item) => <CommandItem key={item.value} value={item.label} onSelect={() => { setProjection(item.value); setProjectionOpen(false); }}><Check className={cn("mr-2 h-4 w-4", projection === item.value ? "opacity-100" : "opacity-0")} />{item.label}</CommandItem>)}</CommandGroup>)}</CommandList></Command></PopoverContent></Popover></div>
+          <div><label className="mb-1.5 block text-xs font-bold text-muted-foreground">Proyeksi output</label><select value={projection} onChange={(e) => setProjection(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-xs text-foreground outline-none focus:border-cyan-400"><option value="4326">WGS 84 (EPSG:4326) - Derajat Satelit Baku</option>{PROJECTIONS.slice(1).map((group) => <optgroup key={group.group} label={group.group}>{group.items.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</optgroup>)}</select></div>
           {projection === "custom" && <Input value={customEpsg} onChange={(e) => setCustomEpsg(e.target.value)} placeholder="Contoh: 32748" />}
 
           <div className="space-y-2 rounded-xl border border-border bg-background/40 p-3 text-xs">
@@ -155,7 +152,7 @@ function FeatureExportDialog({ request, onClose }: { request: ExportRequest; onC
           </div>
         </div>
 
-        <DialogFooter><Button variant="ghost" onClick={onClose} disabled={isExporting}>Batal</Button><Button onClick={handleExport} disabled={isExporting} className="bg-cyan-600 text-white hover:bg-cyan-700">{isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}Export</Button></DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row"><Button variant="ghost" onClick={onClose} disabled={isExporting}>Batal</Button><Button onClick={handleExport} disabled={isExporting} className="bg-cyan-600 text-white hover:bg-cyan-700">{isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}Export</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
