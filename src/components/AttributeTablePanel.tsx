@@ -12,7 +12,7 @@ import { deleteGeometriesFromSupabase, insertGeometryToSupabase } from "@/lib/da
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
+    const mq = window.matchMedia("(max-width: 1023px)");
     const update = () => setIsMobile(mq.matches);
     update();
     mq.addEventListener("change", update);

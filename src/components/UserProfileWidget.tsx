@@ -34,7 +34,7 @@ export function UserProfileWidget() {
         <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-orange-500/35 bg-orange-500/15 text-[11px] font-black text-orange-300">
           {initials}
         </span>
-        <span className="hidden max-w-[130px] text-left sm:block">
+        <span className="hidden max-w-[130px] text-left lg:block">
           <strong className="block truncate text-[11px] font-bold text-foreground">{name}</strong>
           <small className="block truncate text-[8px] font-bold uppercase tracking-wider text-muted-foreground">{profile.organization || "User aktif"}</small>
         </span>

@@ -518,7 +518,7 @@
 }
 
 /* -- Mobile responsiveness -- */
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .layout-composer-overlay {
     top: 0;
     left: 0;

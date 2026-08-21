@@ -24,6 +24,7 @@ import { useMapContext } from "@/lib/MapContext";
 import { AttributeTablePanel } from "@/components/AttributeTablePanel";
 import { Table2 } from "lucide-react";
 import { UserProfileWidget } from "@/components/UserProfileWidget";
+import { AnalysisResultsPanel } from "@/components/AnalysisResultsPanel";
 
 export default function Home() {
   const [isConverterOpen, setIsConverterOpen] = useState(false);
@@ -49,11 +50,12 @@ export default function Home() {
         <UserProfileWidget />
         <MapWrapper />
       <SearchControl />
+      <AnalysisResultsPanel />
       <ClockWidget />
 
       {/* ── Icon Rail: compact pill, always visible, h-fit ── */}
       <div
-        className="absolute top-4 left-4 z-20 hidden md:flex flex-col items-center gap-1 py-2 px-1.5 rounded-2xl border border-border/50 bg-card/85 backdrop-blur-2xl shadow-xl w-[52px] overflow-hidden"
+        className="absolute top-4 left-4 z-20 hidden lg:flex flex-col items-center gap-1 py-2 px-1.5 rounded-2xl border border-border/50 bg-card/85 backdrop-blur-2xl shadow-xl w-[52px] overflow-hidden"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -195,7 +197,7 @@ export default function Home() {
       {/* ── Mobile backdrop for bottom sheet ── */}
       {isPanelVisible && (
         <div
-          className="md:hidden fixed inset-0 z-[15] bg-black/40 backdrop-blur-[2px]"
+          className="lg:hidden fixed inset-0 z-[15] bg-black/40 backdrop-blur-[2px]"
           onClick={() => setIsSidebarPinned(false)}
         />
       )}
@@ -205,11 +207,11 @@ export default function Home() {
         className={cn(
           "absolute z-[20] flex flex-col rounded-2xl border border-border/50 bg-card/85 backdrop-blur-2xl shadow-xl overflow-hidden",
           "left-2 right-2 bottom-[calc(76px+env(safe-area-inset-bottom))] max-h-[62vh]",
-          "md:left-[68px] md:right-auto md:top-4 md:bottom-auto md:w-[320px] md:max-w-[320px] md:max-h-[75vh]",
+          "lg:left-[68px] lg:right-auto lg:top-4 lg:bottom-auto lg:w-[320px] lg:max-w-[320px] lg:max-h-[75vh]",
           "transition-all duration-300 ease-out",
           isPanelVisible
             ? "opacity-100 translate-x-0 translate-y-0 pointer-events-auto"
-            : "opacity-0 pointer-events-none translate-y-full md:translate-y-0 md:-translate-x-3"
+            : "opacity-0 pointer-events-none translate-y-full lg:translate-y-0 lg:-translate-x-3"
         )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -244,7 +246,7 @@ export default function Home() {
             <GpsTrackingTrigger />
             <button
               onClick={() => setIsSidebarPinned(false)}
-              className="md:hidden p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-white"
+              className="lg:hidden p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-white"
               title="Tutup Panel"
             >
               <X className="w-3.5 h-3.5" />
@@ -292,7 +294,7 @@ export default function Home() {
       </div>
 
       {/* ── Mobile Bottom Navigation ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex items-stretch bg-card/95 backdrop-blur-xl border-t border-border/50 pb-[env(safe-area-inset-bottom)]">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 flex items-stretch bg-card/95 backdrop-blur-xl border-t border-border/50 pb-[env(safe-area-inset-bottom)]">
         <button
           onClick={() => { setActiveTool("digitize"); setActiveTab("digitize"); setIsSidebarPinned(true); }}
           className={cn(
