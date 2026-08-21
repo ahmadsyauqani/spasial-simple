@@ -1875,13 +1875,10 @@ function LayerFeature({ layer }: { layer: any }) {
         if (exportBtn) {
           exportBtn.onclick = (ev) => {
             ev.stopPropagation();
-            const blob = new Blob([JSON.stringify(feature, null, 2)], { type: "application/geo+json" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `${String(parcelId).replace(/\s+/g, '_') || 'fitur'}_feature.geojson`;
-            link.click();
-            URL.revokeObjectURL(url);
+            window.dispatchEvent(new CustomEvent("sakagis:export-feature", {
+              detail: { feature, fileName: String(parcelId).replace(/\s+/g, '_') || 'fitur' }
+            }));
+            mapLayer.closePopup();
           };
         }
         if (editBtn) {

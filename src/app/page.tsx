@@ -25,6 +25,7 @@ import { AttributeTablePanel } from "@/components/AttributeTablePanel";
 import { Table2 } from "lucide-react";
 import { UserProfileWidget } from "@/components/UserProfileWidget";
 import { AnalysisResultsPanel } from "@/components/AnalysisResultsPanel";
+import { FeatureExportDialogHost } from "@/components/FeatureExportDialog";
 
 export default function Home() {
   const [isConverterOpen, setIsConverterOpen] = useState(false);
@@ -51,6 +52,7 @@ export default function Home() {
         <MapWrapper />
       <SearchControl />
       <AnalysisResultsPanel />
+      <FeatureExportDialogHost />
       <ClockWidget />
 
       {/* ── Icon Rail: compact pill, always visible, h-fit ── */}
