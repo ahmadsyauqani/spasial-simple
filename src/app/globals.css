@@ -539,6 +539,39 @@ input, select, textarea, button {
   background-size: 10px 10px;
 }
 
+.layer-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  margin-top: 5px;
+}
+
+.layer-card-badges span {
+  padding: 2px 5px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  color: rgba(255,255,255,0.46);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.layer-card-badges span.online,
+.layer-card-badges span.valid {
+  color: #86efac;
+  border-color: rgba(52,211,153,0.25);
+  background: rgba(16,185,129,0.08);
+}
+
+.layer-card-badges span.offline,
+.layer-card-badges span.warning {
+  color: #fbbf24;
+  border-color: rgba(245,158,11,0.25);
+  background: rgba(245,158,11,0.08);
+}
+
 .analysis-workspace {
   display: flex;
   flex-direction: column;

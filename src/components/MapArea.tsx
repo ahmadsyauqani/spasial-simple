@@ -1828,14 +1828,18 @@ function LayerFeature({ layer }: { layer: any }) {
       }
       
       const btnId = `edit-btn-${Math.random().toString(36).substr(2, 9)}`;
+      const zoomBtnId = `zoom-btn-${Math.random().toString(36).substr(2, 9)}`;
+      const copyBtnId = `copy-btn-${Math.random().toString(36).substr(2, 9)}`;
+      const exportBtnId = `export-btn-${Math.random().toString(36).substr(2, 9)}`;
       popupContent += `</tbody></table></div>`;
       
-      // Tambahkan tombol Edit di bagian bawah popup
+      // Action toolbar bidang
       popupContent += `
-        <div class="mt-3 pt-2 border-t border-white/10 flex justify-end">
-          <button id="${btnId}" class="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-all shadow-lg shadow-orange-500/20 active:scale-95">
-             Edit Atribut
-          </button>
+        <div class="mt-3 pt-2 border-t border-white/10 grid grid-cols-4 gap-1">
+          <button id="${zoomBtnId}" class="px-2 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/35 text-indigo-200 text-[9px] font-black uppercase rounded-lg">Zoom</button>
+          <button id="${copyBtnId}" class="px-2 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-200 text-[9px] font-black uppercase rounded-lg">Copy ID</button>
+          <button id="${exportBtnId}" class="px-2 py-1.5 bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase rounded-lg">Export</button>
+          <button id="${btnId}" class="px-2 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[9px] font-black uppercase rounded-lg">Edit</button>
         </div>
       `;
 
@@ -1849,6 +1853,37 @@ function LayerFeature({ layer }: { layer: any }) {
       mapLayer.on('popupopen', (e: any) => {
         // Bind event ke tombol edit di dalam popup
         const editBtn = document.getElementById(btnId);
+        const zoomBtn = document.getElementById(zoomBtnId);
+        const copyBtn = document.getElementById(copyBtnId);
+        const exportBtn = document.getElementById(exportBtnId);
+        if (zoomBtn) {
+          zoomBtn.onclick = (ev) => {
+            ev.stopPropagation();
+            try {
+              const bounds = mapLayer.getBounds ? mapLayer.getBounds() : null;
+              if (bounds?.isValid?.()) mapLayer._map?.fitBounds(bounds, { padding: [40, 40], maxZoom: 19 });
+            } catch (_) {}
+          };
+        }
+        if (copyBtn) {
+          copyBtn.onclick = (ev) => {
+            ev.stopPropagation();
+            const value = String(parcelId);
+            navigator.clipboard?.writeText(value).then(() => toast.success("ID bidang disalin."));
+          };
+        }
+        if (exportBtn) {
+          exportBtn.onclick = (ev) => {
+            ev.stopPropagation();
+            const blob = new Blob([JSON.stringify(feature, null, 2)], { type: "application/geo+json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `${String(parcelId).replace(/\s+/g, '_') || 'fitur'}_feature.geojson`;
+            link.click();
+            URL.revokeObjectURL(url);
+          };
+        }
         if (editBtn) {
           editBtn.onclick = (ev) => {
             ev.stopPropagation();
