@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import proj4 from "proj4";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getProj4Def } from "@/lib/crs";
 
 export const PROJECTIONS = [
   {
@@ -92,9 +93,14 @@ export function ExportLayerDialog({ layer }: { layer: any }) {
       let targetProjConfig = "EPSG:4326";
 
       if (code !== "4326") {
-        const projRes = await fetch(`https://epsg.io/${code}.proj4`);
-        if (!projRes.ok) throw new Error(`Sistem Proyeksi Koordinat (EPSG:${code}) tidak ditemukan.`);
-        targetProjConfig = await projRes.text();
+        const localProjection = getProj4Def(`EPSG:${code}`);
+        if (localProjection) {
+          targetProjConfig = localProjection as any;
+        } else {
+          const projRes = await fetch(`https://epsg.io/${code}.proj4`);
+          if (!projRes.ok) throw new Error(`Sistem Proyeksi Koordinat (EPSG:${code}) tidak ditemukan.`);
+          targetProjConfig = await projRes.text();
+        }
       }
 
       toast.info("Sedang menarik & mencerna geometri layer...");

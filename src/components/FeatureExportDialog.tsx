@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import * as turf from "@turf/turf";
 import tokml from "tokml";
+import { getProj4Def } from "@/lib/crs";
 
 type ExportFormat = "geojson" | "kml" | "csv";
 type ExportRequest = { feature: any; fileName: string } | null;
@@ -89,9 +90,14 @@ function FeatureExportDialog({ request, onClose }: { request: ExportRequest; onC
 
       let targetProjection = "EPSG:4326";
       if (code !== "4326") {
-        const response = await fetch(`https://epsg.io/${code}.proj4`);
-        if (!response.ok) throw new Error(`EPSG:${code} tidak ditemukan.`);
-        targetProjection = await response.text();
+        const localProjection = getProj4Def(`EPSG:${code}`);
+        if (localProjection) {
+          targetProjection = localProjection as any;
+        } else {
+          const response = await fetch(`https://epsg.io/${code}.proj4`);
+          if (!response.ok) throw new Error(`EPSG:${code} tidak ditemukan.`);
+          targetProjection = await response.text();
+        }
       }
 
       const geojson = {
