@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMapContext } from "@/lib/MapContext";
 import * as turf from "@turf/turf";
 import { toast } from "sonner";
-import { Loader2, Trash2, Scissors } from "lucide-react";
+import { Loader2, Trash2, Scissors, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -70,6 +70,7 @@ export function SliverDetectionButton() {
     areaUnit,
     sliverResult,
     setSliverResult,
+    setZoomFeature,
   } = useMapContext();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -84,10 +85,10 @@ export function SliverDetectionButton() {
 
   const formatUnit = (sqm: number) => {
     if (areaUnit === "Ha")
-      return `${(sqm / 10000).toLocaleString("id-ID", { maximumFractionDigits: 4 })} Ha`;
+      return `${(sqm / 10000).toLocaleString("id-ID", { maximumFractionDigits: 5 })} Ha`;
     if (areaUnit === "km2")
-      return `${(sqm / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 6 })} km²`;
-    return `${sqm.toLocaleString("id-ID", { maximumFractionDigits: 2 })} m²`;
+      return `${(sqm / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 5 })} km²`;
+    return `${sqm.toLocaleString("id-ID", { maximumFractionDigits: 5 })} m²`;
   };
 
   const availableLayers = layers.filter((l) => l.id && layerGeojsonCache[l.id]);
@@ -158,9 +159,9 @@ export function SliverDetectionButton() {
                         ...diff,
                         properties: {
                           sliver_type: "gap",
-                          area_sqm: Math.round(area * 100) / 100,
-                          thinness_ratio: Math.round(tr * 1000) / 1000,
-                          bbox_ratio: Math.round(br * 1000) / 1000,
+                           area_sqm: area,
+                           thinness_ratio: tr,
+                           bbox_ratio: br,
                           collapsed: collapsed,
                           source_A: featuresA[i].properties?.nama || featuresA[i].properties?.NAMA || `A-${i + 1}`,
                           source_B: featuresB[j].properties?.nama || featuresB[j].properties?.NAMA || `B-${j + 1}`,
@@ -198,9 +199,9 @@ export function SliverDetectionButton() {
                         ...intersection,
                         properties: {
                           sliver_type: "overlap",
-                          area_sqm: Math.round(area * 100) / 100,
-                          thinness_ratio: Math.round(tr * 1000) / 1000,
-                          bbox_ratio: Math.round(br * 1000) / 1000,
+                           area_sqm: area,
+                           thinness_ratio: tr,
+                           bbox_ratio: br,
                           collapsed: collapsed,
                           source_A: featuresA[i].properties?.nama || featuresA[i].properties?.NAMA || `A-${i + 1}`,
                           source_B: featuresB[j].properties?.nama || featuresB[j].properties?.NAMA || `B-${j + 1}`,
@@ -270,8 +271,8 @@ export function SliverDetectionButton() {
             totalSlivers: sliverFeatures.length,
             gaps,
             overlaps,
-            avgThinness: Math.round(avgThinness * 1000) / 1000,
-            totalAreaSqm: Math.round(totalAreaSqm * 100) / 100,
+             avgThinness,
+             totalAreaSqm,
           },
         });
 
@@ -442,7 +443,7 @@ export function SliverDetectionButton() {
                 <span className="font-mono text-yellow-300">{sliverResult.layerBName}</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Sliver:</span>
                   <span className="font-mono font-bold text-yellow-300">{sliverResult.stats.totalSlivers}</span>
@@ -464,12 +465,27 @@ export function SliverDetectionButton() {
                 <div className="flex justify-between col-span-2">
                   <span className="text-muted-foreground">Avg. Thinness Ratio:</span>
                   <span className="font-mono text-yellow-200">{sliverResult.stats.avgThinness}</span>
+                  </div>
                 </div>
-              </div>
 
-              <p className="text-[10px] text-yellow-400/70 mt-1">
-                Klik area kuning di peta untuk detail per sliver.
-              </p>
+                <div className="mt-2 max-h-40 space-y-1.5 overflow-y-auto border-t border-yellow-500/15 pt-2">
+                  {sliverResult.geojson.features.map((feature: any, index: number) => {
+                    const props = feature.properties || {};
+                    return (
+                      <div key={index} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-black/20 px-2 py-1.5">
+                        <div className="min-w-0 text-[10px]">
+                          <div className={props.sliver_type === 'gap' ? 'font-bold text-orange-300' : 'font-bold text-red-300'}>{props.sliver_type === 'gap' ? 'Gap' : 'Overlap'} #{index + 1}</div>
+                          <div className="truncate text-white/50">Area: {Number(props.area_sqm || 0).toLocaleString('id-ID', { minimumFractionDigits: 5, maximumFractionDigits: 5 })} m² · Thinness: {Number(props.thinness_ratio || 0).toFixed(5)}</div>
+                        </div>
+                        <button type="button" onClick={() => setZoomFeature(feature)} className="flex shrink-0 items-center gap-1 rounded-md bg-indigo-500/15 px-2 py-1 text-[9px] font-bold text-indigo-300 hover:bg-indigo-500/25" title="Zoom ke sliver"><MapPin className="h-3 w-3" /> Zoom</button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p className="text-[10px] text-yellow-400/70 mt-1">
+                 Klik Zoom untuk fokus ke sliver tertentu. Popup di peta menampilkan metrik lengkap.
+                </p>
             </div>
           )}
         </div>

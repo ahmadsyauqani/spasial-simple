@@ -2038,9 +2038,9 @@ function SliverLayer() {
   if (!sliverResult?.geojson) return null;
 
   const formatUnit = (sqm: number) => {
-    if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 4 })} Ha`;
-    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 6 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 2 })} m²`;
+    if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 5 })} Ha`;
+    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 5 })} km²`;
+    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 5 })} m²`;
   };
 
   const sliverStyle = (feature: any) => {
@@ -2060,14 +2060,15 @@ function SliverLayer() {
     const color = isGap ? 'amber' : 'red';
     const icon = isGap ? '🕳️' : '📐';
     const label = isGap ? 'Gap (Celah)' : 'Overlap Tipis';
+    const zoomId = `sliver-zoom-${Math.random().toString(36).slice(2, 10)}`;
 
     let html = `<div class="p-2 min-w-[220px]">`;
     html += `<h4 class="font-bold text-base border-b border-${color}-400/30 pb-1 mb-2 text-${color}-300">${icon} Sliver: ${label}</h4>`;
 
     html += `<div class="bg-${color}-900/30 p-2 rounded border border-${color}-500/20 text-xs mb-2">`;
     html += `<div class="flex justify-between mt-0.5"><span class="text-gray-300">Area</span><span class="font-mono text-${color}-300 font-bold">${formatUnit(props.area_sqm || 0)}</span></div>`;
-    html += `<div class="flex justify-between mt-1"><span class="text-gray-300">Thinness Ratio</span><span class="font-mono text-white">${props.thinness_ratio}</span></div>`;
-    html += `<div class="flex justify-between mt-1"><span class="text-gray-300">BBox Elongation</span><span class="font-mono text-white">${props.bbox_ratio}</span></div>`;
+    html += `<div class="flex justify-between mt-1"><span class="text-gray-300">Thinness Ratio</span><span class="font-mono text-white">${Number(props.thinness_ratio || 0).toFixed(5)}</span></div>`;
+    html += `<div class="flex justify-between mt-1"><span class="text-gray-300">BBox Elongation</span><span class="font-mono text-white">${Number(props.bbox_ratio || 0).toFixed(5)}</span></div>`;
     html += `<div class="flex justify-between mt-1"><span class="text-gray-300">Collapse Test</span><span class="font-mono ${props.collapsed ? 'text-red-400 font-bold' : 'text-green-400'}">${props.collapsed ? '✗ Hilang' : '✓ Bertahan'}</span></div>`;
     html += `</div>`;
 
@@ -2075,9 +2076,22 @@ function SliverLayer() {
     html += `<div>Sumber A: <span class="text-white">${props.source_A || '-'}</span></div>`;
     html += `<div>Sumber B: <span class="text-white">${props.source_B || '-'}</span></div>`;
     html += `</div>`;
+    html += `<button id="${zoomId}" class="mt-3 w-full rounded-lg bg-indigo-500/20 px-3 py-1.5 text-[10px] font-bold text-indigo-200 hover:bg-indigo-500/35">Zoom ke Sliver</button>`;
 
     html += `</div>`;
     mapLayer.bindPopup(html, { className: 'custom-popup-dark', maxWidth: 320 });
+    mapLayer.on('popupopen', () => {
+      const zoomButton = document.getElementById(zoomId);
+      if (zoomButton) {
+        zoomButton.onclick = (event) => {
+          event.stopPropagation();
+          try {
+            const bounds = mapLayer.getBounds?.();
+            if (bounds?.isValid?.()) mapLayer._map?.fitBounds(bounds, { padding: [40, 40], maxZoom: 21 });
+          } catch (_) {}
+        };
+      }
+    });
   };
 
   return (
