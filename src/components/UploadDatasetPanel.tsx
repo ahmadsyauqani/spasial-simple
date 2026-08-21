@@ -22,6 +22,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { PROJECTIONS, reprojectCoords } from "./ExportLayerDialog";
+import { getProj4Def } from "@/lib/crs";
 import { cn } from "@/lib/utils";
 import { OverlapAnalysisButton } from "./OverlapAnalysisPanel";
 import { ClipAnalysisButton } from "./ClipAnalysisPanel";
@@ -693,9 +694,13 @@ export function UploadDatasetPanel() {
                 setIsFixing(true);
                 try {
                   const code = activeEpsg.trim().replace(/^EPSG:/i, ''); 
-                  const projRes = await fetch(`https://epsg.io/${code}.proj4`);
-                  if (!projRes.ok) throw new Error(`Sistem Proyeksi (EPSG:${code}) tidak ditemukan.`);
-                  const sourceProjConfig = await projRes.text();
+                   const localProjection = getProj4Def(`EPSG:${code}`);
+                   let sourceProjConfig: any = localProjection;
+                   if (!sourceProjConfig) {
+                     const projRes = await fetch(`https://epsg.io/${code}.proj4`);
+                     if (!projRes.ok) throw new Error(`Sistem Proyeksi (EPSG:${code}) tidak ditemukan.`);
+                     sourceProjConfig = await projRes.text();
+                   }
 
                   toast.info(`Kalkulasi pemurnian dari EPSG:${code} ke WGS84...`);
                   
@@ -1029,13 +1034,27 @@ export function UploadDatasetPanel() {
 import { ExportLayerDialog } from "./ExportLayerDialog";
 
 function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => void }) {
-  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache, setLayers } = useMapContext();
+  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache, setLayers, topologyErrors } = useMapContext();
   const { isGuest } = useAuth();
   const style = layer.style || { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2, dissolve_key: 'none' };
   const colorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
   const [isPinned, setIsPinned] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const isVisible = layer.visible !== false;
+  const featureCount = layerGeojsonCache[layer.id!]?.features?.length || 0;
+  const validationCount = topologyErrors?.features?.length || 0;
+
+  useEffect(() => {
+    const updateConnection = () => setIsOnline(navigator.onLine);
+    updateConnection();
+    window.addEventListener('online', updateConnection);
+    window.addEventListener('offline', updateConnection);
+    return () => {
+      window.removeEventListener('online', updateConnection);
+      window.removeEventListener('offline', updateConnection);
+    };
+  }, []);
 
   const handleToggleVisibility = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1203,9 +1222,12 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
           <span className="block font-bold text-[12px] text-navy dark:text-white/95 truncate leading-tight" title={layer.name}>
             {layer.name}
           </span>
-          <span className="text-[9px] text-muted-foreground/70 font-medium uppercase tracking-wider">
-            {layer.geometryType || 'Vector'} · {layerGeojsonCache[layer.id!]?.features?.length || 0} fitur
-          </span>
+          <div className="layer-card-badges">
+            <span>{layer.geometryType || 'Vector'}</span>
+            <span>{featureCount.toLocaleString('id-ID')} fitur</span>
+            <span className={isOnline ? "online" : "offline"}>{isOnline ? "Online" : "Offline"}</span>
+            <span className={validationCount ? "warning" : "valid"}>{validationCount ? `${validationCount} warning` : "Valid"}</span>
+          </div>
         </div>
 
         {/* Action buttons (Absolute on hover) */}
