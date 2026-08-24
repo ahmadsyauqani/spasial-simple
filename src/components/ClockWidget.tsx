@@ -46,7 +46,7 @@ export function ClockWidget() {
   if (!mounted) {
     return (
       <div
-        className="fixed z-[41] top-3"
+        className="fixed z-[41] top-3 hidden lg:block"
         style={{ right: "calc(50% + 240px)" }}
       >
         <div className="w-16 h-16 rounded-full border-2 border-indigo-500/30 bg-slate-950/80 animate-pulse" />
@@ -102,7 +102,7 @@ export function ClockWidget() {
 
       {/* Symmetric positioning on the left of search bar */}
       <div
-        className="fixed z-[41] top-3"
+        className="fixed z-[41] top-3 hidden lg:block"
         style={{
           right: "calc(50% + 240px)",
         }}

@@ -42,7 +42,7 @@ export function AnalysisResultsPanel() {
   };
 
   return (
-    <aside className={`fixed right-4 top-24 z-[9000] w-[min(340px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-white/10 bg-card/90 shadow-2xl backdrop-blur-2xl ${expanded ? "" : "analysis-results-collapsed"}`}>
+    <aside className={`analysis-results-panel fixed right-4 top-24 z-[9000] w-[min(340px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-white/10 bg-card/90 shadow-2xl backdrop-blur-2xl ${expanded ? "" : "analysis-results-collapsed"}`}>
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2.5">
         <button onClick={() => setExpanded((value) => !value)} className="flex items-center gap-2 text-left"><Layers3 className="h-4 w-4 text-cyan-300" /><div><strong className="block text-[10px] font-black uppercase tracking-widest text-white/90">Analysis Results</strong><span className="text-[9px] text-white/40">{results.length} hasil aktif di peta</span></div></button>
         <button onClick={() => setExpanded((value) => !value)} className="rounded-md p-1 text-white/40 hover:bg-white/10 hover:text-white" title={expanded ? "Ciutkan" : "Buka hasil"}><ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "" : "-rotate-90"}`} /></button>

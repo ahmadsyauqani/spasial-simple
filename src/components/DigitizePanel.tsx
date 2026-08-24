@@ -126,27 +126,36 @@ export function DigitizePanel() {
       }
       toast.info("Mode digitasi dinonaktifkan");
     } else {
-      setActiveDigitizingLayerId(layerId);
       const drawMode = layer.geometryType === 'Point' ? 'Marker' : (layer.geometryType === 'Line' ? 'Line' : 'Polygon');
+      let enabled = false;
       try {
+        if (!map?.pm) throw new Error("Peta belum siap");
         (map?.pm as any)?.enableDraw(drawMode, { 
           snappable: digitizeSettings.snapping, 
           snapDistance: digitizeSettings.snapDistance 
         });
+        enabled = true;
       } catch(e) {
         console.warn('Geoman enableDraw error:', e);
         // Fallback: try alternative shape names
         try {
           const fallbackMode = layer.geometryType === 'Line' ? 'Polyline' : drawMode;
+          if (!map?.pm) throw new Error("Peta belum siap");
           (map?.pm as any)?.enableDraw(fallbackMode, { 
             snappable: digitizeSettings.snapping, 
             snapDistance: digitizeSettings.snapDistance 
           });
+          enabled = true;
         } catch(e2) {
           console.warn('Geoman enableDraw fallback also failed:', e2);
         }
       }
-      toast.success(`Mode gambar ${layer.geometryType} aktif`);
+      if (enabled) {
+        setActiveDigitizingLayerId(layerId);
+        toast.success(`Mode gambar ${layer.geometryType} aktif`);
+      } else {
+        toast.error("Peta belum siap untuk digitasi. Coba lagi sebentar.");
+      }
     }
   };
 
@@ -213,7 +222,7 @@ export function DigitizePanel() {
 
   return (
     <>
-      <div className="text-card-foreground overflow-hidden flex flex-col">
+      <div className="digitize-panel text-card-foreground overflow-hidden flex flex-col">
         {/* Compact controls bar */}
         <div
           className="flex items-center justify-between px-3 py-2 border-b border-border/20 bg-black/10 cursor-pointer hover:bg-black/15 transition-colors"

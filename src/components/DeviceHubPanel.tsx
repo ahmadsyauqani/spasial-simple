@@ -823,7 +823,7 @@ export function DeviceHubPanel({
 
   return (
     <div className={cn(
-      "fixed bottom-[88px] right-4 z-[9998] w-80",
+      "device-hub-panel fixed bottom-[88px] right-4 z-[9998] w-80",
       "rounded-2xl border border-violet-500/20 bg-[#0f1014]/95 backdrop-blur-2xl shadow-2xl overflow-hidden",
       "animate-in slide-in-from-bottom-3 fade-in duration-300"
     )}>

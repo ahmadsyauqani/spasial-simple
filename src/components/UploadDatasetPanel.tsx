@@ -36,7 +36,7 @@ import { SliverDetectionButton } from "./SliverDetectionPanel";
 
 const PdfOverlayPanel = dynamic(() => import("./PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
 
-export function UploadDatasetPanel() {
+export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "analysis" }) {
   const { layers, setLayers, setZoomFeature, areaUnit, setAreaUnit } = useMapContext();
   const { isGuest } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
@@ -340,7 +340,45 @@ export function UploadDatasetPanel() {
   };
 
   return (
-    <div className="text-card-foreground overflow-hidden flex flex-col">
+    <div className={cn("dataset-panel text-card-foreground overflow-hidden flex flex-col", mode === "analysis" && "dataset-panel-analysis")}>
+      {mode === "analysis" && (
+        <div className="analysis-workspace analysis-workspace-primary">
+          <div className="analysis-workspace-header">
+            <div>
+              <strong>Analisis Spasial</strong>
+              <span>Pilih tool, atur parameter, lalu simpan hasil sebagai layer baru.</span>
+            </div>
+            <span className="analysis-layer-status">{layers.length} layer</span>
+          </div>
+          <div className="analysis-workspace-search">
+            <Search className="h-3.5 w-3.5" />
+            <input value={analysisQuery} onChange={(e) => setAnalysisQuery(e.target.value)} placeholder="Cari tool analisis..." />
+          </div>
+          <div className="analysis-category-tabs">
+            {analysisCategories.map((category) => (
+              <button key={category} type="button" onClick={() => setAnalysisCategory(category)} className={analysisCategory === category ? "active" : ""}>{category}</button>
+            ))}
+          </div>
+          <div className="analysis-workspace-grid">
+            {visibleAnalysisTools.map((tool) => (
+              <div className="analysis-tool-card" key={tool.key}>
+                <div className="analysis-tool-icon">{tool.icon}</div>
+                <div className="analysis-tool-copy">
+                  <strong>{tool.label}</strong>
+                  <span>{tool.description}</span>
+                  <small>{tool.category}</small>
+                </div>
+                <div className="analysis-tool-trigger">{tool.component}</div>
+              </div>
+            ))}
+          </div>
+          {visibleAnalysisTools.length === 0 && <div className="analysis-empty">Tool tidak ditemukan.</div>}
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <LayoutPetaButton />
+            <DownloadAllResultsButton />
+          </div>
+        </div>
+      )}
       <div className="layer-manager-heading">
         <div>
           <strong>Layer Manager</strong>
@@ -349,7 +387,7 @@ export function UploadDatasetPanel() {
         <Layers className="h-4 w-4 text-cyan-300" />
       </div>
       {/* Area unit switcher — compact top bar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/20 bg-black/10">
+      <div className="dataset-unit-bar flex items-center justify-between px-3 py-2 border-b border-border/20 bg-black/10">
         <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Satuan Luas</span>
         <div className="relative flex items-center bg-black/30 rounded-lg p-0.5 border border-white/5 shadow-inner overflow-hidden">
           <div 
@@ -509,7 +547,7 @@ export function UploadDatasetPanel() {
       </label>
 
       {/* Unified Analysis Workspace */}
-      <div className="analysis-workspace">
+      {mode === "dataset" && <div className="analysis-workspace">
         <div className="analysis-workspace-header">
           <div>
             <strong>Analysis Workspace</strong>
@@ -544,7 +582,7 @@ export function UploadDatasetPanel() {
           <LayoutPetaButton />
           <DownloadAllResultsButton />
         </div>
-      </div>
+      </div>}
 
       </div>
 

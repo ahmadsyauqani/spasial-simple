@@ -915,3 +915,255 @@ input, select, textarea, button {
 .measure-tooltip::before {
   display: none !important;
 }
+
+/* SAKAGIS workbench shell: one touch-friendly rhythm across all tools. */
+.workspace-panel {
+  isolation: isolate;
+}
+
+.sakagis-app {
+  height: 100dvh;
+}
+
+.workspace-panel-header,
+.workspace-panel-tabs {
+  min-height: 48px;
+}
+
+.workspace-panel-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-bottom-nav {
+  min-height: calc(70px + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.24);
+}
+
+.mobile-bottom-nav button {
+  position: relative;
+  min-height: 64px;
+  min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-bottom-nav button:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mobile-bottom-nav button[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 22%;
+  right: 22%;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 12px currentColor;
+}
+
+.analysis-workspace-primary {
+  min-height: 100%;
+  border-top: 0;
+  padding: 16px 14px 24px;
+}
+
+.dataset-panel-analysis > .layer-manager-heading,
+.dataset-panel-analysis > .dataset-unit-bar,
+.dataset-panel-analysis > .p-3 {
+  display: none;
+}
+
+.digitize-status-bar {
+  left: 12px;
+  right: 12px;
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.digitize-status-pulse {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #fb923c;
+  box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.14), 0 0 16px rgba(249, 115, 22, 0.8);
+  animation: digitize-pulse 1.5s ease-in-out infinite;
+}
+
+.digitize-action-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 11px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 0.18s, transform 0.18s;
+}
+
+.digitize-action-button:active {
+  transform: scale(0.97);
+}
+
+.digitize-action-muted {
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.digitize-action-primary {
+  color: white;
+  background: #f97316;
+  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.22);
+}
+
+.digitize-action-danger {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+@keyframes digitize-pulse {
+  50% { opacity: 0.48; transform: scale(0.82); }
+}
+
+.analysis-results-panel {
+  max-height: min(55vh, 620px);
+}
+
+.device-hub-panel,
+.gps-tracking-panel {
+  max-height: min(74dvh, 720px);
+}
+
+@media (min-width: 1024px) {
+  .workspace-panel {
+    width: 360px !important;
+    max-width: 360px !important;
+  }
+
+  .digitize-status-bar {
+    left: 84px;
+    right: auto;
+    width: min(430px, calc(100vw - 110px));
+    margin: 0;
+    bottom: 22px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .workspace-panel {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(72dvh, 700px) !important;
+    border-radius: 24px !important;
+  }
+
+  .workspace-panel-header {
+    min-height: 56px;
+    padding: 10px 14px !important;
+  }
+
+  .workspace-panel-header button,
+  .workspace-panel-tabs button {
+    min-height: 42px;
+  }
+
+  .map-action-controls,
+  .leaflet-bottom.leaflet-right {
+    bottom: calc(84px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .workspace-panel-tabs {
+    min-height: 54px;
+    padding: 6px 8px !important;
+  }
+
+  .workspace-panel-tabs button {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+
+  .digitize-panel button,
+  .dataset-panel-analysis .analysis-tool-trigger > button {
+    min-height: 42px;
+  }
+
+  .digitize-panel input,
+  .digitize-panel select {
+    min-height: 42px;
+  }
+
+  .dataset-panel-analysis .analysis-tool-trigger > button {
+    min-width: 42px !important;
+  }
+
+  .analysis-results-panel {
+    left: 12px;
+    right: 12px;
+    top: calc(66px + env(safe-area-inset-top));
+    width: auto;
+    max-height: 34dvh;
+  }
+
+  .device-hub-panel,
+  .gps-tracking-panel {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(76dvh, 720px) !important;
+  }
+
+  .digitizing-active [data-map-ui="coordinate-bar"],
+  .digitizing-active .map-action-controls {
+    display: none !important;
+  }
+
+  .digitizing-active .leaflet-bottom.leaflet-right {
+    bottom: calc(178px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .digitizing-active .mobile-bottom-nav {
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.36);
+  }
+
+  .attribute-table-window {
+    border-radius: 0 !important;
+  }
+
+  .attribute-table-window .attr-header {
+    min-height: 58px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    gap: 7px;
+  }
+
+  .attribute-table-window .attr-header > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .attribute-table-window .attr-header select {
+    max-width: min(145px, 38vw);
+  }
+
+  .attribute-table-window .attr-header button {
+    min-height: 38px;
+    min-width: 38px;
+  }
+
+  .attribute-table-window table {
+    min-width: 620px;
+  }
+}

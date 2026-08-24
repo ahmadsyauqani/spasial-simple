@@ -617,9 +617,9 @@ export function AttributeTablePanel() {
   if (isMaximized || isMobile) {
     return (
       <>
-        <div
-          className={cn(
-            "fixed z-50 bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl flex flex-col",
+      <div
+        className={cn(
+            "attribute-table-window fixed z-50 bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl flex flex-col",
             isMinimized ? "top-0 left-0 right-0" : "inset-0"
           )}
         >
@@ -644,7 +644,7 @@ export function AttributeTablePanel() {
       >
         <div
           ref={nodeRef}
-          className="fixed z-40 bg-card/95 backdrop-blur-xl border border-border/50 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
+          className="attribute-table-window fixed z-40 bg-card/95 backdrop-blur-xl border border-border/50 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
           style={{ width: panelWidth, height: isMinimized ? "auto" : panelHeight }}
         >
           {isMinimized ? minimizedHeader : headerBar}

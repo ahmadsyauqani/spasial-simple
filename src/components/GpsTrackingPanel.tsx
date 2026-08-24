@@ -112,7 +112,7 @@ export function GpsTrackingPanel() {
     <div
       className={cn(
         // Posisi: bottom-right, di atas status bar — tidak nabrak toolbar kanan maupun sidebar
-        "fixed bottom-[88px] right-4 z-[9999] w-72",
+        "gps-tracking-panel fixed bottom-[88px] right-4 z-[9999] w-72",
         "rounded-2xl border border-border/50 bg-card/90 backdrop-blur-2xl shadow-2xl overflow-hidden",
         "animate-in slide-in-from-bottom-3 fade-in duration-300"
       )}

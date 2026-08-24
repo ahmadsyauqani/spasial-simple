@@ -285,7 +285,7 @@ export default function MapArea() {
     <div className="w-full h-full bg-background absolute inset-0 z-0">
       {/* Bottom-left controls: Basemap + My Location (Moved to clear sidebar) */}
       <div 
-        className="absolute bottom-[calc(196px+env(safe-area-inset-bottom))] lg:bottom-6 left-4 lg:left-[340px] flex items-end gap-2 transition-all duration-300"
+        className="map-action-controls absolute bottom-[calc(196px+env(safe-area-inset-bottom))] lg:bottom-6 left-4 lg:left-[340px] flex items-end gap-2 transition-all duration-300"
         style={{ zIndex: 9999 }}
       >
         {/* Basemap Gallery */}
