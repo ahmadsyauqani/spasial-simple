@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import * as turf from "@turf/turf";
 import proj4 from "proj4";
-import { useMapContext, BASEMAP_OPTIONS, BasemapType } from "@/lib/MapContext";
+import { useMapContext, BASEMAP_OPTIONS, type BasemapType, type GpsAccuracyPosition } from "@/lib/MapContext";
 import { Layers, LocateFixed, Loader2, Lock, Unlock, Magnet, MousePointer2, Settings2, Crosshair, Activity, Maximize, Compass, Ruler, Square } from "lucide-react";
 import { createOfflineTileLayer } from "@/lib/OfflineTileLayer";
 import { OfflineMapManager } from "./OfflineMapManager";
@@ -222,7 +222,7 @@ function TileLayerWithOffline({ url, attribution, crossOrigin }: { url: string, 
 export default function MapArea() {
   const { 
     activeFeatureToZoom, layers, activeBasemap, setActiveBasemap, pdfOverlays,
-    isTracking, trackingPath
+    isTracking, trackingPath, gpsAccuracyPosition, gpsAccuracySamples, isGpsAccuracyTracking
   } = useMapContext();
   const currentBasemap = BASEMAP_OPTIONS[activeBasemap];
   const canvasSafeBasemap = activeBasemap === "dark" || activeBasemap === "citra" || activeBasemap === "osm";
@@ -417,6 +417,11 @@ export default function MapArea() {
           >
             <Popup>Lokasi Anda Sekarang</Popup>
           </CircleMarker>
+        )}
+
+        {/* Realtime GPS quality footprint and breadcrumb trail */}
+        {isGpsAccuracyTracking && gpsAccuracyPosition && (
+          <GpsAccuracyOverlay position={gpsAccuracyPosition} samples={gpsAccuracySamples} />
         )}
 
         <PdfEditMarkers />
@@ -944,6 +949,50 @@ function LocationMarker({ location }: { location: { lat: number; lng: number; ac
         icon={pulsingIcon}
         interactive={false}
       />
+    </>
+  );
+}
+
+function GpsAccuracyOverlay({
+  position,
+  samples,
+}: {
+  position: GpsAccuracyPosition;
+  samples: GpsAccuracyPosition[];
+}) {
+  const map = useMap();
+  const hasCenteredRef = useRef(false);
+  const color = position.accuracy <= 8 ? "#22d3ee" : position.accuracy <= 20 ? "#fbbf24" : "#f87171";
+  const trail = samples.map((sample) => [sample.latitude, sample.longitude] as [number, number]);
+
+  useEffect(() => {
+    if (hasCenteredRef.current) return;
+    hasCenteredRef.current = true;
+    map.flyTo([position.latitude, position.longitude], Math.max(map.getZoom(), 16), { duration: 1.2 });
+  }, [map, position.latitude, position.longitude]);
+
+  return (
+    <>
+      {trail.length > 1 && (
+        <Polyline
+          positions={trail}
+          pathOptions={{ color, weight: 3, opacity: 0.8, dashArray: "7 7" }}
+        />
+      )}
+      <Circle
+        center={[position.latitude, position.longitude]}
+        radius={position.accuracy}
+        pathOptions={{ color, fillColor: color, fillOpacity: 0.12, weight: 2, dashArray: "6 5" }}
+      />
+      <CircleMarker
+        center={[position.latitude, position.longitude]}
+        radius={7}
+        pathOptions={{ color: "#fff", fillColor: color, fillOpacity: 1, weight: 2 }}
+      >
+        <Tooltip permanent direction="top" offset={[0, -8]} className="gps-accuracy-map-tooltip">
+          GPS +/- {position.accuracy.toFixed(1)} m
+        </Tooltip>
+      </CircleMarker>
     </>
   );
 }
@@ -1479,6 +1528,7 @@ function CursorCoordinates() {
             <Lock className="w-3.5 h-3.5" />
           </button>
         )}
+
         </div>
 
         <div className="coordinate-modern">

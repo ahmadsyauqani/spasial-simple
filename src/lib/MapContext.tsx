@@ -154,6 +154,16 @@ export type MapViewState = {
   zoom: number;
 };
 
+export type GpsAccuracyPosition = {
+  accuracy: number;
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+  speed: number | null;
+  heading: number | null;
+  timestamp: number;
+};
+
 interface MapContextType {
   layers: GeoJsonLayer[];
   setLayers: React.Dispatch<React.SetStateAction<GeoJsonLayer[]>>;
@@ -235,6 +245,12 @@ interface MapContextType {
   setIsAttributeTableOpen: (val: boolean) => void;
   activeTableLayerId: string | null;
   setActiveTableLayerId: (id: string | null) => void;
+  gpsAccuracyPosition: GpsAccuracyPosition | null;
+  setGpsAccuracyPosition: React.Dispatch<React.SetStateAction<GpsAccuracyPosition | null>>;
+  gpsAccuracySamples: GpsAccuracyPosition[];
+  setGpsAccuracySamples: React.Dispatch<React.SetStateAction<GpsAccuracyPosition[]>>;
+  isGpsAccuracyTracking: boolean;
+  setIsGpsAccuracyTracking: (value: boolean) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -259,6 +275,9 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
   const [isAttributeTableOpen, setIsAttributeTableOpen] = useState(false);
   const [activeTableLayerId, setActiveTableLayerId] = useState<string | null>(null);
+  const [gpsAccuracyPosition, setGpsAccuracyPosition] = useState<GpsAccuracyPosition | null>(null);
+  const [gpsAccuracySamples, setGpsAccuracySamples] = useState<GpsAccuracyPosition[]>([]);
+  const [isGpsAccuracyTracking, setIsGpsAccuracyTracking] = useState(false);
 
   // Load cached layers from IndexedDB on startup
   useEffect(() => {
@@ -414,7 +433,10 @@ export function MapProvider({ children }: { children: ReactNode }) {
       isDarkMode, setIsDarkMode,
       BASEMAP_OPTIONS,
       isAttributeTableOpen, setIsAttributeTableOpen,
-      activeTableLayerId, setActiveTableLayerId
+      activeTableLayerId, setActiveTableLayerId,
+      gpsAccuracyPosition, setGpsAccuracyPosition,
+      gpsAccuracySamples, setGpsAccuracySamples,
+      isGpsAccuracyTracking, setIsGpsAccuracyTracking
     }}>
       {children}
     </MapContext.Provider>

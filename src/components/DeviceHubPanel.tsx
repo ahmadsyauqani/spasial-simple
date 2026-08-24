@@ -826,6 +826,7 @@ export function DeviceHubPanel({
   return (
     <div className={cn(
       "device-hub-panel fixed bottom-[88px] right-4 z-[9998] w-80",
+      activeTab === "accuracy" && "device-hub-panel-accuracy",
       "rounded-2xl border border-violet-500/20 bg-[#0f1014]/95 backdrop-blur-2xl shadow-2xl overflow-hidden",
       "animate-in slide-in-from-bottom-3 fade-in duration-300"
     )}>
@@ -866,7 +867,7 @@ export function DeviceHubPanel({
       </div>
 
       {/* Tab content */}
-      <div className="p-4 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+      <div className="device-hub-tab-content p-4 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
         {activeTab === "drone"      && <DroneTab onOpenPlanner={onOpenFlightPlanner} />}
         {activeTab === "smartphone" && <SmartphoneTab />}
         {activeTab === "gps"        && <GpsReceiverTab />}

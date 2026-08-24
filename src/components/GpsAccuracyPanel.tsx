@@ -15,18 +15,9 @@ import {
   Square,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMapContext, type GpsAccuracyPosition } from "@/lib/MapContext";
 
 type TrackerStatus = "idle" | "searching" | "active" | "error";
-
-type GpsSample = {
-  accuracy: number;
-  latitude: number;
-  longitude: number;
-  altitude: number | null;
-  speed: number | null;
-  heading: number | null;
-  timestamp: number;
-};
 
 function getQuality(accuracy: number | null) {
   if (accuracy === null) {
@@ -90,10 +81,15 @@ function formatCoordinate(value: number | null | undefined) {
 
 export function GpsAccuracyTab() {
   const [status, setStatus] = useState<TrackerStatus>("idle");
-  const [position, setPosition] = useState<GpsSample | null>(null);
-  const [samples, setSamples] = useState<GpsSample[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const watchIdRef = useRef<number | null>(null);
+  const {
+    gpsAccuracyPosition: position,
+    setGpsAccuracyPosition: setPosition,
+    gpsAccuracySamples: samples,
+    setGpsAccuracySamples: setSamples,
+    setIsGpsAccuracyTracking,
+  } = useMapContext();
 
   const stopWatching = () => {
     if (watchIdRef.current !== null) {
@@ -101,12 +97,14 @@ export function GpsAccuracyTab() {
       watchIdRef.current = null;
     }
     setStatus("idle");
+    setIsGpsAccuracyTracking(false);
   };
 
   useEffect(() => () => {
     if (watchIdRef.current !== null && navigator.geolocation) {
       navigator.geolocation.clearWatch(watchIdRef.current);
     }
+    setIsGpsAccuracyTracking(false);
   }, []);
 
   const startWatching = () => {
@@ -119,9 +117,12 @@ export function GpsAccuracyTab() {
 
     setStatus("searching");
     setErrorMessage("");
+    setPosition(null);
+    setSamples([]);
+    setIsGpsAccuracyTracking(true);
     watchIdRef.current = navigator.geolocation.watchPosition(
       (nextPosition) => {
-        const nextSample: GpsSample = {
+        const nextSample: GpsAccuracyPosition = {
           accuracy: nextPosition.coords.accuracy,
           latitude: nextPosition.coords.latitude,
           longitude: nextPosition.coords.longitude,
@@ -140,6 +141,7 @@ export function GpsAccuracyTab() {
           watchIdRef.current = null;
         }
         setStatus("error");
+        setIsGpsAccuracyTracking(false);
         setErrorMessage(
           error.code === error.PERMISSION_DENIED
             ? "Izin lokasi ditolak. Aktifkan izin lokasi browser untuk melanjutkan."
@@ -216,99 +218,107 @@ export function GpsAccuracyTab() {
         </div>
       )}
 
-      <div className="gps-accuracy-reading">
-        <div className="gps-accuracy-orb">
-          <span className="gps-accuracy-orb-ring ring-one" />
-          <span className="gps-accuracy-orb-ring ring-two" />
-          <span className="gps-accuracy-orb-dot" />
-          <strong>{currentAccuracy === null ? "--" : currentAccuracy.toFixed(1)}</strong>
-          <span>meter</span>
-        </div>
-        <div className="gps-accuracy-quality">
-          <p className="gps-accuracy-eyebrow">Ketelitian saat ini</p>
-          <strong className={quality.color}>{quality.label}</strong>
-          <p>{quality.description}</p>
-          <div className="gps-accuracy-progress">
-            <span className={quality.bar} style={{ width: `${qualityBarWidth}%` }} />
+      <div className="gps-accuracy-dashboard">
+        <div className="gps-accuracy-column gps-accuracy-column-left">
+          <div className="gps-accuracy-reading">
+            <div className="gps-accuracy-orb">
+              <span className="gps-accuracy-orb-ring ring-one" />
+              <span className="gps-accuracy-orb-ring ring-two" />
+              <span className="gps-accuracy-orb-dot" />
+              <strong>{currentAccuracy === null ? "--" : currentAccuracy.toFixed(1)}</strong>
+              <span>meter</span>
+            </div>
+            <div className="gps-accuracy-quality">
+              <p className="gps-accuracy-eyebrow">Ketelitian saat ini</p>
+              <strong className={quality.color}>{quality.label}</strong>
+              <p>{quality.description}</p>
+              <div className="gps-accuracy-progress">
+                <span className={quality.bar} style={{ width: `${qualityBarWidth}%` }} />
+              </div>
+              <small>Semakin kecil nilai meter, semakin teliti.</small>
+            </div>
           </div>
-          <small>Semakin kecil nilai meter, semakin teliti.</small>
-        </div>
-      </div>
 
-      <div className="gps-accuracy-stats">
-        {[
-          { label: "Minimum", value: formatMetric(statistics.min, "m"), icon: <Gauge className="h-3.5 w-3.5" /> },
-          { label: "Rata-rata", value: formatMetric(statistics.average, "m"), icon: <Activity className="h-3.5 w-3.5" /> },
-          { label: "Terburuk", value: formatMetric(statistics.max, "m"), icon: <AlertTriangle className="h-3.5 w-3.5" /> },
-        ].map((item) => (
-          <div className="gps-accuracy-stat" key={item.label}>
-            <span>{item.icon} {item.label}</span>
-            <strong>{item.value}</strong>
+          <div className="gps-accuracy-stats">
+            {[
+              { label: "Minimum", value: formatMetric(statistics.min, "m"), icon: <Gauge className="h-3.5 w-3.5" /> },
+              { label: "Rata-rata", value: formatMetric(statistics.average, "m"), icon: <Activity className="h-3.5 w-3.5" /> },
+              { label: "Terburuk", value: formatMetric(statistics.max, "m"), icon: <AlertTriangle className="h-3.5 w-3.5" /> },
+            ].map((item) => (
+              <div className="gps-accuracy-stat" key={item.label}>
+                <span>{item.icon} {item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      <div className="gps-accuracy-chart-card">
-        <div className="gps-accuracy-section-heading">
-          <div>
-            <strong>Riwayat ketelitian</strong>
-            <span>{samples.length} pembaruan terakhir · realtime</span>
-          </div>
-          <span className="gps-accuracy-chart-hint">lebih rendah lebih baik</span>
         </div>
-        <div className="gps-accuracy-chart-wrap">
-          <svg viewBox="0 0 320 102" preserveAspectRatio="none" role="img" aria-label="Grafik perubahan akurasi GPS">
-            <line x1="0" y1="8" x2="320" y2="8" />
-            <line x1="0" y1="49" x2="320" y2="49" />
-            <line x1="0" y1="90" x2="320" y2="90" />
-            {chartPoints && (
-              <>
-                <polygon points={`0,102 ${chartPoints} 320,102`} className="gps-accuracy-chart-fill" />
-                <polyline points={chartPoints} className="gps-accuracy-chart-line" />
-              </>
+
+        <div className="gps-accuracy-column gps-accuracy-column-center">
+          <div className="gps-accuracy-chart-card">
+            <div className="gps-accuracy-section-heading">
+              <div>
+                <strong>Riwayat ketelitian</strong>
+                <span>{samples.length} pembaruan terakhir · realtime</span>
+              </div>
+              <span className="gps-accuracy-chart-hint">lebih rendah lebih baik</span>
+            </div>
+            <div className="gps-accuracy-chart-wrap">
+              <svg viewBox="0 0 320 102" preserveAspectRatio="none" role="img" aria-label="Grafik perubahan akurasi GPS">
+                <line x1="0" y1="8" x2="320" y2="8" />
+                <line x1="0" y1="49" x2="320" y2="49" />
+                <line x1="0" y1="90" x2="320" y2="90" />
+                {chartPoints && (
+                  <>
+                    <polygon points={`0,102 ${chartPoints} 320,102`} className="gps-accuracy-chart-fill" />
+                    <polyline points={chartPoints} className="gps-accuracy-chart-line" />
+                  </>
+                )}
+              </svg>
+              {!chartPoints && <div className="gps-accuracy-chart-empty">Grafik akan muncul setelah GPS mendapat pembaruan.</div>}
+            </div>
+          </div>
+        </div>
+
+        <div className="gps-accuracy-column gps-accuracy-column-right">
+          <div className="gps-accuracy-section">
+            <div className="gps-accuracy-section-heading">
+              <div>
+                <strong>Data posisi realtime</strong>
+                <span>Diterima dari GPS browser dengan high accuracy.</span>
+              </div>
+              <MapPin className="h-4 w-4 text-cyan-300" />
+            </div>
+            <div className="gps-accuracy-data-grid">
+              <div><span>Latitude</span><strong>{formatCoordinate(position?.latitude)}</strong></div>
+              <div><span>Longitude</span><strong>{formatCoordinate(position?.longitude)}</strong></div>
+              <div><span>Altitud</span><strong>{formatMetric(position?.altitude, "m")}</strong></div>
+              <div><span>Kecepatan</span><strong>{formatMetric(position?.speed, "m/s")}</strong></div>
+              <div><span>Arah</span><strong>{formatMetric(position?.heading, "deg")}</strong></div>
+              <div><span>Pembaruan</span><strong>{position ? new Date(position.timestamp).toLocaleTimeString("id-ID") : "--"}</strong></div>
+            </div>
+          </div>
+
+          <div className="gps-accuracy-actions">
+            {status === "active" || status === "searching" ? (
+              <button type="button" onClick={stopWatching} disabled={status === "searching"} className="gps-accuracy-button gps-accuracy-button-stop">
+                <Square className="h-4 w-4 fill-current" /> Hentikan
+              </button>
+            ) : (
+              <button type="button" onClick={startWatching} className="gps-accuracy-button gps-accuracy-button-start">
+                <Play className="h-4 w-4 fill-current" /> Mulai cek GPS
+              </button>
             )}
-          </svg>
-          {!chartPoints && <div className="gps-accuracy-chart-empty">Grafik akan muncul setelah GPS mendapat pembaruan.</div>}
-        </div>
-      </div>
-
-      <div className="gps-accuracy-section">
-        <div className="gps-accuracy-section-heading">
-          <div>
-            <strong>Data posisi realtime</strong>
-            <span>Diterima dari GPS browser dengan high accuracy.</span>
+            <button type="button" onClick={reset} className="gps-accuracy-button gps-accuracy-button-reset">
+              <RotateCcw className="h-4 w-4" /> Reset
+            </button>
           </div>
-          <MapPin className="h-4 w-4 text-cyan-300" />
-        </div>
-        <div className="gps-accuracy-data-grid">
-          <div><span>Latitude</span><strong>{formatCoordinate(position?.latitude)}</strong></div>
-          <div><span>Longitude</span><strong>{formatCoordinate(position?.longitude)}</strong></div>
-          <div><span>Altitud</span><strong>{formatMetric(position?.altitude, "m")}</strong></div>
-          <div><span>Kecepatan</span><strong>{formatMetric(position?.speed, "m/s")}</strong></div>
-          <div><span>Arah</span><strong>{formatMetric(position?.heading, "deg")}</strong></div>
-          <div><span>Pembaruan</span><strong>{position ? new Date(position.timestamp).toLocaleTimeString("id-ID") : "--"}</strong></div>
-        </div>
-      </div>
 
-      <div className="gps-accuracy-actions">
-        {status === "active" || status === "searching" ? (
-          <button type="button" onClick={stopWatching} disabled={status === "searching"} className="gps-accuracy-button gps-accuracy-button-stop">
-            <Square className="h-4 w-4 fill-current" /> Hentikan
-          </button>
-        ) : (
-          <button type="button" onClick={startWatching} className="gps-accuracy-button gps-accuracy-button-start">
-            <Play className="h-4 w-4 fill-current" /> Mulai cek GPS
-          </button>
-        )}
-        <button type="button" onClick={reset} className="gps-accuracy-button gps-accuracy-button-reset">
-          <RotateCcw className="h-4 w-4" /> Reset
-        </button>
-      </div>
-
-      <div className="gps-accuracy-note">
-        <Mountain className="h-4 w-4 shrink-0 text-cyan-300" />
-        <span>Akurasi adalah radius perkiraan dari browser, bukan error absolut. Bangunan tinggi, pepohonan, dan cuaca dapat memengaruhi hasil.</span>
-        <Navigation2 className="h-4 w-4 shrink-0 text-white/25" />
+          <div className="gps-accuracy-note">
+            <Mountain className="h-4 w-4 shrink-0 text-cyan-300" />
+            <span>Akurasi adalah radius perkiraan dari browser, bukan error absolut. Bangunan tinggi, pepohonan, dan cuaca dapat memengaruhi hasil.</span>
+            <Navigation2 className="h-4 w-4 shrink-0 text-white/25" />
+          </div>
+        </div>
       </div>
     </div>
   );
