@@ -298,7 +298,7 @@ export default function MapArea() {
             <div className="grid grid-cols-2 gap-2">
               {(Object.keys(BASEMAP_OPTIONS) as BasemapType[]).map((key) => {
                 const swatches: Record<BasemapType, string> = { dark: 'linear-gradient(135deg,#111827,#374151)', citra: 'linear-gradient(135deg,#6b8e63,#d4a373)', hybrid: 'linear-gradient(135deg,#365c87,#8ca66b)', citra_terang: 'linear-gradient(135deg,#89a878,#e4c28c)', osm: 'linear-gradient(135deg,#d9e7d4,#f5f1df)', bpn: 'linear-gradient(135deg,#222,#6b7280)' };
-                return <button key={key} type="button" onClick={() => setActiveBasemap(key)} className={`basemap-card ${activeBasemap === key ? 'active' : ''}`}><span className="basemap-card-thumb" style={{ background: swatches[key] }} /><span className="min-w-0 text-left"><strong>{BASEMAP_OPTIONS[key].name}</strong><small>{activeBasemap === key ? 'Aktif' : 'Pilih basemap'}</small></span></button>;
+                return <button key={key} type="button" onClick={() => { setActiveBasemap(key); setIsBasemapGalleryOpen(false); }} className={`basemap-card ${activeBasemap === key ? 'active' : ''}`}><span className="basemap-card-thumb" style={{ background: swatches[key] }} /><span className="min-w-0 text-left"><strong>{BASEMAP_OPTIONS[key].name}</strong><small>{activeBasemap === key ? 'Aktif' : 'Pilih basemap'}</small></span></button>;
               })}
             </div>
           </div>

@@ -17,7 +17,7 @@ const FlightPathPlanner = dynamic(
   { ssr: false }
 );
 import { RefreshCcw, Database, UploadCloud, Pin, Cpu, X, BarChart3, LayoutGrid, HardDrive, Undo2, Check, MousePointer2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Map as LeafletMap } from "leaflet";
@@ -455,10 +455,12 @@ function getActiveDrawInstance(map: any) {
   return activeShapeName ? draw[activeShapeName] : null;
 }
 
-function getVertexCount(map: any) {
+function getVertexCount(map: any, workingLayer?: any) {
   const activeShape = getActiveDrawInstance(map);
-  const latlngs = activeShape?._layer?.getLatLngs?.();
-  if (!Array.isArray(latlngs)) return 0;
+  const workingLatLngs = workingLayer?.getLatLngs?.();
+  const activeLatLngs = activeShape?._layer?.getLatLngs?.();
+  const latlngs = Array.isArray(workingLatLngs) && workingLatLngs.length > 0 ? workingLatLngs : activeLatLngs;
+  if (!Array.isArray(latlngs)) return activeShape?._layer?.getLatLng ? 1 : 0;
   const count = (items: any[]): number => items.reduce((total, item) => Array.isArray(item) ? total + count(item) : total + 1, 0);
   return count(latlngs);
 }
@@ -475,14 +477,35 @@ function DigitizingStatusBar({
   onCancel: () => void;
 }) {
   const [vertexCount, setVertexCount] = useState(0);
+  const workingLayerRef = useRef<any>(null);
 
   useEffect(() => {
     if (!map) return;
-    const update = () => setVertexCount(getVertexCount(map));
-    const events = ["pm:drawstart", "pm:vertexadded", "pm:drawend", "pm:create"];
+    const update = (event?: any) => {
+      const workingLayer = event?.workingLayer || workingLayerRef.current;
+      setVertexCount(getVertexCount(map, workingLayer));
+    };
+    const handleDrawStart = (event: any) => {
+      workingLayerRef.current = event?.workingLayer || null;
+      workingLayerRef.current?.on?.("pm:vertexadded", update);
+      update(event);
+    };
+    const handleDrawEnd = () => {
+      workingLayerRef.current?.off?.("pm:vertexadded", update);
+      workingLayerRef.current = null;
+      setVertexCount(0);
+    };
+    const events = ["pm:vertexadded", "pm:create"];
+    map.on("pm:drawstart", handleDrawStart);
+    map.on("pm:drawend", handleDrawEnd);
     events.forEach((event) => map.on(event, update));
     update();
-    return () => events.forEach((event) => map.off(event, update));
+    return () => {
+      workingLayerRef.current?.off?.("pm:vertexadded", update);
+      map.off("pm:drawstart", handleDrawStart);
+      map.off("pm:drawend", handleDrawEnd);
+      events.forEach((event) => map.off(event, update));
+    };
   }, [map]);
 
   const undoVertex = () => {
@@ -490,7 +513,7 @@ function DigitizingStatusBar({
     if (!activeShape?._removeLastVertex) return;
     try {
       activeShape._removeLastVertex();
-      setVertexCount(getVertexCount(map));
+      setVertexCount(getVertexCount(map, workingLayerRef.current));
     } catch (error) {
       console.warn("Undo vertex error:", error);
     }
@@ -498,11 +521,22 @@ function DigitizingStatusBar({
 
   const finishDrawing = () => {
     const activeShape = getActiveDrawInstance(map);
-    if (!activeShape) return;
+    if (!activeShape) {
+      toast.info("Mode gambar belum aktif.");
+      return;
+    }
+    const minimumVertices = layer?.geometryType === "Polygon" ? 3 : layer?.geometryType === "Line" ? 2 : 1;
+    const currentVertices = getVertexCount(map, workingLayerRef.current);
+    if (currentVertices < minimumVertices) {
+      toast.info(`${layer?.geometryType || "Fitur"} membutuhkan minimal ${minimumVertices} titik.`);
+      return;
+    }
     try {
-      if (activeShape.finish) activeShape.finish();
-      else if (activeShape._finishShape) activeShape._finishShape();
-      else toast.info("Tambahkan minimal titik lalu ketuk titik pertama untuk menutup polygon.");
+      // Geoman exposes the active shape name publicly; finishing is handled by
+      // the shape instance (or Enter when a build does not expose the helper).
+      if (activeShape._finishShape) activeShape._finishShape();
+      else if (activeShape.finish) activeShape.finish();
+      else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true }));
     } catch (error) {
       console.warn("Finish drawing error:", error);
       toast.info("Tambahkan minimal titik lalu ketuk titik pertama untuk menutup polygon.");

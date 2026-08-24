@@ -117,8 +117,13 @@ export function DigitizePanel() {
     if (activeDigitizingLayerId === layerId) {
       setActiveDigitizingLayerId(null);
       try {
-        if ((map?.pm as any)?.Draw?.getActiveMode?.()) {
-          (map?.pm?.Draw as any)?.getActiveShape?.()?.finish?.();
+        const draw = (map?.pm as any)?.Draw;
+        const activeShapeName = draw?.getActiveShape?.();
+        const activeShape = typeof activeShapeName === 'string' ? draw?.[activeShapeName] : null;
+        if (activeShape?._finishShape) {
+          activeShape._finishShape();
+        } else if (activeShape?.finish) {
+          activeShape.finish();
         }
         map?.pm?.disableDraw();
       } catch(e) {
@@ -132,7 +137,9 @@ export function DigitizePanel() {
         if (!map?.pm) throw new Error("Peta belum siap");
         (map?.pm as any)?.enableDraw(drawMode, { 
           snappable: digitizeSettings.snapping, 
-          snapDistance: digitizeSettings.snapDistance 
+          snapDistance: digitizeSettings.snapDistance,
+          finishOnEnter: true,
+          continueDrawing: true,
         });
         enabled = true;
       } catch(e) {
@@ -143,7 +150,9 @@ export function DigitizePanel() {
           if (!map?.pm) throw new Error("Peta belum siap");
           (map?.pm as any)?.enableDraw(fallbackMode, { 
             snappable: digitizeSettings.snapping, 
-            snapDistance: digitizeSettings.snapDistance 
+            snapDistance: digitizeSettings.snapDistance,
+            finishOnEnter: true,
+            continueDrawing: true,
           });
           enabled = true;
         } catch(e2) {
