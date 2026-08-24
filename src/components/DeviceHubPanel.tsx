@@ -5,10 +5,11 @@ import {
   Wifi, WifiOff, Bluetooth, BluetoothConnected, Radio, X,
   Smartphone, Cpu, ChevronRight, AlertTriangle, CheckCircle2,
   Activity, Navigation2, Battery, Signal, Zap, Settings2,
-  Link2, Link2Off, RefreshCw, Route, Loader2
+  Link2, Link2Off, RefreshCw, Route, Loader2, Crosshair
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { GpsAccuracyTab } from "./GpsAccuracyPanel";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export type DeviceType = "drone" | "smartphone" | "gps";
@@ -811,14 +812,15 @@ export function DeviceHubPanel({
   onClose: () => void;
   onOpenFlightPlanner: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"drone" | "smartphone" | "gps">("drone");
+  const [activeTab, setActiveTab] = useState<"drone" | "smartphone" | "gps" | "accuracy">("drone");
 
   if (!isOpen) return null;
 
-  const tabs: { key: "drone" | "smartphone" | "gps"; label: string; icon: React.ReactNode; color: string }[] = [
+  const tabs: { key: "drone" | "smartphone" | "gps" | "accuracy"; label: string; icon: React.ReactNode; color: string }[] = [
     { key: "drone",      label: "Drone",       icon: <Route className="w-3.5 h-3.5" />,      color: "text-violet-400" },
     { key: "smartphone", label: "Smartphone",  icon: <Smartphone className="w-3.5 h-3.5" />, color: "text-emerald-400" },
     { key: "gps",        label: "GPS",         icon: <Radio className="w-3.5 h-3.5" />,       color: "text-cyan-400" },
+    { key: "accuracy",   label: "Akurasi",     icon: <Crosshair className="w-3.5 h-3.5" />,  color: "text-amber-400" },
   ];
 
   return (
@@ -868,6 +870,7 @@ export function DeviceHubPanel({
         {activeTab === "drone"      && <DroneTab onOpenPlanner={onOpenFlightPlanner} />}
         {activeTab === "smartphone" && <SmartphoneTab />}
         {activeTab === "gps"        && <GpsReceiverTab />}
+        {activeTab === "accuracy"   && <GpsAccuracyTab />}
       </div>
 
       {/* Footer */}
