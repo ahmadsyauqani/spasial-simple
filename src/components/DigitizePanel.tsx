@@ -139,7 +139,7 @@ export function DigitizePanel() {
           snappable: digitizeSettings.snapping, 
           snapDistance: digitizeSettings.snapDistance,
           finishOnEnter: true,
-          continueDrawing: true,
+          continueDrawing: false,
         });
         enabled = true;
       } catch(e) {
@@ -152,7 +152,7 @@ export function DigitizePanel() {
             snappable: digitizeSettings.snapping, 
             snapDistance: digitizeSettings.snapDistance,
             finishOnEnter: true,
-            continueDrawing: true,
+            continueDrawing: false,
           });
           enabled = true;
         } catch(e2) {

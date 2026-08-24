@@ -42,7 +42,7 @@ function MapController() {
   const { 
     activeFeatureToZoom, setMapViewState, 
     activeDigitizingLayerId, layerGeojsonCache, 
-    cacheLayerGeojson, setLayers, setMapInstance 
+    cacheLayerGeojson, setLayers, setMapInstance, setActiveDigitizingLayerId
   } = useMapContext();
 
   useEffect(() => {
@@ -134,6 +134,9 @@ function MapController() {
           fc.features.push(newFeature);
           cacheLayerGeojson(activeId, fc);
           setLayers(prev => [...prev]);
+          // Satu sesi draw menghasilkan satu fitur. Jangan langsung memulai
+          // sesi polygon baru setelah vertex terakhir menutup polygon.
+          setActiveDigitizingLayerId(null);
           layer.remove();
           toast.success("Fitur berhasil ditambahkan ke layer!");
         }
