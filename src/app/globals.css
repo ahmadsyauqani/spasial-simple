@@ -976,6 +976,7 @@ input, select, textarea, button {
 }
 
 .digitize-status-bar {
+  display: none !important;
   left: 12px;
   right: 12px;
   bottom: calc(82px + env(safe-area-inset-bottom));
