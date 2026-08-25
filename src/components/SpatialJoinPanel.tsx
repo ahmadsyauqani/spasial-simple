@@ -42,16 +42,46 @@ export function SpatialJoinButton() {
 
   // Load fields for source layer when it changes
   useEffect(() => {
+    let cancelled = false;
+
     async function loadFields() {
-      if (!sourceLayerId) return;
-      const { data } = await supabase.from('geometries').select('properties').eq('layer_id', sourceLayerId).limit(1).single();
-      if (data && data.properties) {
-        const keys = Object.keys(data.properties).filter(k => typeof data.properties[k] === 'number');
-        setAvailableFields(keys);
+      setAvailableFields([]);
+      setNumericField("");
+      if (!sourceLayerId || joinType === 'count') return;
+
+      const cachedSource = layerGeojsonCache[sourceLayerId];
+      const cachedKeys = new Set<string>();
+      (cachedSource?.features || []).forEach((feature: any) => {
+        Object.entries(feature.properties || {}).forEach(([key, value]) => {
+          if (typeof value === 'number' && Number.isFinite(value)) cachedKeys.add(key);
+        });
+      });
+
+      if (cachedKeys.size > 0) {
+        if (!cancelled) setAvailableFields(Array.from(cachedKeys));
+        return;
       }
+
+      const { data, error } = await supabase.from('geometries').select('properties').eq('layer_id', sourceLayerId).limit(1000);
+      if (error) {
+        console.error("Gagal memuat field Spatial Join:", error);
+        return;
+      }
+
+      const keys = new Set<string>();
+      (data || []).forEach((row: any) => {
+        Object.entries(row.properties || {}).forEach(([key, value]) => {
+          if (typeof value === 'number' && Number.isFinite(value)) keys.add(key);
+        });
+      });
+      if (!cancelled) setAvailableFields(Array.from(keys));
     }
-    if (joinType !== 'count') loadFields();
-  }, [sourceLayerId, joinType]);
+
+    loadFields();
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceLayerId, joinType, layerGeojsonCache]);
 
   const availableLayers = layers.filter((l) => l.id && layerGeojsonCache[l.id]);
 
@@ -61,11 +91,24 @@ export function SpatialJoinButton() {
       return;
     }
 
+    if (joinType !== 'count' && !numericField) {
+      toast.error("Pilih kolom angka untuk perhitungan Sum atau Avg!");
+      return;
+    }
+
     const geojsonTarget = layerGeojsonCache[targetLayerId];
     const geojsonSource = layerGeojsonCache[sourceLayerId];
 
     if (!geojsonTarget || !geojsonSource) {
       toast.error("Data geometri belum siap.");
+      return;
+    }
+
+    const hasPolygonTarget = (geojsonTarget.features || []).some((feature: any) =>
+      feature.geometry?.type === 'Polygon' || feature.geometry?.type === 'MultiPolygon'
+    );
+    if (!hasPolygonTarget) {
+      toast.error("Layer target harus berupa Polygon atau MultiPolygon.");
       return;
     }
 
@@ -100,11 +143,18 @@ export function SpatialJoinButton() {
           const count = internalFeatures.length;
           let resultValue = count;
 
-          if (joinType === 'sum' && numericField) {
-            resultValue = internalFeatures.reduce((acc: number, f: any) => acc + (Number(f.properties?.[numericField]) || 0), 0);
-          } else if (joinType === 'avg' && numericField) {
-            const sum = internalFeatures.reduce((acc: number, f: any) => acc + (Number(f.properties?.[numericField]) || 0), 0);
-            resultValue = count > 0 ? sum / count : 0;
+           if (joinType === 'sum' && numericField) {
+             resultValue = internalFeatures.reduce((acc: number, f: any) => {
+               const value = Number(f.properties?.[numericField]);
+               return acc + (Number.isFinite(value) ? value : 0);
+             }, 0);
+           } else if (joinType === 'avg' && numericField) {
+             const values = internalFeatures
+               .map((f: any) => Number(f.properties?.[numericField]))
+               .filter((value: number) => Number.isFinite(value));
+             resultValue = values.length > 0
+               ? values.reduce((sum: number, value: number) => sum + value, 0) / values.length
+               : 0;
           }
 
           const propKey = joinType === 'count' ? 'join_count' : `join_${joinType}_${numericField}`;

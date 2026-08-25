@@ -87,6 +87,36 @@ export function UnionAnalysisButton() {
           throw new Error("Data layer tidak valid atau kosong.");
         }
 
+        const normalizeFeatures = (features: any[]) => {
+          const normalized: any[] = [];
+
+          for (const feature of features) {
+            const type = feature.geometry?.type;
+            if (type !== "Polygon" && type !== "MultiPolygon") {
+              throw new Error("Union hanya dapat digunakan pada layer Polygon/MultiPolygon.");
+            }
+
+            let remainder = JSON.parse(JSON.stringify(feature));
+            for (const existing of normalized) {
+              if (!remainder) break;
+              if (!turf.booleanIntersects(remainder, existing)) continue;
+              remainder = turf.difference(turf.featureCollection([remainder, existing]));
+            }
+
+            if (remainder?.geometry?.coordinates) {
+              normalized.push({ ...remainder, properties: feature.properties || {} });
+            }
+          }
+
+          return normalized;
+        };
+
+        const normalizedFeaturesA = normalizeFeatures(fcA.features);
+        const normalizedFeaturesB = normalizeFeatures(fcB.features);
+        if (normalizedFeaturesA.length === 0 || normalizedFeaturesB.length === 0) {
+          throw new Error("Layer Union tidak memiliki polygon yang valid.");
+        }
+
         // Algoritma Union Topologi Naive
         // 1. A ∩ B (Intersect) -> Mewarisi atribut A dan B
         // 2. A - B (Difference) -> Mewarisi atribut A
@@ -95,12 +125,12 @@ export function UnionAnalysisButton() {
         const unionedFeatures: any[] = [];
         
         // Buat salinan array B untuk dikurangi bertahap
-        let remnantsB = fcB.features.map((f: any) => JSON.parse(JSON.stringify(f)));
+        let remnantsB = normalizedFeaturesB.map((f: any) => JSON.parse(JSON.stringify(f)));
 
         setProgress("Memotong poligon...");
 
-        for (let i = 0; i < fcA.features.length; i++) {
-          let remnantA = JSON.parse(JSON.stringify(fcA.features[i]));
+        for (let i = 0; i < normalizedFeaturesA.length; i++) {
+          let remnantA = JSON.parse(JSON.stringify(normalizedFeaturesA[i]));
           const propsA = remnantA.properties || {};
 
           for (let j = 0; j < remnantsB.length; j++) {

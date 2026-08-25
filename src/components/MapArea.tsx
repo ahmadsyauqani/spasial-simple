@@ -2031,7 +2031,11 @@ function SpatialJoinLayer() {
     const joinKey = Object.keys(props).find(k => k.startsWith('join_') && k !== 'join_details');
     
     if (joinKey) {
-      const label = joinKey === 'join_count' ? 'Jumlah Objek' : `Total ${joinKey.replace('join_sum_', '')}`;
+       const label = joinKey === 'join_count'
+         ? 'Jumlah Objek'
+         : joinKey.startsWith('join_avg_')
+           ? `Rata-rata ${joinKey.replace('join_avg_', '')}`
+           : `Total ${joinKey.replace('join_sum_', '')}`;
       html += `
         <div class="mb-3 bg-indigo-900/30 p-2 rounded border border-indigo-500/20">
           <span class="text-[10px] uppercase font-bold text-indigo-400/60 block tracking-widest mb-1">Hasil Analisis</span>

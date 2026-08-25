@@ -134,37 +134,47 @@ export function SliverDetectionButton() {
           for (let i = 0; i < featuresA.length; i++) {
             for (let j = 0; j < featuresB.length; j++) {
               try {
-                // Cek apakah mereka berdekatan (bbox bersinggungan)
-                const bboxA = turf.bbox(featuresA[i]);
-                const bboxB = turf.bbox(featuresB[j]);
-                // Buffer bbox sedikit untuk menangkap gap kecil
-                const margin = 0.001; // ~111m
+                const featureA = featuresA[i];
+                const featureB = featuresB[j];
+                const bboxA = turf.bbox(featureA);
+                const bboxB = turf.bbox(featureB);
+                const margin = 100 / 111320; // ~100m, used only as a cheap proximity filter
                 if (
                   bboxA[2] + margin < bboxB[0] ||
                   bboxB[2] + margin < bboxA[0] ||
                   bboxA[3] + margin < bboxB[1] ||
                   bboxB[3] + margin < bboxA[1]
-                ) continue; // Terlalu jauh, skip
+                ) continue; // Too far apart to form a narrow gap.
 
-                const diff = turf.difference(turf.featureCollection([featuresA[i], featuresB[j]]));
-                if (diff) {
-                  const area = turf.area(diff);
+                const overlap = turf.intersect(turf.featureCollection([featureA, featureB]));
+                if (overlap && turf.area(overlap) > 0.01) continue;
+
+                // Use the pair's convex envelope so the gap is limited to the area
+                // between the features, rather than returning all of A.
+                const covered = turf.union(turf.featureCollection([featureA, featureB]));
+                const envelope = turf.convex(turf.featureCollection([featureA, featureB]));
+                const gap = envelope && covered
+                  ? turf.difference(turf.featureCollection([envelope, covered]))
+                  : null;
+
+                if (gap) {
+                  const area = turf.area(gap);
                   if (area > 0 && area < maxAreaSqm) {
-                    const tr = thinnessRatio(diff);
-                    const br = bboxElongationRatio(diff);
-                    const collapsed = isCollapsible(diff, collapseDistance);
+                    const tr = thinnessRatio(gap);
+                    const br = bboxElongationRatio(gap);
+                    const collapsed = isCollapsible(gap, collapseDistance);
 
                     if (tr < thinnessThreshold || br < 0.1 || collapsed) {
                       sliverFeatures.push({
-                        ...diff,
+                        ...gap,
                         properties: {
                           sliver_type: "gap",
                            area_sqm: area,
                            thinness_ratio: tr,
                            bbox_ratio: br,
                           collapsed: collapsed,
-                          source_A: featuresA[i].properties?.nama || featuresA[i].properties?.NAMA || `A-${i + 1}`,
-                          source_B: featuresB[j].properties?.nama || featuresB[j].properties?.NAMA || `B-${j + 1}`,
+                           source_A: featureA.properties?.nama || featureA.properties?.NAMA || `A-${i + 1}`,
+                           source_B: featureB.properties?.nama || featureB.properties?.NAMA || `B-${j + 1}`,
                         },
                       });
                     }

@@ -256,13 +256,19 @@ export async function parseSpatialFile(file: File): Promise<any> {
 function checkTopology(geojson: any) {
   const errors: any[] = [];
   turf.featureEach(geojson, (currentFeature, featureIndex) => {
+    if (!currentFeature?.geometry) return;
+
     if (currentFeature.geometry.type === "Polygon" || currentFeature.geometry.type === "MultiPolygon") {
-      const kinks = turf.kinks(currentFeature as any);
-      if (kinks.features.length > 0) {
-        errors.push({
-          index: featureIndex,
-          kinks: kinks,
-        });
+      try {
+        const kinks = turf.kinks(currentFeature as any);
+        if (kinks.features.length > 0) {
+          errors.push({
+            index: featureIndex,
+            kinks: kinks,
+          });
+        }
+      } catch (_) {
+        // A malformed feature should not prevent the remaining file from loading.
       }
     }
   });

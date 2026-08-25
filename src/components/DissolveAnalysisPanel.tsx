@@ -98,6 +98,16 @@ export function DissolveAnalysisButton() {
           return;
         }
 
+        const hasNonPolygonFeature = geojson.features.some((feature: any) =>
+          feature.geometry?.type !== "Polygon" && feature.geometry?.type !== "MultiPolygon"
+        );
+        if (hasNonPolygonFeature) {
+          toast.error("Dissolve hanya dapat digunakan pada layer Polygon/MultiPolygon.");
+          setIsProcessing(false);
+          setProgress("");
+          return;
+        }
+
         // Jalankan dissolve
         let dissolved: any;
         if (selectedAttribute !== "none") {
@@ -137,6 +147,8 @@ export function DissolveAnalysisButton() {
         let featureCount = 0;
         if (dissolved.type === "FeatureCollection") {
             featureCount = dissolved.features.length;
+        } else if (dissolved.type === "Feature") {
+            featureCount = 1;
         }
 
         setDissolveResult({

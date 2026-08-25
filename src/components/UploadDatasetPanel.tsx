@@ -37,7 +37,7 @@ import { SliverDetectionButton } from "./SliverDetectionPanel";
 const PdfOverlayPanel = dynamic(() => import("./PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
 
 export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "analysis" }) {
-  const { layers, setLayers, setZoomFeature, areaUnit, setAreaUnit } = useMapContext();
+  const { layers, setLayers, setZoomFeature, cacheLayerGeojson, areaUnit, setAreaUnit } = useMapContext();
   const { isGuest } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -216,6 +216,8 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
         visible: true
       };
       setLayers((prev) => [...prev, newLayer as any]);
+      // Guest layers must also enter the analysis cache; analysis tools read from it.
+      cacheLayerGeojson(newLayer.id, geojsonData);
       setZoomFeature(geojsonData);
       toast.success(`Layer ${file.name} sukses dimuat secara lokal!`);
       return;

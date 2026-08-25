@@ -157,13 +157,13 @@ export function OverlapAnalysisButton() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger
         className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all outline-none ${
-          availableLayers.length < 2
+          availableLayers.length < 1
             ? "border-border/40 text-muted-foreground/30 cursor-not-allowed"
             : overlapResult
               ? "border-red-500/50 bg-red-500/15 text-red-400 hover:bg-red-500/25 shadow-sm shadow-red-500/10"
               : "border-border text-muted-foreground hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400"
         }`}
-        disabled={availableLayers.length < 2}
+        disabled={availableLayers.length < 1}
         title="Analisis Overlap"
       >
         <SearchCheck className="w-5 h-5" />

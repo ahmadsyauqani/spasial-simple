@@ -88,8 +88,20 @@ export function ClipAnalysisButton() {
       try {
         const inputFeatures = geojsonInput.features || [];
         const clipFeatures = geojsonClip.features || [];
+        const clipPolygons = clipFeatures.filter((feature: any) =>
+          feature.geometry?.type === "Polygon" || feature.geometry?.type === "MultiPolygon"
+        );
+        let clipMasks = clipPolygons;
+        if (clipPolygons.length > 1) {
+          try {
+            const mergedClip = turf.union(turf.featureCollection(clipPolygons));
+            if (mergedClip) clipMasks = [mergedClip];
+          } catch (e) {
+            // Keep individual masks as a fallback when the clip layer is invalid.
+          }
+        }
 
-        setProgress(`Memotong ${inputFeatures.length} fitur input dengan ${clipFeatures.length} batas clip...`);
+        setProgress(`Memotong ${inputFeatures.length} fitur input dengan ${clipMasks.length} batas clip...`);
 
         const clippedFeatures: any[] = [];
 
@@ -100,11 +112,13 @@ export function ClipAnalysisButton() {
               (fInput.geometry.type !== "Polygon" && fInput.geometry.type !== "MultiPolygon")) {
             // Point dan Line langsung masuk jika berada di dalam clip area
             if (fInput.geometry && (fInput.geometry.type === "Point" || fInput.geometry.type === "MultiPoint")) {
-              // Cek apakah titik berada di dalam salah satu clip polygon
-              for (const fClip of clipFeatures) {
-                if (!fClip.geometry || (fClip.geometry.type !== "Polygon" && fClip.geometry.type !== "MultiPolygon")) continue;
+              // Cek apakah titik berada di dalam salah satu clip polygon.
+              for (const fClip of clipMasks) {
                 try {
-                  if (turf.booleanPointInPolygon(fInput, fClip)) {
+                  const points = fInput.geometry.type === "Point"
+                    ? [fInput]
+                    : fInput.geometry.coordinates.map((coordinates: number[]) => turf.point(coordinates));
+                  if (points.some((point: any) => turf.booleanPointInPolygon(point, fClip))) {
                     clippedFeatures.push({ ...fInput });
                     break; // Sudah masuk, tidak perlu cek clip polygon lain
                   }
@@ -113,8 +127,7 @@ export function ClipAnalysisButton() {
             }
             // LineString: clip line by polygon
             if (fInput.geometry && (fInput.geometry.type === "LineString" || fInput.geometry.type === "MultiLineString")) {
-              for (const fClip of clipFeatures) {
-                if (!fClip.geometry || (fClip.geometry.type !== "Polygon" && fClip.geometry.type !== "MultiPolygon")) continue;
+              for (const fClip of clipMasks) {
                 try {
                   // Use lineSplit or booleanIntersects approach
                   const clipped = turf.lineSplit(fInput, fClip);
@@ -138,12 +151,8 @@ export function ClipAnalysisButton() {
             continue;
           }
 
-          // Polygon vs Polygon clip: intersect
-          for (let j = 0; j < clipFeatures.length; j++) {
-            const fClip = clipFeatures[j];
-            if (!fClip.geometry || 
-                (fClip.geometry.type !== "Polygon" && fClip.geometry.type !== "MultiPolygon")) continue;
-
+          // Polygon vs Polygon clip: intersect with the dissolved clip mask.
+          for (const fClip of clipMasks) {
             try {
               const clipped = turf.intersect(turf.featureCollection([fInput, fClip]));
               if (clipped) {
