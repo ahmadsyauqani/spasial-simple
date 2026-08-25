@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
-import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff, Search, GripVertical } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff, Search, GripVertical, Cloud, CloudOff, HardDrive, RefreshCw } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import * as turf from "@turf/turf";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
@@ -213,7 +213,8 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
         geojson: geojsonData,
         geometryType: geojsonData.features?.[0]?.geometry?.type || "Vector",
         style: layerStyle,
-        visible: true
+        visible: true,
+        syncStatus: 'local'
       };
       setLayers((prev) => [...prev, newLayer as any]);
       // Guest layers must also enter the analysis cache; analysis tools read from it.
@@ -226,9 +227,11 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
     toast.info(`Mulai mengunggah ${file.name} ke Supabase...`);
     const project = await getOrCreateDefaultProject();
     const newLayer = await uploadLayerToSupabase(project.id, file.name, geojsonData);
-    const styledLayer = { ...newLayer, style: layerStyle };
-    if (newLayer?.id) await updateLayerStyleInSupabase(newLayer.id, layerStyle);
+    const styledLayer = { ...newLayer, style: layerStyle, syncStatus: 'syncing' as const };
     setLayers((prev) => [...prev, styledLayer]);
+    if (newLayer?.id) await updateLayerStyleInSupabase(newLayer.id, layerStyle);
+    const cloudLayer = { ...styledLayer, syncStatus: 'cloud' as const };
+    setLayers((prev) => prev.map((layer) => layer.id === cloudLayer.id ? cloudLayer : layer));
     setZoomFeature(geojsonData);
     toast.success(`Layer ${file.name} sukses tersimpan di Supabase!`);
   };
@@ -1191,7 +1194,18 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
       return 0;
     }
   })();
-  const storageLabel = isGuest || layer.id?.startsWith("local-") ? "Local" : "Supabase";
+  const syncStatus = (layer.syncStatus || (
+    isGuest || layer.id?.startsWith("local-")
+      ? "local"
+      : isOnline ? "cloud" : "unsynced"
+  )) as 'cloud' | 'local' | 'syncing' | 'unsynced';
+  const syncStatusLabels: Record<typeof syncStatus, string> = {
+    cloud: "Cloud",
+    local: "Cache lokal",
+    syncing: "Syncing",
+    unsynced: "Belum sinkron",
+  };
+  const syncStatusLabel = syncStatusLabels[syncStatus];
 
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
@@ -1284,7 +1298,10 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
           </div>
           <div className="layer-card-insights">
             <span>{displayArea > 0 ? `Luas ${formatUnit(displayArea)}` : "Luas -"}</span>
-            <span className={storageLabel === "Local" ? "local" : "saved"}>{storageLabel}</span>
+            <span className={`layer-sync-status ${syncStatus}`} title={`Status penyimpanan: ${syncStatusLabel}`}>
+              {syncStatus === "syncing" ? <RefreshCw className="h-2.5 w-2.5 animate-spin" /> : syncStatus === "local" ? <HardDrive className="h-2.5 w-2.5" /> : syncStatus === "unsynced" ? <CloudOff className="h-2.5 w-2.5" /> : <Cloud className="h-2.5 w-2.5" />}
+              {syncStatusLabel}
+            </span>
           </div>
         </div>
 

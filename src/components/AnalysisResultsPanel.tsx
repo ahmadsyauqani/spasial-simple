@@ -4,7 +4,7 @@ import { ChevronDown, Download, Layers3, Maximize2, X } from "lucide-react";
 import { useState } from "react";
 import { useMapContext } from "@/lib/MapContext";
 
-export function AnalysisResultsPanel() {
+export function AnalysisResultsPanel({ hidden = false }: { hidden?: boolean }) {
   const [expanded, setExpanded] = useState(true);
   const {
     overlapResult, setOverlapResult,
@@ -30,7 +30,7 @@ export function AnalysisResultsPanel() {
     { key: "sliver", label: "Sliver", color: "#facc15", result: sliverResult, clear: setSliverResult },
   ].filter((item) => item.result?.geojson);
 
-  if (results.length === 0) return null;
+  if (hidden || results.length === 0) return null;
 
   const formatArea = (sqm: number) => {
     if (areaUnit === "m2") return `${sqm.toLocaleString("id-ID", { maximumFractionDigits: 1 })} m²`;

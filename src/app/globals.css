@@ -347,19 +347,51 @@ input, select, textarea, button {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 7px;
-  min-height: 42px;
-  padding: 5px 7px;
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 16px;
-  background: rgba(2, 6, 23, 0.88);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  gap: 9px;
+  min-height: 50px;
+  padding: 6px 9px;
+  border: 1px solid rgba(103,232,249,0.24);
+  border-radius: 17px;
+  background: rgba(5, 11, 19, 0.96);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.5), 0 0 24px rgba(34,211,238,0.07);
 }
 
 .coordinate-modern-tools {
   display: flex;
   align-items: center;
   gap: 3px;
+}
+
+.coordinate-workspace-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 128px;
+  padding: 0 5px 0 2px;
+  border-right: 1px solid rgba(255,255,255,0.12);
+}
+
+.coordinate-workspace-status div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.coordinate-workspace-status span {
+  color: rgba(251,146,60,0.72);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.coordinate-workspace-status strong {
+  overflow: hidden;
+  color: rgba(255,255,255,0.86);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .coordinate-tool,
@@ -414,12 +446,13 @@ input, select, textarea, button {
 }
 
 .coordinate-modern-readout {
-  min-width: 130px;
+  min-width: 190px;
+  padding: 0 4px;
 }
 
 .coordinate-modern-readout span,
 .coordinate-modern-metric span {
-  color: rgba(255,255,255,0.32);
+  color: rgba(103,232,249,0.65);
   font-size: 7px;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -427,14 +460,15 @@ input, select, textarea, button {
 
 .coordinate-modern-readout strong,
 .coordinate-modern-metric strong {
-  color: rgba(255,255,255,0.88);
+  color: rgba(255,255,255,0.95);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
 .coordinate-modern-metric strong {
-  color: #c4b5fd;
+  color: #fb923c;
+  font-size: 12px;
 }
 
 .coordinate-details-toggle.active {
@@ -610,6 +644,31 @@ input, select, textarea, button {
   color: #fbbf24;
   border-color: rgba(245,158,11,0.25);
   background: rgba(245,158,11,0.08);
+}
+
+.layer-card-insights .layer-sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.layer-card-insights .layer-sync-status.cloud {
+  color: #67e8f9;
+  border-color: rgba(34,211,238,0.25);
+  background: rgba(6,182,212,0.08);
+}
+
+.layer-card-insights .layer-sync-status.local,
+.layer-card-insights .layer-sync-status.syncing {
+  color: #fbbf24;
+  border-color: rgba(245,158,11,0.25);
+  background: rgba(245,158,11,0.08);
+}
+
+.layer-card-insights .layer-sync-status.unsynced {
+  color: #fca5a5;
+  border-color: rgba(248,113,113,0.28);
+  background: rgba(239,68,68,0.08);
 }
 
 .analysis-workspace {
@@ -865,18 +924,29 @@ input, select, textarea, button {
 
 @media (max-width: 1023px) {
   .coordinate-modern {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
+    display: flex !important;
+    flex-wrap: nowrap;
     left: 0;
     right: 0;
     width: 100%;
-    justify-content: space-between;
-    gap: 3px;
+    justify-content: flex-start;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
     border-radius: 14px;
+  }
+
+  .coordinate-modern::-webkit-scrollbar {
+    display: none;
   }
 
   .coordinate-modern-tools {
     gap: 1px;
+    flex: 0 0 auto;
+  }
+
+  .coordinate-workspace-status {
+    display: none;
   }
 
   .coordinate-tool,
@@ -897,22 +967,35 @@ input, select, textarea, button {
   }
 
   .coordinate-modern-readout {
-    min-width: 0;
+    min-width: 128px;
+    flex: 1 0 128px;
     overflow: hidden;
+  }
+
+  .coordinate-modern-readout span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .coordinate-modern-readout strong {
     overflow: hidden;
-    font-size: 8px;
+    font-size: 10px;
     text-overflow: ellipsis;
   }
 
   .coordinate-modern-metric {
-    min-width: 40px;
+    min-width: 48px;
+    flex: 0 0 auto;
+  }
+
+  .coordinate-details-toggle,
+  .coordinate-unlock {
+    flex: 0 0 auto;
   }
 
   .coordinate-modern-metric strong {
-    font-size: 8px;
+    font-size: 9px;
   }
 
   .coordinate-details-popover {
@@ -959,6 +1042,319 @@ input, select, textarea, button {
 /* SAKAGIS workbench shell: one touch-friendly rhythm across all tools. */
 .workspace-panel {
   isolation: isolate;
+}
+
+.map-action-controls {
+  z-index: 600 !important;
+  align-items: center;
+  padding: 4px;
+  border: 1px solid rgba(103, 232, 249, 0.2);
+  border-radius: 999px;
+  background: rgba(5, 11, 19, 0.88);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42), 0 0 18px rgba(34, 211, 238, 0.06);
+  backdrop-filter: blur(18px);
+}
+
+.map-action-controls > button,
+.map-action-controls > div > button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.map-action-controls > div > button:hover,
+.map-action-controls > button:hover {
+  border-color: rgba(103, 232, 249, 0.45);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.08);
+}
+
+.map-instrument-dock {
+  pointer-events: none;
+}
+
+.map-instrument-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+  gap: 7px;
+  min-height: 54px;
+  width: max-content;
+  max-width: 100%;
+  padding: 6px 8px;
+  overflow: visible;
+  border: 1px solid rgba(103,232,249,0.22);
+  border-radius: 17px;
+  background: rgba(5,11,19,0.97);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.48), 0 0 22px rgba(34,211,238,0.06);
+}
+
+.map-instrument-status,
+.map-instrument-actions,
+.map-instrument-readout,
+.map-instrument-metric,
+.map-instrument-details,
+.map-instrument-lock {
+  flex: 0 0 auto;
+}
+
+.map-instrument-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 120px;
+  padding: 0 5px 0 2px;
+  border-right: 1px solid rgba(255,255,255,0.12);
+}
+
+.map-instrument-status div,
+.map-instrument-readout,
+.map-instrument-metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1.15;
+}
+
+.map-instrument-status span,
+.map-instrument-readout span,
+.map-instrument-metric span {
+  color: rgba(103,232,249,0.62);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.map-instrument-status strong,
+.map-instrument-readout strong,
+.map-instrument-metric strong {
+  overflow: hidden;
+  color: rgba(255,255,255,0.92);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-instrument-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.map-instrument-button,
+.map-instrument-details,
+.map-instrument-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0 8px;
+  color: rgba(255,255,255,0.55);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+
+.map-instrument-button:hover,
+.map-instrument-details:hover {
+  color: white;
+  background: rgba(255,255,255,0.08);
+}
+
+.map-instrument-button.is-active {
+  color: #a5b4fc;
+  border-color: rgba(99,102,241,0.35);
+  background: rgba(99,102,241,0.2);
+}
+
+.map-instrument-button.is-measuring {
+  color: #fdba74;
+  border-color: rgba(249,115,22,0.35);
+  background: rgba(249,115,22,0.2);
+}
+
+.map-instrument-divider {
+  width: 1px;
+  height: 27px;
+  flex: 0 0 auto;
+  background: rgba(255,255,255,0.12);
+}
+
+.map-instrument-readout {
+  min-width: 190px;
+  flex: 0 0 190px;
+}
+
+.map-instrument-projection {
+  min-width: 104px;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 5px;
+  border-left: 1px solid rgba(255,255,255,0.1);
+  line-height: 1.15;
+}
+
+.map-instrument-projection span {
+  color: rgba(103,232,249,0.62);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.map-instrument-projection strong,
+.map-instrument-projection small {
+  color: rgba(255,255,255,0.9);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.map-instrument-projection small {
+  color: rgba(255,255,255,0.58);
+}
+
+.map-instrument-metric {
+  min-width: 68px;
+  padding: 0 4px;
+}
+
+.map-instrument-metric strong {
+  color: #fb923c;
+  font-size: 11px;
+}
+
+.map-instrument-details {
+  min-width: 70px;
+}
+
+.map-instrument-details.is-active {
+  color: #93c5fd;
+  border-color: rgba(59,130,246,0.3);
+  background: rgba(59,130,246,0.18);
+}
+
+.map-instrument-lock {
+  min-width: 38px;
+  padding: 0;
+  color: #fca5a5;
+  border-color: rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.16);
+}
+
+@media (min-width: 1024px) {
+  [data-map-ui="coordinate-bar"] {
+    left: 50% !important;
+    right: auto !important;
+    width: max-content !important;
+    max-width: calc(100vw - 430px) !important;
+    transform: translateX(-50%) !important;
+    z-index: 500 !important;
+  }
+
+  [data-map-ui="coordinate-bar"] .map-instrument-bar {
+    width: max-content;
+    max-width: 100%;
+  }
+
+  .map-action-controls .basemap-gallery {
+    left: auto;
+    right: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .map-instrument-dock {
+    left: 68px !important;
+    right: 12px !important;
+    width: auto !important;
+    transform: none !important;
+  }
+
+  .map-instrument-bar {
+    min-height: 50px;
+    width: 100%;
+    gap: 5px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .map-instrument-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .map-instrument-status,
+  .map-instrument-divider {
+    display: none;
+  }
+
+  .map-instrument-readout {
+    min-width: 145px;
+    flex: 1 0 145px;
+  }
+
+  .map-instrument-projection {
+    min-width: 112px;
+  }
+
+  .map-instrument-readout span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .map-instrument-metric {
+    min-width: 54px;
+  }
+
+  .map-instrument-button,
+  .map-instrument-details,
+  .map-instrument-lock {
+    min-height: 38px;
+  }
+
+  .map-action-controls .basemap-gallery {
+    left: 0;
+    right: auto;
+    max-width: calc(100vw - 1.5rem);
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  [data-map-ui="coordinate-bar"] .map-instrument-bar {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  [data-map-ui="coordinate-bar"] .map-instrument-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .map-instrument-status {
+    display: none;
+  }
+
+  .map-instrument-projection {
+    display: none !important;
+  }
+
+  .map-instrument-readout {
+    min-width: 180px;
+    flex-basis: 180px;
+  }
 }
 
 .sakagis-app {
@@ -1016,7 +1412,10 @@ input, select, textarea, button {
 }
 
 .digitize-status-bar {
-  display: none !important;
+  display: flex !important;
+  flex-direction: column;
+  pointer-events: auto;
+  z-index: 40;
   left: 12px;
   right: 12px;
   bottom: calc(82px + env(safe-area-inset-bottom));

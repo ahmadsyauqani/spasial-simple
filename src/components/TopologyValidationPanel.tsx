@@ -777,7 +777,7 @@ export function TopologyValidationButton() {
         <ShieldCheck className="w-5 h-5" />
       </DialogTrigger>
 
-      <DialogContent className="w-[min(1100px,calc(100vw-1rem))] max-w-6xl bg-card text-card-foreground border-border max-h-[90vh] flex flex-col">
+      <DialogContent className="w-[min(1100px,calc(100vw-1rem))] max-w-6xl sm:max-w-6xl overflow-hidden bg-card text-card-foreground border-border max-h-[calc(100dvh-2rem)] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-amber-400" />

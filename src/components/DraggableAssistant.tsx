@@ -82,7 +82,7 @@ export function DraggableAssistant() {
       `}} />
 
       <div
-        className="fixed z-[41] top-3"
+        className="fixed z-[41] top-3 hidden lg:block"
         style={{
           left: "calc(50% + 240px)",
         }}

@@ -288,11 +288,11 @@ export default function MapArea() {
     <div className="w-full h-full bg-background absolute inset-0 z-0">
       {/* Bottom-left controls: Basemap + My Location (Moved to clear sidebar) */}
       <div 
-        className="map-action-controls absolute bottom-[calc(196px+env(safe-area-inset-bottom))] lg:bottom-6 left-4 lg:left-[340px] flex items-end gap-2 transition-all duration-300"
-        style={{ zIndex: 9999 }}
+        className="map-action-controls absolute bottom-[calc(196px+env(safe-area-inset-bottom))] left-4 right-auto flex items-end justify-start gap-2 transition-all duration-300 lg:bottom-6 lg:left-auto lg:right-[76px] lg:justify-end"
+        style={{ zIndex: 600 }}
       >
         {/* Basemap Gallery */}
-        <div className="relative flex flex-col gap-2">
+          <div className="relative flex flex-col gap-2">
           <button onClick={() => setIsBasemapGalleryOpen((value) => !value)} title="Pilih peta dasar" className={`bg-card/70 backdrop-blur-xl text-card-foreground border rounded-full p-2.5 shadow-2xl transition-colors flex items-center justify-center ${isBasemapGalleryOpen ? 'border-primary bg-primary/15' : 'border-border/50 hover:bg-muted/80'}`}>
             <Layers className="w-5 h-5 text-primary" />
           </button>
@@ -1094,6 +1094,12 @@ function CursorCoordinates() {
     return `${meters.toLocaleString('id-ID', { maximumFractionDigits: 1 })} m`;
   };
 
+  const loadedLayers = layers.filter((layer) => layer.id && layerGeojsonCache[layer.id]);
+  const loadedFeatureCount = loadedLayers.reduce(
+    (total, layer) => total + (layerGeojsonCache[layer.id!]?.features?.length || 0),
+    0
+  );
+
   const startMeasure = (type: 'distance' | 'area') => {
     setActiveDigitizingLayerId(null);
     try { map.pm.disableDraw(); } catch(e) {}
@@ -1426,169 +1432,56 @@ function CursorCoordinates() {
         </>
       )}
 
-      {/* ── Coordinate Bar ── */}
-      <div data-map-ui="coordinate-bar" className="absolute bottom-[calc(132px+env(safe-area-inset-bottom))] lg:bottom-6 left-1/2 -translate-x-1/2 z-[500] w-[calc(100vw-2rem)] lg:w-auto pointer-events-auto">
-
-        <div className="coordinate-legacy" aria-hidden="true">
-        {/* Tool Buttons — Inline */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button 
-            onClick={() => setIsSnapEnabled(!isSnapEnabled)}
-            className={`p-2 rounded-xl transition-all duration-200 ${isSnapEnabled ? 'bg-indigo-500/20 text-indigo-400 ring-1 ring-indigo-500/40' : 'text-white/30 hover:text-white/60 hover:bg-white/5'}`}
-            title={isSnapEnabled ? "Matikan Snap" : "Aktifkan Snap ke Vertex"}
-          >
-            <Magnet className="w-3.5 h-3.5" />
-          </button>
-
-          <button 
-            onClick={() => {
-              if (isMeasuring && measureType === 'distance') {
-                cancelMeasure();
-              } else {
-                startMeasure('distance');
-                toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" });
-              }
-            }}
-            className={`px-2.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-1.5 ${isMeasuring && measureType === 'distance' ? 'bg-orange-500/20 text-orange-400 ring-1 ring-orange-500/40' : 'text-white/30 hover:text-white/60 hover:bg-white/5'}`}
-            title={isMeasuring && measureType === 'distance' ? "Batal Ukur" : "Ukur Jarak (Panjang)"}
-          >
-            <Ruler className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-bold uppercase tracking-wide hidden sm:inline">Jarak</span>
-          </button>
-
-          <button 
-            onClick={() => {
-              if (isMeasuring && measureType === 'area') {
-                cancelMeasure();
-              } else {
-                startMeasure('area');
-                toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" });
-              }
-            }}
-            className={`px-2.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-1.5 ${isMeasuring && measureType === 'area' ? 'bg-orange-500/20 text-orange-400 ring-1 ring-orange-500/40' : 'text-white/30 hover:text-white/60 hover:bg-white/5'}`}
-            title={isMeasuring && measureType === 'area' ? "Batal Ukur" : "Ukur Luas & Keliling"}
-          >
-            <Square className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-bold uppercase tracking-wide hidden sm:inline">Luas</span>
-          </button>
-        </div>
-
-        {/* Divider */}
-        <div className="w-px h-8 bg-white/10 shrink-0"></div>
-
-        {/* Scale & Zoom */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="flex flex-col items-center">
-            <span className="text-[7px] text-white/25 uppercase font-black tracking-widest leading-none">Scale</span>
-            <span className="font-mono font-black text-white/80 text-[11px] leading-tight">1:{new Intl.NumberFormat('id-ID').format(scale)}</span>
+      {/* ── Map instrument dock ── */}
+      <div data-map-ui="coordinate-bar" className="map-instrument-dock absolute bottom-[calc(132px+env(safe-area-inset-bottom))] left-3 right-3 z-[500] pointer-events-auto lg:bottom-6">
+        <div className="map-instrument-bar">
+          <div className="map-instrument-status">
+            <Activity className="h-3.5 w-3.5 shrink-0 text-orange-300" />
+            <div>
+              <span>WORKSPACE</span>
+              <strong>{loadedLayers.length} layer · {loadedFeatureCount.toLocaleString('id-ID')} fitur</strong>
+            </div>
           </div>
-          <div className="flex flex-col items-center">
-            <span className="text-[7px] text-white/25 uppercase font-black tracking-widest leading-none">Zoom</span>
-            <span className="font-mono font-black text-indigo-400 text-[11px] leading-tight">{zoom}</span>
-          </div>
-        </div>
 
-        {/* Divider */}
-        <div className="w-px h-8 bg-white/10 shrink-0 hidden sm:block"></div>
-
-        {/* WGS 84 */}
-        <div className="hidden sm:flex flex-col items-center">
-          <span className={`text-[8px] uppercase font-bold tracking-wider leading-none mb-1 ${isLocked ? 'text-primary-foreground/60' : 'text-white/25'}`}>WGS 84</span>
-          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>{toDMS(lat, true)}</span>
-          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>{toDMS(lng, false)}</span>
-        </div>
-
-        {/* Divider */}
-        <div className="w-px h-8 bg-white/10 shrink-0 hidden sm:block"></div>
-
-        {/* UTM */}
-        <div className="hidden sm:flex flex-col items-center">
-          <span className={`text-[8px] uppercase font-bold tracking-wider leading-none mb-1 ${isLocked ? 'text-primary-foreground/60' : 'text-white/25'}`}>UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
-          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>X: {utmResult.x.toFixed(2)}</span>
-          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>Y: {utmResult.y.toFixed(2)}</span>
-        </div>
-
-        {/* Divider */}
-        <div className="w-px h-8 bg-white/10 shrink-0 hidden sm:block"></div>
-
-        {/* TM-3 */}
-        <div className="hidden sm:flex flex-col items-center">
-          <span className={`text-[8px] uppercase font-bold tracking-wider leading-none mb-1 ${isLocked ? 'text-primary-foreground/60' : 'text-white/25'}`}>TM-3 {tm3ZoneDisplay}</span>
-          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>X: {tm3Result.x.toFixed(2)}</span>
-          <span className={`font-mono text-[10px] leading-tight whitespace-nowrap ${isLocked ? 'text-primary-foreground' : 'text-white/80'}`}>Y: {tm3Result.y.toFixed(2)}</span>
-        </div>
-
-        {/* Lock Badge */}
-        {isLocked && (
-          <button 
-            onClick={handleUnlock}
-            className="ml-1 p-1.5 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-all ring-1 ring-red-500/30 shrink-0"
-            title="Buka Kunci Koordinat"
-          >
-            <Lock className="w-3.5 h-3.5" />
-          </button>
-        )}
-
-        </div>
-
-        <div className="coordinate-modern">
-          <div className="coordinate-modern-tools">
-            <button
-              onClick={() => setIsSnapEnabled(!isSnapEnabled)}
-              className={isSnapEnabled ? "coordinate-tool active-snap" : "coordinate-tool"}
-              title={isSnapEnabled ? "Matikan snap" : "Aktifkan snap ke vertex"}
-            >
-              <Magnet className="w-3.5 h-3.5" />
-              <span>Snap</span>
+          <div className="map-instrument-actions">
+            <button onClick={() => setIsSnapEnabled(!isSnapEnabled)} className={isSnapEnabled ? "map-instrument-button is-active" : "map-instrument-button"} title={isSnapEnabled ? "Matikan snap" : "Aktifkan snap ke vertex"}>
+              <Magnet className="h-3.5 w-3.5" /><span>Snap</span>
             </button>
-            <button
-              onClick={() => isMeasuring && measureType === 'distance' ? cancelMeasure() : (startMeasure('distance'), toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" }))}
-              className={isMeasuring && measureType === 'distance' ? "coordinate-tool active-measure" : "coordinate-tool"}
-              title="Ukur jarak"
-            >
-              <Ruler className="w-3.5 h-3.5" />
-              <span>Jarak</span>
+            <button onClick={() => isMeasuring && measureType === 'distance' ? cancelMeasure() : (startMeasure('distance'), toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" }))} className={isMeasuring && measureType === 'distance' ? "map-instrument-button is-measuring" : "map-instrument-button"} title="Ukur jarak">
+              <Ruler className="h-3.5 w-3.5" /><span>Jarak</span>
             </button>
-            <button
-              onClick={() => isMeasuring && measureType === 'area' ? cancelMeasure() : (startMeasure('area'), toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" }))}
-              className={isMeasuring && measureType === 'area' ? "coordinate-tool active-measure" : "coordinate-tool"}
-              title="Ukur luas"
-            >
-              <Square className="w-3.5 h-3.5" />
-              <span>Luas</span>
+            <button onClick={() => isMeasuring && measureType === 'area' ? cancelMeasure() : (startMeasure('area'), toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" }))} className={isMeasuring && measureType === 'area' ? "map-instrument-button is-measuring" : "map-instrument-button"} title="Ukur luas">
+              <Square className="h-3.5 w-3.5" /><span>Luas</span>
             </button>
           </div>
 
-          <div className="coordinate-modern-divider" />
+          <div className="map-instrument-divider" />
 
-          <div className="coordinate-modern-readout">
-            <span>WGS 84</span>
-            <strong>{lat.toFixed(5)}, {lng.toFixed(5)}</strong>
+          <div className="map-instrument-readout">
+            <span>KOORDINAT KURSOR · WGS 84</span>
+            <strong>{lat.toFixed(6)}°, {lng.toFixed(6)}°</strong>
           </div>
 
-          <div className="coordinate-modern-metric">
-            <span>SKALA</span>
-            <strong>1:{new Intl.NumberFormat('id-ID').format(scale)}</strong>
-          </div>
-          <div className="coordinate-modern-metric">
-            <span>ZOOM</span>
-            <strong>{zoom}</strong>
+          <div className="map-instrument-projection hidden sm:flex">
+            <span>UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
+            <strong>E {utmResult.x.toFixed(2)}</strong>
+            <small>N {utmResult.y.toFixed(2)}</small>
           </div>
 
-          <button
-            onClick={() => setShowCoordinateDetails((value) => !value)}
-            className={showCoordinateDetails ? "coordinate-details-toggle active" : "coordinate-details-toggle"}
-            title="Tampilkan koordinat UTM dan TM-3"
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-            <span>Detail</span>
+          <div className="map-instrument-projection hidden sm:flex">
+            <span>TM-3 {tm3ZoneDisplay}</span>
+            <strong>X {tm3Result.x.toFixed(2)}</strong>
+            <small>Y {tm3Result.y.toFixed(2)}</small>
+          </div>
+
+          <div className="map-instrument-metric"><span>SKALA</span><strong>1:{new Intl.NumberFormat('id-ID').format(scale)}</strong></div>
+          <div className="map-instrument-metric"><span>ZOOM</span><strong>{zoom}</strong></div>
+
+          <button onClick={() => setShowCoordinateDetails((value) => !value)} className={showCoordinateDetails ? "map-instrument-details is-active" : "map-instrument-details"} title="Tampilkan koordinat UTM dan TM-3">
+            <Settings2 className="h-3.5 w-3.5" /><span>Detail</span>
           </button>
 
-          {isLocked && (
-            <button onClick={handleUnlock} className="coordinate-unlock" title="Buka kunci koordinat">
-              <Lock className="w-3.5 h-3.5" />
-            </button>
-          )}
+          {isLocked && <button onClick={handleUnlock} className="map-instrument-lock" title="Buka kunci koordinat"><Lock className="h-3.5 w-3.5" /></button>}
 
           {showCoordinateDetails && (
             <div className="coordinate-details-popover">
