@@ -208,7 +208,7 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
     if (isGuest) {
       toast.info(`Memuat ${file.name} ke sesi Guest...`);
       const newLayer = {
-        id: crypto.randomUUID(),
+        id: `local-${crypto.randomUUID()}`,
         name: file.name,
         geojson: geojsonData,
         geometryType: geojsonData.features?.[0]?.geometry?.type || "Vector",
@@ -1074,7 +1074,7 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
 import { ExportLayerDialog } from "./ExportLayerDialog";
 
 function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => void }) {
-  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache, setLayers, topologyErrors } = useMapContext();
+  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache, setLayers, topologyErrors, activeDigitizingLayerId, activeEditFeature } = useMapContext();
   const { isGuest } = useAuth();
   const style = layer.style || { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2, dissolve_key: 'none' };
   const colorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1083,7 +1083,10 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
   const [isOnline, setIsOnline] = useState(true);
   const isVisible = layer.visible !== false;
   const featureCount = layerGeojsonCache[layer.id!]?.features?.length || 0;
-  const validationCount = topologyErrors?.features?.length || 0;
+  const validationCount = (!topologyErrors?.layerId || topologyErrors.layerId === layer.id)
+    ? topologyErrors?.features?.length || 0
+    : 0;
+  const isActive = activeDigitizingLayerId === layer.id || activeEditFeature?.layerId === layer.id;
 
   useEffect(() => {
     const updateConnection = () => setIsOnline(navigator.onLine);
@@ -1181,6 +1184,15 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
 
   const metrics = layer.id ? layerAreas[layer.id] : undefined;
 
+  const displayArea = metrics?.wgs84_sqm ?? (() => {
+    try {
+      return layer.id ? turf.area(layerGeojsonCache[layer.id]) : 0;
+    } catch (_) {
+      return 0;
+    }
+  })();
+  const storageLabel = isGuest || layer.id?.startsWith("local-") ? "Local" : "Supabase";
+
   const formatUnit = (sqm: number) => {
     if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
     if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
@@ -1221,7 +1233,9 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
       className={cn(
         "flex flex-col gap-0 rounded-2xl border transition-all duration-300 group cursor-pointer overflow-hidden",
         "bg-white dark:bg-white/5 shadow-sm",
-        isPinned
+        isActive
+          ? "border-cyan-300/70 bg-cyan-500/[0.06] shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-300/20"
+          : isPinned
           ? "border-primary/40 shadow-primary/10 shadow-md"
           : "border-border/60 hover:border-primary/30 hover:shadow-md"
       )}
@@ -1266,7 +1280,11 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
             <span>{layer.geometryType || 'Vector'}</span>
             <span>{featureCount.toLocaleString('id-ID')} fitur</span>
             <span className={isOnline ? "online" : "offline"}>{isOnline ? "Online" : "Offline"}</span>
-            <span className={validationCount ? "warning" : "valid"}>{validationCount ? `${validationCount} warning` : "Valid"}</span>
+            <span className={validationCount ? "warning" : "valid"}>{validationCount ? `${validationCount} temuan` : "Valid"}</span>
+          </div>
+          <div className="layer-card-insights">
+            <span>{displayArea > 0 ? `Luas ${formatUnit(displayArea)}` : "Luas -"}</span>
+            <span className={storageLabel === "Local" ? "local" : "saved"}>{storageLabel}</span>
           </div>
         </div>
 

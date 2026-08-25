@@ -18,6 +18,19 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+const criticalValidationTypes = new Set([
+  "point-null-geometry",
+  "point-invalid-geometry",
+  "polygon-invalid-geometry",
+  "polygon-invalid-coordinate",
+  "polygon-invalid-topology",
+  "self-intersection",
+]);
+
+function getValidationSeverity(type: string) {
+  return criticalValidationTypes.has(type) ? "error" : "warning";
+}
+
 export function TopologyValidationButton() {
   const {
     layers,
@@ -94,6 +107,41 @@ export function TopologyValidationButton() {
     rules.pointSnap || rules.pointOnLine || rules.pointOnBoundary
   );
   const referenceRequired = pointReferenceRuleActive || (isPolygonLayer && rules.polygonGap);
+  const validationFeatures = topologyErrors?.features || [];
+  const validationSummary = (() => {
+    const affectedFeatures = new Set<number>();
+    const ruleCounts = new Map<string, number>();
+    let errors = 0;
+    let warnings = 0;
+
+    validationFeatures.forEach((feature: any) => {
+      const properties = feature.properties || {};
+      const severity = getValidationSeverity(properties.type || "");
+      if (severity === "error") errors += 1;
+      else warnings += 1;
+      ruleCounts.set(properties.type || "unknown", (ruleCounts.get(properties.type || "unknown") || 0) + 1);
+      if (Number.isInteger(properties.featureIndex)) affectedFeatures.add(properties.featureIndex);
+      if (Array.isArray(properties.featureIndices)) {
+        properties.featureIndices.forEach((index: number) => {
+          if (Number.isInteger(index)) affectedFeatures.add(index);
+        });
+      }
+    });
+
+    const featureCount = fc?.features?.length || 0;
+    const validPercent = featureCount > 0
+      ? Math.max(0, Math.round(((featureCount - affectedFeatures.size) / featureCount) * 100))
+      : 100;
+
+    return {
+      featureCount,
+      affectedFeatures: affectedFeatures.size,
+      errors,
+      warnings,
+      validPercent,
+      ruleCounts: Array.from(ruleCounts.entries()).sort((a, b) => b[1] - a[1]),
+    };
+  })();
 
   const countDecimals = (num: number) => {
     if (Math.floor(num) === num) return 0;
@@ -141,6 +189,14 @@ export function TopologyValidationButton() {
   const zoomToValidationError = (error: any) => {
     if (!error?.geometry) return;
     setZoomFeature({ type: 'Feature', properties: error.properties || {}, geometry: error.geometry });
+  };
+
+  const ignoreValidationError = (errorIndex: number) => {
+    setTopologyErrors((previous: any) => {
+      if (!previous?.features) return null;
+      const remaining = previous.features.filter((_: any, index: number) => index !== errorIndex);
+      return remaining.length > 0 ? { ...previous, features: remaining } : null;
+    });
   };
 
   const repairValidationError = async (error: any, errorIndex: number) => {
@@ -668,6 +724,7 @@ export function TopologyValidationButton() {
           toast.warning(`Ditemukan ${errors.length} kesalahan topologi!`);
           const errorFC = {
             type: "FeatureCollection",
+            layerId: targetLayerId,
             features: errors.map(err => ({
               type: "Feature",
               properties: { ...err },
@@ -720,7 +777,7 @@ export function TopologyValidationButton() {
         <ShieldCheck className="w-5 h-5" />
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-xl bg-card text-card-foreground border-border max-h-[90vh] flex flex-col">
+      <DialogContent className="w-[min(1100px,calc(100vw-1rem))] max-w-6xl bg-card text-card-foreground border-border max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-amber-400" />
@@ -731,7 +788,8 @@ export function TopologyValidationButton() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2 flex-1 overflow-hidden">
+        <div className="grid min-h-0 flex-1 gap-5 py-2 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.82fr)]">
+          <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
           {/* Layer Selection */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
@@ -864,6 +922,9 @@ export function TopologyValidationButton() {
             </div>
           )}
 
+          </div>
+          <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+
           {progress && (
             <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-900/20 border border-amber-500/20 rounded-md p-2.5">
               <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
@@ -871,29 +932,62 @@ export function TopologyValidationButton() {
             </div>
           )}
 
-          {topologyErrors && (
-            <div className="bg-amber-950/30 border border-amber-500/20 rounded-lg p-3 flex flex-col gap-2">
+          {topologyErrors ? (
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-amber-500/20 bg-amber-950/30 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                  ⚠️ Hasil Validasi
+                  <AlertTriangle className="h-3.5 w-3.5" /> Hasil Validasi
                 </span>
                 <button onClick={() => setTopologyErrors(null)} className="p-1 hover:bg-amber-500/20 rounded text-amber-400">
                   <Trash2 className="w-3 h-3" />
                 </button>
               </div>
-              <div className="text-xs text-amber-200">{topologyErrors.features.length} kesalahan ditemukan. Pilih item untuk zoom dan tindakan.</div>
-              <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-                {topologyErrors.features.map((error: any, errorIndex: number) => {
+              <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                <div className="rounded-lg border border-rose-400/15 bg-rose-500/10 px-2 py-2">
+                  <span className="block uppercase tracking-wider text-rose-200/60">Error</span>
+                  <strong className="mt-0.5 block text-base text-rose-200">{validationSummary.errors}</strong>
+                </div>
+                <div className="rounded-lg border border-amber-400/15 bg-amber-500/10 px-2 py-2">
+                  <span className="block uppercase tracking-wider text-amber-200/60">Warning</span>
+                  <strong className="mt-0.5 block text-base text-amber-200">{validationSummary.warnings}</strong>
+                </div>
+                <div className="rounded-lg border border-cyan-400/15 bg-cyan-500/10 px-2 py-2">
+                  <span className="block uppercase tracking-wider text-cyan-200/60">Fitur valid</span>
+                  <strong className="mt-0.5 block text-base text-cyan-200">{validationSummary.validPercent}%</strong>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-black/15 px-2 py-2">
+                  <span className="block uppercase tracking-wider text-white/45">Terdampak</span>
+                  <strong className="mt-0.5 block text-base text-white/85">{validationSummary.affectedFeatures}/{validationSummary.featureCount}</strong>
+                </div>
+              </div>
+              <div className="text-[10px] text-amber-200/75">
+                {validationFeatures.length} temuan ditemukan dari {validationSummary.featureCount.toLocaleString("id-ID")} fitur. Pilih item untuk zoom, perbaiki, atau abaikan.
+              </div>
+              {validationSummary.ruleCounts.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {validationSummary.ruleCounts.map(([type, count]) => (
+                    <span key={type} className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[9px] text-white/60">
+                      {type} <b className="text-white/90">{count}</b>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                {validationFeatures.map((error: any, errorIndex: number) => {
                   const props = error.properties || {};
                   const featureIndex = Number.isInteger(props.featureIndex) ? props.featureIndex : -1;
                   const original = featureIndex >= 0 ? fc?.features?.[featureIndex] : null;
                   const metrics = getFeatureMetrics(original || error);
                   const idValue = original?.properties?.[parcelIdField] ?? original?.properties?.NIB ?? original?.properties?.nib;
+                  const severity = getValidationSeverity(props.type || "");
                   return (
                     <div key={`${props.type}-${errorIndex}`} className="rounded-lg border border-amber-500/20 bg-black/20 p-2.5">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="text-[10px] font-black uppercase tracking-wider text-rose-300">{props.type || "error"}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider ${severity === "error" ? "bg-rose-500/15 text-rose-300" : "bg-amber-500/15 text-amber-300"}`}>{severity}</span>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/60">{props.type || "error"}</span>
+                          </div>
                           <div className="mt-1 text-xs leading-relaxed text-white/85">{props.message || "Kesalahan geometri"}</div>
                         </div>
                         <span className="shrink-0 rounded bg-rose-500/15 px-1.5 py-0.5 text-[9px] font-bold text-rose-300">#{featureIndex >= 0 ? featureIndex + 1 : "-"}</span>
@@ -912,13 +1006,23 @@ export function TopologyValidationButton() {
                             <Wrench className="h-3 w-3" /> Perbaiki
                           </button>
                         )}
+                        <button type="button" onClick={() => ignoreValidationError(errorIndex)} className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold text-white/55 hover:bg-white/10 hover:text-white">
+                          Abaikan
+                        </button>
                       </div>
                     </div>
                   );
                 })}
               </div>
             </div>
-          )}
+          ) : selectedLayer ? (
+            <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-cyan-300/20 bg-cyan-500/[0.04] p-6 text-center">
+              <ShieldCheck className="h-8 w-8 text-cyan-300/70" />
+              <strong className="mt-3 text-sm text-white/85">Cockpit validasi siap</strong>
+              <p className="mt-1 max-w-xs text-[10px] leading-relaxed text-white/45">Jalankan pemeriksaan untuk melihat ringkasan kesehatan geometri dan tindakan per temuan.</p>
+            </div>
+          ) : null}
+          </div>
         </div>
 
         <DialogFooter className="border-t pt-4">

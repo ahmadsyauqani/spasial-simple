@@ -28,6 +28,7 @@ import { Table2 } from "lucide-react";
 import { UserProfileWidget } from "@/components/UserProfileWidget";
 import { AnalysisResultsPanel } from "@/components/AnalysisResultsPanel";
 import { FeatureExportDialogHost } from "@/components/FeatureExportDialog";
+import { SpatialCommandHud } from "@/components/SpatialCommandHud";
 
 export default function Home() {
   const [isConverterOpen, setIsConverterOpen] = useState(false);
@@ -70,8 +71,9 @@ export default function Home() {
     <AuthGuard>
     <main className={cn("sakagis-app relative w-full h-screen overflow-hidden touch-manipulation", isDrawing && "digitizing-active")}>
         <UserProfileWidget />
-        <MapWrapper />
+      <MapWrapper />
       <SearchControl />
+      <SpatialCommandHud />
       <AnalysisResultsPanel />
       <FeatureExportDialogHost />
       <ClockWidget />

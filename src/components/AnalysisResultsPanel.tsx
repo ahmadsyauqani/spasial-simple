@@ -16,6 +16,7 @@ export function AnalysisResultsPanel() {
     spatialJoinResult, setSpatialJoinResult,
     sliverResult, setSliverResult,
     setZoomFeature,
+    areaUnit,
   } = useMapContext();
 
   const results = [
@@ -30,6 +31,12 @@ export function AnalysisResultsPanel() {
   ].filter((item) => item.result?.geojson);
 
   if (results.length === 0) return null;
+
+  const formatArea = (sqm: number) => {
+    if (areaUnit === "m2") return `${sqm.toLocaleString("id-ID", { maximumFractionDigits: 1 })} m²`;
+    if (areaUnit === "km2") return `${(sqm / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 3 })} km²`;
+    return `${(sqm / 10000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} Ha`;
+  };
 
   const downloadResult = (label: string, geojson: any) => {
     const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: "application/geo+json" });
@@ -55,12 +62,13 @@ export function AnalysisResultsPanel() {
           return (
             <div key={item.key} className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color, boxShadow: `0 0 10px ${item.color}` }} /><strong className="text-xs text-white/90">{item.label}</strong></div>
-                <button onClick={() => item.clear(null)} className="rounded-md p-1 text-white/30 hover:bg-red-500/10 hover:text-red-300" title="Hapus hasil"><X className="h-3.5 w-3.5" /></button>
+                 <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color, boxShadow: `0 0 10px ${item.color}` }} /><strong className="text-xs text-white/90">{item.label}</strong></div>
+                 <span className="rounded-full border border-emerald-300/15 bg-emerald-400/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-300">Aktif</span>
+                 <button onClick={() => item.clear(null)} className="rounded-md p-1 text-white/30 hover:bg-red-500/10 hover:text-red-300" title="Hapus hasil"><X className="h-3.5 w-3.5" /></button>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px]">
                 <span className="rounded-md bg-black/20 px-2 py-1 text-white/50">Fitur <b className="text-white/80">{featureCount}</b></span>
-                {area !== undefined && <span className="rounded-md bg-black/20 px-2 py-1 text-white/50">Area <b className="text-white/80">{(area / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha</b></span>}
+                 {area !== undefined && <span className="rounded-md bg-black/20 px-2 py-1 text-white/50">Area <b className="text-white/80">{formatArea(area)}</b></span>}
               </div>
               <div className="mt-2 flex gap-1.5">
                 <button onClick={() => setZoomFeature(result.geojson)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-indigo-500/15 px-2 py-1.5 text-[9px] font-bold text-indigo-300 hover:bg-indigo-500/25"><Maximize2 className="h-3 w-3" /> Lihat di peta</button>
