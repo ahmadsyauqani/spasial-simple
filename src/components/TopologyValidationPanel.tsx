@@ -89,6 +89,11 @@ export function TopologyValidationButton() {
     selectedLayer?.geometryType === 'Polygon' ||
     fc?.features?.[0]?.geometry?.type === 'Polygon' ||
     fc?.features?.[0]?.geometry?.type === 'MultiPolygon';
+  const pointReferenceRuleActive = isPointLayer && (
+    rules.pointInsidePolygon || rules.pointCoveredByPolygon || rules.pointWithinBoundary ||
+    rules.pointSnap || rules.pointOnLine || rules.pointOnBoundary
+  );
+  const referenceRequired = pointReferenceRuleActive || (isPolygonLayer && rules.polygonGap);
 
   const countDecimals = (num: number) => {
     if (Math.floor(num) === num) return 0;
@@ -200,13 +205,14 @@ export function TopologyValidationButton() {
       return;
     }
 
-    const needsRefLayer = rules.pointInsidePolygon || rules.pointCoveredByPolygon || 
-                           rules.pointWithinBoundary || rules.pointSnap || 
-                           rules.pointOnLine || rules.pointOnBoundary ||
-                           (!isPointLayer && rules.polygonGap);
-
-    if (needsRefLayer && !referenceLayerId) {
+    if (referenceRequired && !referenceLayerId) {
       toast.error("Pilih layer referensi untuk aturan spasial yang aktif!");
+      return;
+    }
+
+    const refFc = referenceLayerId ? layerGeojsonCache[referenceLayerId] : null;
+    if (referenceRequired && !refFc?.features?.length) {
+      toast.error("Data layer referensi belum tersedia atau masih kosong.");
       return;
     }
 
@@ -217,8 +223,6 @@ export function TopologyValidationButton() {
       try {
         const errors: any[] = [];
         const features = fc.features;
-        const refFc = referenceLayerId ? layerGeojsonCache[referenceLayerId] : null;
-
         if (isPointLayer) {
           // ==========================================
           // POINT VALIDATION (17 Rules)
@@ -229,15 +233,15 @@ export function TopologyValidationButton() {
             const propsI = pI.properties || {};
 
             // 6. Point Geometry Not Null
-            if (rules.pointNotNull) {
-              if (!geomI || !geomI.coordinates) {
+            if (!geomI || !Array.isArray(geomI.coordinates)) {
+              if (rules.pointNotNull) {
                 errors.push({
                   type: 'point-null-geometry',
                   featureIndex: i,
                   message: `Titik #${i + 1} memiliki geometri kosong (Null).`
                 });
-                return; // Skip other checks for this feature if geometry is null
               }
+              return; // Other point checks need usable coordinates.
             }
 
             // 7. Point Geometry Valid
@@ -601,9 +605,19 @@ export function TopologyValidationButton() {
           }
 
           if (rules.polygonOverlap) {
+            const indexedFeatures = polygonFeatures.map((feature: any) => ({ ...feature }));
+            const featureIndexByIndexedFeature = new Map<any, number>();
+            indexedFeatures.forEach((feature: any, index: number) => featureIndexByIndexedFeature.set(feature, index));
+            const spatialIndex = turf.geojsonRbush();
+            spatialIndex.load(indexedFeatures);
+
             for (let i = 0; i < polygonFeatures.length; i++) {
-              for (let j = i + 1; j < polygonFeatures.length; j++) {
-                const a = polygonFeatures[i];
+              const a = polygonFeatures[i];
+              const candidateFeatures = spatialIndex.search(a).features;
+              for (const indexedB of candidateFeatures) {
+                const j = featureIndexByIndexedFeature.get(indexedB);
+                if (j === undefined || j <= i) continue;
+
                 const b = polygonFeatures[j];
                 try {
                   if (!turf.booleanIntersects(a, b)) continue;
@@ -724,7 +738,11 @@ export function TopologyValidationButton() {
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Layer Subjek</label>
               <select
                 value={targetLayerId}
-                onChange={(e) => setTargetLayerId(e.target.value)}
+                onChange={(e) => {
+                  setTargetLayerId(e.target.value);
+                  setReferenceLayerId("");
+                  setTopologyErrors(null);
+                }}
                 className="w-full text-sm p-2 rounded-md bg-background border border-border text-foreground outline-none focus:ring-2 focus:ring-amber-500/50"
               >
                 <option value="">— Pilih Layer —</option>
@@ -737,12 +755,15 @@ export function TopologyValidationButton() {
               </select>
             </div>
 
-            {((isPointLayer && (rules.pointInsidePolygon || rules.pointCoveredByPolygon || rules.pointWithinBoundary || rules.pointSnap || rules.pointOnLine || rules.pointOnBoundary)) || (!isPointLayer && rules.polygonGap)) && (
+            {referenceRequired && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Layer Referensi</label>
                 <select
                   value={referenceLayerId}
-                  onChange={(e) => setReferenceLayerId(e.target.value)}
+                  onChange={(e) => {
+                    setReferenceLayerId(e.target.value);
+                    setTopologyErrors(null);
+                  }}
                   className="w-full text-sm p-2 rounded-md bg-background border border-border text-foreground outline-none focus:ring-2 focus:ring-amber-500/50"
                 >
                   <option value="">— Pilih Layer Referensi —</option>
