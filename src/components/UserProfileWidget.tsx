@@ -52,7 +52,7 @@ export function UserProfileWidget() {
               </div>
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" /> Online
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(103,156,127,0.8)]" /> Online
             </div>
           </div>
           <div className="my-2 h-px bg-white/10" />

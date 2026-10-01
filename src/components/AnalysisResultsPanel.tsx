@@ -21,13 +21,13 @@ export function AnalysisResultsPanel({ hidden = false }: { hidden?: boolean }) {
 
   const results = [
     { key: "overlap", label: "Overlap", color: "#f43f5e", result: overlapResult, clear: setOverlapResult },
-    { key: "clip", label: "Clip", color: "#10b981", result: clipResult, clear: setClipResult },
-    { key: "merge", label: "Merge", color: "#a78bfa", result: mergeResult, clear: setMergeResult },
+    { key: "clip", label: "Clip", color: "#4e8266", result: clipResult, clear: setClipResult },
+    { key: "merge", label: "Merge", color: "#a397c5", result: mergeResult, clear: setMergeResult },
     { key: "buffer", label: "Buffer", color: "#38bdf8", result: bufferResult, clear: setBufferResult },
-    { key: "union", label: "Union", color: "#f59e0b", result: unionResult, clear: setUnionResult },
+    { key: "union", label: "Union", color: "#b99449", result: unionResult, clear: setUnionResult },
     { key: "dissolve", label: "Dissolve", color: "#e879f9", result: dissolveResult, clear: setDissolveResult },
-    { key: "join", label: "Spatial Join", color: "#818cf8", result: spatialJoinResult, clear: setSpatialJoinResult },
-    { key: "sliver", label: "Sliver", color: "#facc15", result: sliverResult, clear: setSliverResult },
+    { key: "join", label: "Spatial Join", color: "#a397c5", result: spatialJoinResult, clear: setSpatialJoinResult },
+    { key: "sliver", label: "Sliver", color: "#cbab61", result: sliverResult, clear: setSliverResult },
   ].filter((item) => item.result?.geojson);
 
   if (hidden || results.length === 0) return null;

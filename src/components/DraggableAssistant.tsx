@@ -96,7 +96,7 @@ export function DraggableAssistant() {
             onClick={() => setIsOpen(!isOpen)}
           >
             {/* Avatar circle */}
-            <div className="relative flex items-center justify-center w-16 h-16 rounded-full overflow-hidden border-2 border-orange-500/70 bg-gradient-to-br from-gray-900 to-black shadow-[0_4px_24px_rgba(249,115,22,0.3)] transition-all duration-300 hover:border-orange-400 hover:shadow-[0_4px_30px_rgba(249,115,22,0.55)]">
+            <div className="relative flex items-center justify-center w-16 h-16 rounded-full overflow-hidden border-2 border-orange-500/70 bg-gradient-to-br from-gray-900 to-black shadow-[0_4px_24px_rgba(90,158,141,0.3)] transition-all duration-300 hover:border-orange-400 hover:shadow-[0_4px_30px_rgba(90,158,141,0.55)]">
               <img 
                 src="/small-dancing-white-cat-dance-funny.gif" 
                 alt="Asisten SAKAGIS" 

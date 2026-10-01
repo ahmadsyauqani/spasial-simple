@@ -40,15 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        console.error("Error fetching profile:", error);
-      } else {
-        setProfile(data);
+        console.error("Error fetching profile:", error.message || error.code || JSON.stringify(error));
+        return;
       }
+      // No row yet (e.g. trigger has not created the profile) is a normal state, not an error.
+      setProfile(data ?? null);
     } catch (err) {
-      console.error("Profile fetch error:", err);
+      console.error("Profile fetch error:", err instanceof Error ? err.message : String(err));
     }
   };
 

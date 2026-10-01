@@ -185,7 +185,7 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
       id: newId,
       name: nameStr,
       data: convertedGeojson,
-      style: { color: "#f97316", fillColor: "#f97316", fillOpacity: 0.2, weight: 2 }
+      style: { color: "#5a9e8d", fillColor: "#5a9e8d", fillOpacity: 0.2, weight: 2 }
     }]);
     
     triggerZoomToLayer(newId);
@@ -317,7 +317,7 @@ export default function SpatialConverterModal({ isOpen, onClose }: SpatialConver
         {step === "success" && (
           <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="px-6 py-10 flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(16,185,129,0.2)] border border-emerald-500/30">
+              <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(78,130,102,0.2)] border border-emerald-500/30">
                 <CheckCircle2 className="w-10 h-10 text-emerald-400" />
               </div>
               <h3 className="text-2xl font-black text-foreground tracking-tight mb-2">Konversi Selesai!</h3>

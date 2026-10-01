@@ -349,18 +349,18 @@ export function FlightPathPlanner({ isOpen, onClose }: { isOpen: boolean; onClos
             style={{ height: "100%", width: "100%", background: "#0f1014" }}
             zoomControl={false}
           >
-            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
 
             {/* Area polygon */}
             {areaPoints.length >= 2 && (
               <Polygon
                 positions={areaPoints}
-                pathOptions={{ color: "#a78bfa", fillColor: "#7c3aed", fillOpacity: 0.15, weight: 2, dashArray: "6 4" }}
+                pathOptions={{ color: "#a397c5", fillColor: "#7c3aed", fillOpacity: 0.15, weight: 2, dashArray: "6 4" }}
               />
             )}
             {areaPoints.map((pt, i) => (
               <CircleMarker key={i} center={pt} radius={5}
-                pathOptions={{ color: "#a78bfa", fillColor: "#7c3aed", fillOpacity: 1, weight: 2 }}
+                pathOptions={{ color: "#a397c5", fillColor: "#7c3aed", fillOpacity: 1, weight: 2 }}
               />
             ))}
 
@@ -381,7 +381,7 @@ export function FlightPathPlanner({ isOpen, onClose }: { isOpen: boolean; onClos
             {/* Manual waypoints */}
             {manualWPs.map((w, i) => (
               <CircleMarker key={w.id} center={[w.lat, w.lng]} radius={6}
-                pathOptions={{ color: "#f59e0b", fillColor: "#d97706", fillOpacity: 1, weight: 2 }}
+                pathOptions={{ color: "#b99449", fillColor: "#d97706", fillOpacity: 1, weight: 2 }}
               />
             ))}
 

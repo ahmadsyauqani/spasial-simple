@@ -20,7 +20,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#6366f1",
+  themeColor: "#8c7bb2",
 };
 
 import { MapProvider } from "@/lib/MapContext";
@@ -33,13 +33,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`h-full antialiased`}
+      className={`dark h-full antialiased`}
+      style={{ colorScheme: "dark" }}
       suppressHydrationWarning
     >
       <head>
         <link href="https://fonts.cdnfonts.com/css/tt-hoves-pro" rel="stylesheet" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#6366f1" />
+        <meta name="theme-color" content="#8c7bb2" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="icon" type="image/png" href="/logo-sakagis.png" />
@@ -52,6 +53,7 @@ export default function RootLayout({
           defaultTheme="dark"
           enableSystem={false}
           disableTransitionOnChange
+          storageKey="sakagis-theme-v2"
         >
           <AuthProvider>
             <MapProvider>

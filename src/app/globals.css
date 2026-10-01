@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "leaflet/dist/leaflet.css";
+@import "maplibre-gl/dist/maplibre-gl.css";
+@import "./spatial-studio.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -43,57 +45,88 @@
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
+
+  /* ── Cool, low-glare palette ──────────────────────────────────────────
+     The UI uses Tailwind color utilities everywhere (orange/red/amber/
+     emerald/cyan/indigo/violet). Remapping the scales here recolors the
+     whole app without touching 1k+ class names. Hot hues become muted,
+     cooler equivalents; semantic roles stay distinguishable. */
+  /* orange → sage teal (primary action) */
+  --color-orange-50: #eef7f4; --color-orange-100: #d8ede6; --color-orange-200: #b5dcd0; --color-orange-300: #8fc7b7; --color-orange-400: #6fb3a1; --color-orange-500: #5a9e8d; --color-orange-600: #478374; --color-orange-700: #3a6a5f; --color-orange-800: #30554d; --color-orange-900: #284640; --color-orange-950: #152824;
+  /* red / rose → dusty rose (danger) */
+  --color-red-50: #fbf1f2; --color-red-100: #f5dfe2; --color-red-200: #ecc3c8; --color-red-300: #de9ea6; --color-red-400: #cf7d88; --color-red-500: #bd6270; --color-red-600: #a34c5b; --color-red-700: #873d4a; --color-red-800: #70353f; --color-red-900: #5f3038; --color-red-950: #34161b;
+  --color-rose-50: #fbf1f2; --color-rose-100: #f5dfe2; --color-rose-200: #ecc3c8; --color-rose-300: #de9ea6; --color-rose-400: #cf7d88; --color-rose-500: #bd6270; --color-rose-600: #a34c5b; --color-rose-700: #873d4a; --color-rose-800: #70353f; --color-rose-900: #5f3038; --color-rose-950: #34161b;
+  /* amber / yellow → sand (warning) */
+  --color-amber-50: #faf7ef; --color-amber-100: #f3ecd6; --color-amber-200: #e7d8ac; --color-amber-300: #d9c182; --color-amber-400: #cbab61; --color-amber-500: #b99449; --color-amber-600: #9d783c; --color-amber-700: #7f5d33; --color-amber-800: #674b2e; --color-amber-900: #563f2a; --color-amber-950: #312014;
+  --color-yellow-50: #faf7ef; --color-yellow-100: #f3ecd6; --color-yellow-200: #e7d8ac; --color-yellow-300: #d9c182; --color-yellow-400: #cbab61; --color-yellow-500: #b99449; --color-yellow-600: #9d783c; --color-yellow-700: #7f5d33; --color-yellow-800: #674b2e; --color-yellow-900: #563f2a; --color-yellow-950: #312014;
+  /* emerald / green → sage (success) */
+  --color-emerald-50: #f0f7f2; --color-emerald-100: #dcebe1; --color-emerald-200: #bad7c5; --color-emerald-300: #8fbba2; --color-emerald-400: #679c7f; --color-emerald-500: #4e8266; --color-emerald-600: #3c6951; --color-emerald-700: #325443; --color-emerald-800: #2b4438; --color-emerald-900: #25382f; --color-emerald-950: #121f1a;
+  --color-green-50: #f0f7f2; --color-green-100: #dcebe1; --color-green-200: #bad7c5; --color-green-300: #8fbba2; --color-green-400: #679c7f; --color-green-500: #4e8266; --color-green-600: #3c6951; --color-green-700: #325443; --color-green-800: #2b4438; --color-green-900: #25382f; --color-green-950: #121f1a;
+  /* cyan / sky / blue → steel blue (info) */
+  --color-cyan-50: #f0f6f9; --color-cyan-100: #dbe8ef; --color-cyan-200: #bad3e0; --color-cyan-300: #8db5ca; --color-cyan-400: #6494ae; --color-cyan-500: #4c7995; --color-cyan-600: #40627d; --color-cyan-700: #395167; --color-cyan-800: #344556; --color-cyan-900: #2f3b49; --color-cyan-950: #1e2631;
+  --color-sky-50: #f0f6f9; --color-sky-100: #dbe8ef; --color-sky-200: #bad3e0; --color-sky-300: #8db5ca; --color-sky-400: #6494ae; --color-sky-500: #4c7995; --color-sky-600: #40627d; --color-sky-700: #395167; --color-sky-800: #344556; --color-sky-900: #2f3b49; --color-sky-950: #1e2631;
+  --color-blue-50: #f0f6f9; --color-blue-100: #dbe8ef; --color-blue-200: #bad3e0; --color-blue-300: #8db5ca; --color-blue-400: #6494ae; --color-blue-500: #4c7995; --color-blue-600: #40627d; --color-blue-700: #395167; --color-blue-800: #344556; --color-blue-900: #2f3b49; --color-blue-950: #1e2631;
+  /* indigo / violet / purple → muted lavender */
+  --color-indigo-50: #f4f3f9; --color-indigo-100: #ebe9f3; --color-indigo-200: #dad6e9; --color-indigo-300: #c0b9d9; --color-indigo-400: #a397c5; --color-indigo-500: #8c7bb2; --color-indigo-600: #7a669d; --color-indigo-700: #685584; --color-indigo-800: #57486d; --color-indigo-900: #493e5a; --color-indigo-950: #2f273c;
+  --color-violet-50: #f4f3f9; --color-violet-100: #ebe9f3; --color-violet-200: #dad6e9; --color-violet-300: #c0b9d9; --color-violet-400: #a397c5; --color-violet-500: #8c7bb2; --color-violet-600: #7a669d; --color-violet-700: #685584; --color-violet-800: #57486d; --color-violet-900: #493e5a; --color-violet-950: #2f273c;
+  --color-purple-50: #f4f3f9; --color-purple-100: #ebe9f3; --color-purple-200: #dad6e9; --color-purple-300: #c0b9d9; --color-purple-400: #a397c5; --color-purple-500: #8c7bb2; --color-purple-600: #7a669d; --color-purple-700: #685584; --color-purple-800: #57486d; --color-purple-900: #493e5a; --color-purple-950: #2f273c;
+  /* pure white text glares on dark glass; use a soft cool off-white */
+  --color-white: #e9eff1;
 }
 
 :root {
-  /* Light Mode (New Colorful Style) */
-  --background: 226 71% 98%;
-  --foreground: 231 46% 31%;
+  /* Light Mode — cool mist */
+  --background: 200 30% 97%;
+  --foreground: 205 28% 24%;
   --card: 0 0% 100%;
-  --card-foreground: 231 46% 31%;
+  --card-foreground: 205 28% 24%;
   --popover: 0 0% 100%;
-  --popover-foreground: 231 46% 31%;
-  --primary: 239 100% 88%;
-  --primary-foreground: 231 46% 31%;
-  --secondary: 196 100% 86%;
-  --secondary-foreground: 231 46% 31%;
-  --muted: 226 43% 94%;
-  --muted-foreground: 225 20% 60%;
-  --accent: 47 97% 75%;
-  --accent-foreground: 231 46% 31%;
-  --destructive: 0 84% 60%;
-  --border: 226 43% 94%;
-  --input: 226 43% 94%;
-  --ring: 239 100% 88%;
+  --popover-foreground: 205 28% 24%;
+  --primary: 168 30% 70%;
+  --primary-foreground: 205 28% 20%;
+  --secondary: 200 36% 88%;
+  --secondary-foreground: 205 28% 24%;
+  --muted: 200 24% 93%;
+  --muted-foreground: 205 14% 50%;
+  --accent: 168 30% 84%;
+  --accent-foreground: 205 28% 24%;
+  --destructive: 352 40% 56%;
+  --border: 200 20% 88%;
+  --input: 200 20% 88%;
+  --ring: 168 30% 60%;
   --radius: 1rem;
 }
 
 .dark {
-  /* Dark Mode (Softer Steel Style) */
-  --background: 240 10% 6%;
-  --foreground: 0 0% 90%;
-  --card: 240 10% 6%;
-  --card-foreground: 0 0% 90%;
-  --popover: 240 10% 6%;
-  --popover-foreground: 0 0% 90%;
-  --primary: 32 95% 44%; /* Steel Orange */
-  --primary-foreground: 240 5.9% 10%;
-  --secondary: 240 3.7% 12%;
-  --secondary-foreground: 0 0% 90%;
-  --muted: 240 3.7% 12%;
-  --muted-foreground: 240 5% 55%;
-  --accent: 240 3.7% 12%;
-  --accent-foreground: 0 0% 90%;
-  --destructive: 0 62.8% 30.6%;
-  --border: 240 3.7% 12%;
-  --input: 240 3.7% 12%;
-  --ring: 32 95% 44%;
+  /* Dark Mode — deep slate, low contrast glare */
+  --background: 206 26% 9%;
+  --foreground: 200 18% 88%;
+  --card: 206 24% 11%;
+  --card-foreground: 200 18% 88%;
+  --popover: 206 24% 11%;
+  --popover-foreground: 200 18% 88%;
+  --primary: 165 28% 50%; /* sage teal */
+  --primary-foreground: 206 26% 9%;
+  --secondary: 206 18% 16%;
+  --secondary-foreground: 200 18% 88%;
+  --muted: 206 18% 16%;
+  --muted-foreground: 204 12% 60%;
+  --accent: 206 18% 16%;
+  --accent-foreground: 200 18% 88%;
+  --destructive: 352 36% 46%;
+  --border: 206 16% 18%;
+  --input: 206 16% 18%;
+  --ring: 165 28% 50%;
 }
 
-/* Custom Utilities for New Style */
-.bg-lavender { background-color: #C3C6FF; }
-.bg-cyan-pastel { background-color: #B7EBFF; }
-.bg-yellow-pastel { background-color: #FDE383; }
+/* Custom Utilities — pastel helpers retuned to the cool palette */
+.bg-lavender { background-color: #a397c5; }
+.bg-cyan-pastel { background-color: #8db5ca; }
+.bg-yellow-pastel { background-color: #d9c182; }
+.text-navy { color: #1b2a33; }
+.dark .bg-lavender,
+.dark .bg-cyan-pastel,
+.dark .bg-yellow-pastel { color: #1b2a33; }
 
 @layer base {
   * { @apply border-border; }
@@ -126,14 +159,26 @@
   background: transparent !important;
 }
 .leaflet-bar a:hover {
-  background-color: rgba(249,115,22,0.1) !important;
-  color: rgb(249,115,22) !important;
+  background-color: rgba(90,158,141,0.1) !important;
+  color: rgba(90,158,141) !important;
 }
 .dark .leaflet-bar a:hover {
-  background-color: rgba(249,115,22,0.15) !important;
-  color: rgb(251,146,60) !important;
+  background-color: rgba(90,158,141,0.15) !important;
+  color: rgba(111,179,161) !important;
 }
 .leaflet-bar a:last-child { border-bottom: none !important; }
+
+/* ── Leaflet attribution: match the dark glass theme instead of default white ── */
+.leaflet-control-attribution {
+  background: rgba(19, 32, 42, 0.78) !important;
+  color: rgba(233, 239, 241, 0.55) !important;
+  border-radius: 8px 0 0 0;
+  font-size: 10px !important;
+  backdrop-filter: blur(8px);
+}
+.leaflet-control-attribution a { color: rgba(143, 199, 183, 0.85) !important; }
+:root:not(.dark) .leaflet-control-attribution { background: rgba(255, 255, 255, 0.75) !important; color: rgba(27, 42, 51, 0.6) !important; }
+:root:not(.dark) .leaflet-control-attribution a { color: #478374 !important; }
 
 /* ── Geoman toolbar container ── */
 .leaflet-pm-toolbar {
@@ -189,8 +234,8 @@
 
 /* Hover state */
 .leaflet-pm-toolbar .button-container button:hover {
-  background: rgba(249,115,22,0.15) !important;
-  border-color: rgba(249,115,22,0.35) !important;
+  background: rgba(90,158,141,0.15) !important;
+  border-color: rgba(90,158,141,0.35) !important;
   transform: scale(1.05) !important;
 }
 .leaflet-pm-toolbar .button-container button:hover svg,
@@ -200,9 +245,9 @@
 
 /* Active / selected state */
 .leaflet-pm-toolbar .button-container button.active {
-  background: rgba(249,115,22,0.2) !important;
-  border-color: rgba(249,115,22,0.5) !important;
-  box-shadow: 0 0 0 2px rgba(249,115,22,0.25), 0 4px 16px rgba(249,115,22,0.15) !important;
+  background: rgba(90,158,141,0.2) !important;
+  border-color: rgba(90,158,141,0.5) !important;
+  box-shadow: 0 0 0 2px rgba(90,158,141,0.25), 0 4px 16px rgba(90,158,141,0.15) !important;
 }
 .leaflet-pm-toolbar .button-container button.active svg,
 .leaflet-pm-toolbar .button-container button.active .control-icon {
@@ -215,14 +260,14 @@
 /* ── Geoman edit vertex handles ── */
 .leaflet-vertex-icon {
   border-radius: 50% !important;
-  border: 2px solid rgb(249,115,22) !important;
+  border: 2px solid rgba(90,158,141) !important;
   background: white !important;
-  box-shadow: 0 0 0 2px rgba(249,115,22,0.3) !important;
+  box-shadow: 0 0 0 2px rgba(90,158,141,0.3) !important;
 }
 .leaflet-middle-icon {
   border-radius: 50% !important;
-  border: 2px dashed rgba(249,115,22,0.5) !important;
-  background: rgba(249,115,22,0.1) !important;
+  border: 2px dashed rgba(90,158,141,0.5) !important;
+  background: rgba(90,158,141,0.1) !important;
 }
 
 /* ── Auto-hide Geoman toolbar: slide in on hover ── */
@@ -238,7 +283,7 @@
   top: 50px;
   width: 3px;
   height: 160px;
-  background: linear-gradient(to bottom, transparent, rgba(249,115,22,0.5), rgba(249,115,22,0.2), transparent);
+  background: linear-gradient(to bottom, transparent, rgba(90,158,141,0.5), rgba(90,158,141,0.2), transparent);
   border-radius: 3px 0 0 3px;
   transition: opacity 0.3s ease;
   opacity: 1;
@@ -350,10 +395,10 @@ input, select, textarea, button {
   gap: 9px;
   min-height: 50px;
   padding: 6px 9px;
-  border: 1px solid rgba(103,232,249,0.24);
+  border: 1px solid rgba(141,181,202,0.24);
   border-radius: 17px;
   background: rgba(5, 11, 19, 0.96);
-  box-shadow: 0 12px 34px rgba(0,0,0,0.5), 0 0 24px rgba(34,211,238,0.07);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.5), 0 0 24px rgba(100,148,174,0.07);
 }
 
 .coordinate-modern-tools {
@@ -379,7 +424,7 @@ input, select, textarea, button {
 }
 
 .coordinate-workspace-status span {
-  color: rgba(251,146,60,0.72);
+  color: rgba(111,179,161,0.72);
   font-size: 7px;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -421,14 +466,14 @@ input, select, textarea, button {
 
 .coordinate-tool.active-snap {
   color: #a5b4fc;
-  background: rgba(99,102,241,0.2);
-  border-color: rgba(99,102,241,0.35);
+  background: rgba(140,123,178,0.2);
+  border-color: rgba(140,123,178,0.35);
 }
 
 .coordinate-tool.active-measure {
-  color: #fdba74;
-  background: rgba(249,115,22,0.2);
-  border-color: rgba(249,115,22,0.35);
+  color: #8fc7b7;
+  background: rgba(90,158,141,0.2);
+  border-color: rgba(90,158,141,0.35);
 }
 
 .coordinate-modern-divider {
@@ -452,7 +497,7 @@ input, select, textarea, button {
 
 .coordinate-modern-readout span,
 .coordinate-modern-metric span {
-  color: rgba(103,232,249,0.65);
+  color: rgba(141,181,202,0.65);
   font-size: 7px;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -467,7 +512,7 @@ input, select, textarea, button {
 }
 
 .coordinate-modern-metric strong {
-  color: #fb923c;
+  color: #6fb3a1;
   font-size: 12px;
 }
 
@@ -480,9 +525,9 @@ input, select, textarea, button {
 .coordinate-unlock {
   min-width: 31px;
   padding: 0;
-  color: #fca5a5;
-  background: rgba(239,68,68,0.16);
-  border-color: rgba(239,68,68,0.3);
+  color: #de9ea6;
+  background: rgba(189,98,112,0.16);
+  border-color: rgba(189,98,112,0.3);
 }
 
 .coordinate-details-popover {
@@ -554,7 +599,7 @@ input, select, textarea, button {
 }
 
 .layer-drag-handle:hover {
-  color: #67e8f9;
+  color: #8db5ca;
 }
 
 .layer-card-thumbnail {
@@ -595,15 +640,15 @@ input, select, textarea, button {
 .layer-card-badges span.online,
 .layer-card-badges span.valid {
   color: #86efac;
-  border-color: rgba(52,211,153,0.25);
-  background: rgba(16,185,129,0.08);
+  border-color: rgba(103,156,127,0.25);
+  background: rgba(78,130,102,0.08);
 }
 
 .layer-card-badges span.offline,
 .layer-card-badges span.warning {
-  color: #fbbf24;
-  border-color: rgba(245,158,11,0.25);
-  background: rgba(245,158,11,0.08);
+  color: #cbab61;
+  border-color: rgba(185,148,73,0.25);
+  background: rgba(185,148,73,0.08);
 }
 
 .layer-card-insights {
@@ -635,15 +680,15 @@ input, select, textarea, button {
 }
 
 .layer-card-insights span.saved {
-  color: #67e8f9;
-  border-color: rgba(34,211,238,0.25);
+  color: #8db5ca;
+  border-color: rgba(100,148,174,0.25);
   background: rgba(6,182,212,0.08);
 }
 
 .layer-card-insights span.local {
-  color: #fbbf24;
-  border-color: rgba(245,158,11,0.25);
-  background: rgba(245,158,11,0.08);
+  color: #cbab61;
+  border-color: rgba(185,148,73,0.25);
+  background: rgba(185,148,73,0.08);
 }
 
 .layer-card-insights .layer-sync-status {
@@ -653,22 +698,22 @@ input, select, textarea, button {
 }
 
 .layer-card-insights .layer-sync-status.cloud {
-  color: #67e8f9;
-  border-color: rgba(34,211,238,0.25);
+  color: #8db5ca;
+  border-color: rgba(100,148,174,0.25);
   background: rgba(6,182,212,0.08);
 }
 
 .layer-card-insights .layer-sync-status.local,
 .layer-card-insights .layer-sync-status.syncing {
-  color: #fbbf24;
-  border-color: rgba(245,158,11,0.25);
-  background: rgba(245,158,11,0.08);
+  color: #cbab61;
+  border-color: rgba(185,148,73,0.25);
+  background: rgba(185,148,73,0.08);
 }
 
 .layer-card-insights .layer-sync-status.unsynced {
-  color: #fca5a5;
-  border-color: rgba(248,113,113,0.28);
-  background: rgba(239,68,68,0.08);
+  color: #de9ea6;
+  border-color: rgba(207,125,136,0.28);
+  background: rgba(189,98,112,0.08);
 }
 
 .analysis-workspace {
@@ -708,9 +753,9 @@ input, select, textarea, button {
 
 .analysis-layer-status {
   padding: 4px 7px;
-  border: 1px solid rgba(99,102,241,0.25);
+  border: 1px solid rgba(140,123,178,0.25);
   border-radius: 999px;
-  background: rgba(99,102,241,0.1);
+  background: rgba(140,123,178,0.1);
   color: #a5b4fc !important;
   font-size: 8px !important;
   font-weight: 800;
@@ -761,9 +806,9 @@ input, select, textarea, button {
 
 .analysis-category-tabs button:hover,
 .analysis-category-tabs button.active {
-  border-color: rgba(249,115,22,0.32);
-  background: rgba(249,115,22,0.13);
-  color: #fdba74;
+  border-color: rgba(90,158,141,0.32);
+  background: rgba(90,158,141,0.13);
+  color: #8fc7b7;
 }
 
 .analysis-workspace-grid {
@@ -786,8 +831,8 @@ input, select, textarea, button {
 }
 
 .analysis-tool-card:hover {
-  border-color: rgba(249,115,22,0.35);
-  background: linear-gradient(145deg, rgba(249,115,22,0.1), rgba(0,0,0,0.16));
+  border-color: rgba(90,158,141,0.35);
+  background: linear-gradient(145deg, rgba(90,158,141,0.1), rgba(0,0,0,0.16));
   transform: translateY(-1px);
 }
 
@@ -798,10 +843,10 @@ input, select, textarea, button {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(249,115,22,0.25);
+  border: 1px solid rgba(90,158,141,0.25);
   border-radius: 8px;
-  background: rgba(249,115,22,0.12);
-  color: #fdba74;
+  background: rgba(90,158,141,0.12);
+  color: #8fc7b7;
   font-size: 15px;
   font-weight: 900;
 }
@@ -876,8 +921,8 @@ input, select, textarea, button {
 
 .basemap-card:hover,
 .basemap-card.active {
-  border-color: rgba(99,102,241,0.5);
-  background: rgba(99,102,241,0.14);
+  border-color: rgba(140,123,178,0.5);
+  background: rgba(140,123,178,0.14);
 }
 
 .basemap-card-thumb {
@@ -1025,7 +1070,7 @@ input, select, textarea, button {
 
 /* -- Measurement tooltip -- */
 .measure-tooltip {
-  background: #10b981 !important;
+  background: #4e8266 !important;
   color: #fff !important;
   border: none !important;
   font-weight: 700 !important;
@@ -1048,10 +1093,10 @@ input, select, textarea, button {
   z-index: 600 !important;
   align-items: center;
   padding: 4px;
-  border: 1px solid rgba(103, 232, 249, 0.2);
+  border: 1px solid rgba(141,181,202, 0.2);
   border-radius: 999px;
   background: rgba(5, 11, 19, 0.88);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42), 0 0 18px rgba(34, 211, 238, 0.06);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42), 0 0 18px rgba(100,148,174, 0.06);
   backdrop-filter: blur(18px);
 }
 
@@ -1067,8 +1112,8 @@ input, select, textarea, button {
 
 .map-action-controls > div > button:hover,
 .map-action-controls > button:hover {
-  border-color: rgba(103, 232, 249, 0.45);
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.08);
+  border-color: rgba(141,181,202, 0.45);
+  box-shadow: 0 0 0 2px rgba(100,148,174, 0.08);
 }
 
 .map-instrument-dock {
@@ -1086,10 +1131,10 @@ input, select, textarea, button {
   max-width: 100%;
   padding: 6px 8px;
   overflow: visible;
-  border: 1px solid rgba(103,232,249,0.22);
+  border: 1px solid rgba(141,181,202,0.22);
   border-radius: 17px;
   background: rgba(5,11,19,0.97);
-  box-shadow: 0 12px 34px rgba(0,0,0,0.48), 0 0 22px rgba(34,211,238,0.06);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.48), 0 0 22px rgba(100,148,174,0.06);
 }
 
 .map-instrument-status,
@@ -1123,7 +1168,7 @@ input, select, textarea, button {
 .map-instrument-status span,
 .map-instrument-readout span,
 .map-instrument-metric span {
-  color: rgba(103,232,249,0.62);
+  color: rgba(141,181,202,0.62);
   font-size: 7px;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -1174,14 +1219,14 @@ input, select, textarea, button {
 
 .map-instrument-button.is-active {
   color: #a5b4fc;
-  border-color: rgba(99,102,241,0.35);
-  background: rgba(99,102,241,0.2);
+  border-color: rgba(140,123,178,0.35);
+  background: rgba(140,123,178,0.2);
 }
 
 .map-instrument-button.is-measuring {
-  color: #fdba74;
-  border-color: rgba(249,115,22,0.35);
-  background: rgba(249,115,22,0.2);
+  color: #8fc7b7;
+  border-color: rgba(90,158,141,0.35);
+  background: rgba(90,158,141,0.2);
 }
 
 .map-instrument-divider {
@@ -1208,7 +1253,7 @@ input, select, textarea, button {
 }
 
 .map-instrument-projection span {
-  color: rgba(103,232,249,0.62);
+  color: rgba(141,181,202,0.62);
   font-size: 7px;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -1233,7 +1278,7 @@ input, select, textarea, button {
 }
 
 .map-instrument-metric strong {
-  color: #fb923c;
+  color: #6fb3a1;
   font-size: 11px;
 }
 
@@ -1250,9 +1295,9 @@ input, select, textarea, button {
 .map-instrument-lock {
   min-width: 38px;
   padding: 0;
-  color: #fca5a5;
-  border-color: rgba(239,68,68,0.3);
-  background: rgba(239,68,68,0.16);
+  color: #de9ea6;
+  border-color: rgba(189,98,112,0.3);
+  background: rgba(189,98,112,0.16);
 }
 
 @media (min-width: 1024px) {
@@ -1428,8 +1473,8 @@ input, select, textarea, button {
   height: 9px;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: #fb923c;
-  box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.14), 0 0 16px rgba(249, 115, 22, 0.8);
+  background: #6fb3a1;
+  box-shadow: 0 0 0 5px rgba(90,158,141, 0.14), 0 0 16px rgba(90,158,141, 0.8);
   animation: digitize-pulse 1.5s ease-in-out infinite;
 }
 
@@ -1459,14 +1504,14 @@ input, select, textarea, button {
 
 .digitize-action-primary {
   color: white;
-  background: #f97316;
-  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.22);
+  background: #5a9e8d;
+  box-shadow: 0 6px 16px rgba(90,158,141, 0.22);
 }
 
 .digitize-action-danger {
-  color: #fca5a5;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #de9ea6;
+  background: rgba(189,98,112, 0.12);
+  border: 1px solid rgba(189,98,112, 0.2);
 }
 
 @keyframes digitize-pulse {
@@ -1640,21 +1685,21 @@ input, select, textarea, button {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(34, 211, 238, 0.22);
+  border: 1px solid rgba(100,148,174, 0.22);
   border-radius: 14px;
-  background: rgba(34, 211, 238, 0.1);
-  color: #67e8f9;
+  background: rgba(100,148,174, 0.1);
+  color: #8db5ca;
 }
 
 .gps-accuracy-icon.is-active {
-  border-color: rgba(52, 211, 153, 0.35);
-  background: rgba(16, 185, 129, 0.13);
-  color: #6ee7b7;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+  border-color: rgba(103,156,127, 0.35);
+  background: rgba(78,130,102, 0.13);
+  color: #8fbba2;
+  box-shadow: 0 0 20px rgba(78,130,102, 0.15);
 }
 
 .gps-accuracy-eyebrow {
-  color: rgba(103, 232, 249, 0.62);
+  color: rgba(141,181,202, 0.62);
   font-size: 8px;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -1700,25 +1745,25 @@ input, select, textarea, button {
 }
 
 .gps-accuracy-status.is-active {
-  border-color: rgba(52, 211, 153, 0.25);
-  background: rgba(16, 185, 129, 0.1);
-  color: #6ee7b7;
+  border-color: rgba(103,156,127, 0.25);
+  background: rgba(78,130,102, 0.1);
+  color: #8fbba2;
 }
 
 .gps-accuracy-status.is-active span {
-  background: #34d399;
-  box-shadow: 0 0 9px rgba(52, 211, 153, 0.8);
+  background: #679c7f;
+  box-shadow: 0 0 9px rgba(103,156,127, 0.8);
   animation: digitize-pulse 1.5s ease-in-out infinite;
 }
 
 .gps-accuracy-status.is-error {
-  border-color: rgba(248, 113, 113, 0.25);
-  background: rgba(239, 68, 68, 0.1);
-  color: #fca5a5;
+  border-color: rgba(207,125,136, 0.25);
+  background: rgba(189,98,112, 0.1);
+  color: #de9ea6;
 }
 
 .gps-accuracy-status.is-error span {
-  background: #f87171;
+  background: #cf7d88;
 }
 
 .gps-accuracy-error {
@@ -1726,10 +1771,10 @@ input, select, textarea, button {
   align-items: flex-start;
   gap: 8px;
   padding: 10px;
-  border: 1px solid rgba(248, 113, 113, 0.2);
+  border: 1px solid rgba(207,125,136, 0.2);
   border-radius: 12px;
-  background: rgba(239, 68, 68, 0.1);
-  color: #fca5a5;
+  background: rgba(189,98,112, 0.1);
+  color: #de9ea6;
   font-size: 9px;
   line-height: 1.4;
 }
@@ -1740,9 +1785,9 @@ input, select, textarea, button {
   align-items: center;
   gap: 14px;
   padding: 13px;
-  border: 1px solid rgba(34, 211, 238, 0.15);
+  border: 1px solid rgba(100,148,174, 0.15);
   border-radius: 16px;
-  background: radial-gradient(circle at 12% 40%, rgba(14, 116, 144, 0.17), transparent 48%), rgba(0, 0, 0, 0.2);
+  background: radial-gradient(circle at 12% 40%, rgba(76,121,149, 0.17), transparent 48%), rgba(0, 0, 0, 0.2);
 }
 
 .gps-accuracy-orb {
@@ -1754,20 +1799,20 @@ input, select, textarea, button {
   align-items: center;
   justify-content: center;
   justify-self: center;
-  border: 1px solid rgba(34, 211, 238, 0.3);
+  border: 1px solid rgba(100,148,174, 0.3);
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.15), rgba(2, 6, 23, 0.1) 58%, transparent 60%);
-  box-shadow: inset 0 0 28px rgba(34, 211, 238, 0.07), 0 0 25px rgba(34, 211, 238, 0.08);
+  background: radial-gradient(circle, rgba(100,148,174, 0.15), rgba(2, 6, 23, 0.1) 58%, transparent 60%);
+  box-shadow: inset 0 0 28px rgba(100,148,174, 0.07), 0 0 25px rgba(100,148,174, 0.08);
 }
 
 .gps-accuracy-orb-ring {
   position: absolute;
-  border: 1px solid rgba(103, 232, 249, 0.18);
+  border: 1px solid rgba(141,181,202, 0.18);
   border-radius: 999px;
 }
 
 .gps-accuracy-orb-ring.ring-one { inset: 13px; }
-.gps-accuracy-orb-ring.ring-two { inset: 27px; border-style: dashed; border-color: rgba(103, 232, 249, 0.25); }
+.gps-accuracy-orb-ring.ring-two { inset: 27px; border-style: dashed; border-color: rgba(141,181,202, 0.25); }
 
 .gps-accuracy-orb-dot {
   position: absolute;
@@ -1775,13 +1820,13 @@ input, select, textarea, button {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: #67e8f9;
-  box-shadow: 0 0 12px rgba(103, 232, 249, 0.9);
+  background: #8db5ca;
+  box-shadow: 0 0 12px rgba(141,181,202, 0.9);
 }
 
 .gps-accuracy-orb strong {
   position: relative;
-  color: #cffafe;
+  color: #dbe8ef;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 22px;
   line-height: 1;
@@ -1869,9 +1914,9 @@ input, select, textarea, button {
   white-space: nowrap;
 }
 
-.gps-accuracy-stat:nth-child(1) span { color: #6ee7b7; }
-.gps-accuracy-stat:nth-child(2) span { color: #67e8f9; }
-.gps-accuracy-stat:nth-child(3) span { color: #fbbf24; }
+.gps-accuracy-stat:nth-child(1) span { color: #8fbba2; }
+.gps-accuracy-stat:nth-child(2) span { color: #8db5ca; }
+.gps-accuracy-stat:nth-child(3) span { color: #cbab61; }
 
 .gps-accuracy-stat strong {
   display: block;
@@ -1912,7 +1957,7 @@ input, select, textarea, button {
 
 .gps-accuracy-chart-hint {
   flex: 0 0 auto;
-  color: #67e8f9 !important;
+  color: #8db5ca !important;
   font-size: 7px !important;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -1925,7 +1970,7 @@ input, select, textarea, button {
   margin-top: 10px;
   overflow: hidden;
   border-radius: 9px;
-  background: linear-gradient(180deg, rgba(34, 211, 238, 0.04), rgba(0, 0, 0, 0.14));
+  background: linear-gradient(180deg, rgba(100,148,174, 0.04), rgba(0, 0, 0, 0.14));
 }
 
 .gps-accuracy-chart-wrap svg {
@@ -1940,16 +1985,16 @@ input, select, textarea, button {
 }
 
 .gps-accuracy-chart-fill {
-  fill: rgba(34, 211, 238, 0.08);
+  fill: rgba(100,148,174, 0.08);
 }
 
 .gps-accuracy-chart-line {
   fill: none;
-  stroke: #67e8f9;
+  stroke: #8db5ca;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.5;
-  filter: drop-shadow(0 0 4px rgba(103, 232, 249, 0.65));
+  filter: drop-shadow(0 0 4px rgba(141,181,202, 0.65));
 }
 
 .gps-accuracy-chart-empty {
@@ -2026,14 +2071,14 @@ input, select, textarea, button {
 
 .gps-accuracy-button-start {
   color: white;
-  background: #0891b2;
+  background: #40627d;
   box-shadow: 0 6px 14px rgba(8, 145, 178, 0.2);
 }
 
 .gps-accuracy-button-stop {
-  color: #fecaca;
-  border: 1px solid rgba(248, 113, 113, 0.25);
-  background: rgba(239, 68, 68, 0.12);
+  color: #ecc3c8;
+  border: 1px solid rgba(207,125,136, 0.25);
+  background: rgba(189,98,112, 0.12);
 }
 
 .gps-accuracy-button-reset {
@@ -2047,20 +2092,20 @@ input, select, textarea, button {
   align-items: flex-start;
   gap: 7px;
   padding: 9px;
-  border: 1px solid rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(100,148,174, 0.12);
   border-radius: 11px;
-  background: rgba(34, 211, 238, 0.05);
-  color: rgba(207, 250, 254, 0.55);
+  background: rgba(100,148,174, 0.05);
+  color: rgba(219,232,239, 0.55);
   font-size: 8px;
   line-height: 1.45;
 }
 
 .gps-accuracy-map-tooltip {
   padding: 4px 8px !important;
-  border: 1px solid rgba(34, 211, 238, 0.3) !important;
+  border: 1px solid rgba(100,148,174, 0.3) !important;
   border-radius: 999px !important;
   background: rgba(8, 47, 73, 0.92) !important;
-  color: #cffafe !important;
+  color: #dbe8ef !important;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
   font-size: 10px !important;
   font-weight: 800 !important;
@@ -2102,7 +2147,7 @@ input, select, textarea, button {
     width: auto !important;
     max-width: none !important;
     max-height: calc(100dvh - 86px) !important;
-    border-color: rgba(34, 211, 238, 0.22) !important;
+    border-color: rgba(100,148,174, 0.22) !important;
   }
 
   .device-hub-panel-accuracy .device-hub-tab-content {
@@ -2121,7 +2166,7 @@ input, select, textarea, button {
 
   .device-hub-panel-accuracy .gps-accuracy-header {
     padding: 2px 2px 12px;
-    border-bottom: 1px solid rgba(34, 211, 238, 0.15);
+    border-bottom: 1px solid rgba(100,148,174, 0.15);
   }
 
   .device-hub-panel-accuracy .gps-accuracy-dashboard {

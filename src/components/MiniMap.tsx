@@ -41,13 +41,13 @@ export default function MiniMap({ coordinates }: MiniMapProps) {
         attributionControl={false}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
         />
         <Polygon 
           positions={latLngs} 
           pathOptions={{ 
-            color: '#06b6d4', // cyan-500
-            fillColor: '#06b6d4', 
+            color: '#4c7995', // cyan-500
+            fillColor: '#4c7995', 
             fillOpacity: 0.2,
             weight: 2
           }} 

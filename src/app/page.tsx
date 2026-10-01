@@ -7,7 +7,7 @@ import { DigitizePanel } from "@/components/DigitizePanel";
 import { GpsTrackingTrigger, GpsTrackingPanel } from "@/components/GpsTrackingPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchControl } from "@/components/SearchControl";
-import { ClockWidget } from "@/components/ClockWidget";
+import { StudioOverview, StudioClock, type SceneDestination } from "@/components/StudioOverview";
 import SpatialConverterModal from "@/components/SpatialConverter";
 import { DeviceHubPanel } from "@/components/DeviceHubPanel";
 import { DraggableAssistant } from "@/components/DraggableAssistant";
@@ -29,7 +29,10 @@ import { UserProfileWidget } from "@/components/UserProfileWidget";
 import { AnalysisResultsPanel } from "@/components/AnalysisResultsPanel";
 import { FeatureExportDialogHost } from "@/components/FeatureExportDialog";
 
+const SceneExplorer = dynamic(() => import("@/components/SceneExplorer"), { ssr: false });
+
 export default function Home() {
+  const [sceneDestination, setSceneDestination] = useState<SceneDestination | null>(null);
   const [isConverterOpen, setIsConverterOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"digitize" | "dataset">("digitize");
   const [isSidebarPinned, setIsSidebarPinned] = useState(false);
@@ -74,7 +77,9 @@ export default function Home() {
       <SearchControl />
       <AnalysisResultsPanel hidden={isPanelVisible || isGpsPanelOpen} />
       <FeatureExportDialogHost />
-      <ClockWidget />
+      <header className="studio-topbar"><div className="studio-wordmark"><span className="studio-logo-mark">S</span><span>SAKAGIS<small>SPATIAL STUDIO</small></span></div><StudioClock /></header>
+      {!isPanelVisible && !isDrawing && !isGpsPanelOpen && !isDeviceHubOpen && !isAttributeTableOpen && <StudioOverview onExplore={setSceneDestination} onUpload={() => openPanel("dataset", "data")} />}
+      {sceneDestination && <SceneExplorer destination={sceneDestination} onClose={() => setSceneDestination(null)} />}
 
       {/* ── Icon Rail: compact pill, always visible, h-fit ── */}
       <div
@@ -216,7 +221,7 @@ export default function Home() {
 
       {/* Invisible pointer bridge keeps the desktop panel open across the rail gap. */}
       <div
-        className="pointer-events-auto absolute left-[68px] top-4 z-[19] hidden h-[75vh] w-2 lg:block"
+        className="studio-pointer-bridge pointer-events-auto absolute left-[68px] top-4 z-[19] hidden h-[75vh] w-2 lg:block"
         onMouseEnter={() => setIsHovered(true)}
       />
 
@@ -544,7 +549,7 @@ function DigitizingStatusBar({
   };
 
   return (
-    <div className="digitize-status-bar fixed z-[35] rounded-2xl border border-orange-400/35 bg-[#111318]/95 px-3 py-2.5 text-white shadow-2xl backdrop-blur-xl">
+    <div className="digitize-status-bar fixed z-[35] rounded-2xl border border-orange-400/35 bg-card/95 px-3 py-2.5 text-white shadow-2xl backdrop-blur-xl">
       <div className="flex items-center gap-2.5 min-w-0">
         <span className="digitize-status-pulse" />
         <div className="min-w-0 flex-1">

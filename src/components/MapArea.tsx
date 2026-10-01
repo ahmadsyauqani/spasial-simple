@@ -395,7 +395,7 @@ export default function MapArea() {
           <Polyline 
             positions={trackingPath} 
             pathOptions={{ 
-              color: '#6366f1', 
+              color: '#8c7bb2', 
               weight: 4, 
               opacity: 0.8,
               dashArray: '10, 10'
@@ -410,7 +410,7 @@ export default function MapArea() {
             radius={6}
             pathOptions={{ 
               color: 'white', 
-              fillColor: '#6366f1', 
+              fillColor: '#8c7bb2', 
               fillOpacity: 1, 
               weight: 2 
             }}
@@ -435,7 +435,7 @@ export default function MapArea() {
 function measureLabelIcon(text: string) {
   return L.divIcon({
     className: "measure-label-icon",
-    html: `<div style="background:#f97316;color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,0.5);font-family:ui-monospace,SFMono-Regular,monospace">${text}</div>`,
+    html: `<div style="background:#5a9e8d;color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,0.5);font-family:ui-monospace,SFMono-Regular,monospace">${text}</div>`,
     iconSize: [0, 0],
     iconAnchor: [8, 28],
   });
@@ -464,8 +464,8 @@ function HighlightFeatureLayer() {
       data={highlightFeature}
       key={`highlight-${Date.now()}`}
       style={() => ({
-        color: '#f97316',     // Orange-500
-        fillColor: '#f97316',
+        color: '#5a9e8d',     // Orange-500
+        fillColor: '#5a9e8d',
         fillOpacity: 0.6,
         weight: 4,
         className: 'animate-pulse' // Tailwind pulse animation
@@ -539,8 +539,8 @@ function OverlapLayer() {
   if (!overlapResult?.geojson) return null;
 
   const overlapStyle = {
-    color: '#ef4444',
-    fillColor: '#ef4444',
+    color: '#bd6270',
+    fillColor: '#bd6270',
     fillOpacity: 0.45,
     weight: 3,
     dashArray: '8, 4'
@@ -586,8 +586,8 @@ function ClipLayer() {
   };
 
   const clipStyle = {
-    color: '#10b981',
-    fillColor: '#10b981',
+    color: '#4e8266',
+    fillColor: '#4e8266',
     fillOpacity: 0.4,
     weight: 2.5,
     dashArray: '6, 3'
@@ -658,8 +658,8 @@ function MergeLayer() {
   };
 
   const mergeStyle = {
-    color: '#8b5cf6',
-    fillColor: '#8b5cf6',
+    color: '#8c7bb2',
+    fillColor: '#8c7bb2',
     fillOpacity: 0.35,
     weight: 2,
   };
@@ -789,8 +789,8 @@ function UnionLayer() {
   };
 
   const unionStyle = {
-    color: '#f59e0b',
-    fillColor: '#f59e0b',
+    color: '#b99449',
+    fillColor: '#b99449',
     fillOpacity: 0.4,
     weight: 2,
   };
@@ -962,7 +962,7 @@ function GpsAccuracyOverlay({
 }) {
   const map = useMap();
   const hasCenteredRef = useRef(false);
-  const color = position.accuracy <= 8 ? "#22d3ee" : position.accuracy <= 20 ? "#fbbf24" : "#f87171";
+  const color = position.accuracy <= 8 ? "#6494ae" : position.accuracy <= 20 ? "#cbab61" : "#cf7d88";
   const trail = samples.map((sample) => [sample.latitude, sample.longitude] as [number, number]);
 
   useEffect(() => {
@@ -1376,7 +1376,7 @@ function CursorCoordinates() {
         <CircleMarker 
           center={[snapPoint.lat, snapPoint.lng]} 
           radius={6} 
-          pathOptions={{ color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.6, weight: 2 }}
+          pathOptions={{ color: '#8c7bb2', fillColor: '#8c7bb2', fillOpacity: 0.6, weight: 2 }}
         />
       )}
       {isLocked && coords && (
@@ -1389,17 +1389,17 @@ function CursorCoordinates() {
           {measureType === 'distance' ? (
             <Polyline
               positions={measurePreviewPos ? [...measurePoints, measurePreviewPos] : measurePoints}
-              pathOptions={{ color: '#f97316', weight: 4, opacity: 0.9 }}
+              pathOptions={{ color: '#5a9e8d', weight: 4, opacity: 0.9 }}
             />
           ) : measurePoints.length >= 3 ? (
             <Polygon
               positions={measurePreviewPos ? [...measurePoints, measurePreviewPos] : measurePoints}
-              pathOptions={{ color: '#f97316', fillColor: '#f97316', fillOpacity: 0.15, weight: 3 }}
+              pathOptions={{ color: '#5a9e8d', fillColor: '#5a9e8d', fillOpacity: 0.15, weight: 3 }}
             />
           ) : (
             <Polyline
               positions={measurePreviewPos ? [...measurePoints, measurePreviewPos] : measurePoints}
-              pathOptions={{ color: '#f97316', weight: 3, opacity: 0.9, dashArray: '6,6' }}
+              pathOptions={{ color: '#5a9e8d', weight: 3, opacity: 0.9, dashArray: '6,6' }}
             />
           )}
           {measureLiveLabel && measurePreviewPos && (
@@ -1413,7 +1413,7 @@ function CursorCoordinates() {
           {measureResult.type === 'distance' ? (
             <Polyline
               positions={measureResult.points}
-              pathOptions={{ color: '#10b981', weight: 4, opacity: 0.95 }}
+              pathOptions={{ color: '#4e8266', weight: 4, opacity: 0.95 }}
             >
               <Tooltip permanent direction="top" offset={[0, -12]} className="measure-tooltip">
                 {measureResult.label}
@@ -1422,7 +1422,7 @@ function CursorCoordinates() {
           ) : (
             <Polygon
               positions={[...measureResult.points, measureResult.points[0]]}
-              pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.2, weight: 3 }}
+              pathOptions={{ color: '#4e8266', fillColor: '#4e8266', fillOpacity: 0.2, weight: 3 }}
             >
               <Tooltip permanent direction="top" offset={[0, -12]} className="measure-tooltip">
                 {measureResult.label}
@@ -1908,8 +1908,8 @@ function SpatialJoinLayer() {
   if (!spatialJoinResult?.geojson) return null;
 
   const joinStyle = {
-    color: '#6366f1',
-    fillColor: '#6366f1',
+    color: '#8c7bb2',
+    fillColor: '#8c7bb2',
     fillOpacity: 0.4,
     weight: 3,
     dashArray: '10, 5'
@@ -1996,8 +1996,8 @@ function SliverLayer() {
   const sliverStyle = (feature: any) => {
     const isGap = feature?.properties?.sliver_type === 'gap';
     return {
-      color: isGap ? '#f59e0b' : '#ef4444',
-      fillColor: isGap ? '#f59e0b' : '#ef4444',
+      color: isGap ? '#b99449' : '#bd6270',
+      fillColor: isGap ? '#b99449' : '#bd6270',
       fillOpacity: 0.5,
       weight: 2.5,
       dashArray: '6, 4'

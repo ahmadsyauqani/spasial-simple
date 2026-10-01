@@ -29,7 +29,7 @@ export function GuestLoginModal({ isOpen, onClose }: { isOpen: boolean; onClose:
         {/* Header */}
         <div className="p-8 border-b border-white/5 flex flex-col items-center text-center shrink-0 relative z-10 bg-black/20">
           <div className="relative mb-4">
-            <div className="w-14 h-14 bg-gradient-to-tr from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(249,115,22,0.3)] rotate-3 transition-transform hover:rotate-6">
+            <div className="w-14 h-14 bg-gradient-to-tr from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(90,158,141,0.3)] rotate-3 transition-transform hover:rotate-6">
               <BookOpen className="w-7 h-7 text-white -rotate-3" />
             </div>
             <Sparkles className="absolute -top-2 -right-2 w-5 h-5 text-yellow-300 animate-pulse" />
@@ -79,7 +79,7 @@ export function GuestLoginModal({ isOpen, onClose }: { isOpen: boolean; onClose:
         {/* Footer */}
         <div className="p-6 md:p-8 border-t border-white/5 shrink-0 bg-black/40 relative z-10 backdrop-blur-xl">
           <label className="flex items-center gap-4 cursor-pointer group mb-6 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
-            <div className={`shrink-0 w-6 h-6 rounded-[6px] border-[1.5px] flex items-center justify-center transition-all duration-300 ${hasRead ? 'bg-orange-500 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]' : 'border-white/30 group-hover:border-orange-500/50 bg-black/50'}`}>
+            <div className={`shrink-0 w-6 h-6 rounded-[6px] border-[1.5px] flex items-center justify-center transition-all duration-300 ${hasRead ? 'bg-orange-500 border-orange-500 shadow-[0_0_15px_rgba(90,158,141,0.4)]' : 'border-white/30 group-hover:border-orange-500/50 bg-black/50'}`}>
               <Check className={`w-4 h-4 text-white transition-transform duration-300 ${hasRead ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`} />
             </div>
             <input type="checkbox" className="hidden" checked={hasRead} onChange={(e) => setHasRead(e.target.checked)} />
@@ -98,7 +98,7 @@ export function GuestLoginModal({ isOpen, onClose }: { isOpen: boolean; onClose:
             <button 
               onClick={handleEnter}
               disabled={!hasRead}
-              className={`flex-[2] py-4 text-sm font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${hasRead ? 'bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white shadow-[0_0_20px_rgba(249,115,22,0.4)] hover:scale-[1.02] active:scale-[0.98]' : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'}`}
+              className={`flex-[2] py-4 text-sm font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${hasRead ? 'bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white shadow-[0_0_20px_rgba(90,158,141,0.4)] hover:scale-[1.02] active:scale-[0.98]' : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'}`}
             >
               Mulai Sesi (5 Menit)
             </button>

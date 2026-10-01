@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
-    "build": "next build --webpack",
+    "dev": "node scripts/copy-maplibre-worker.cjs && next dev --webpack",
+    "build": "node scripts/copy-maplibre-worker.cjs && next build --webpack",
+    "postinstall": "node scripts/copy-maplibre-worker.cjs",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -30,6 +32,7 @@
     "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.14.0",
+    "maplibre-gl": "^6.11.2",
     "next": "16.2.4",
     "next-themes": "^0.4.6",
     "pdfjs-dist": "^5.7.284",
@@ -49,6 +52,7 @@
     "unrar.js": "^0.2.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

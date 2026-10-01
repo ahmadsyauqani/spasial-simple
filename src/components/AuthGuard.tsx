@@ -43,16 +43,16 @@ function GuestTimerBanner({ endTime }: { endTime: number | null }) {
       <div className="fixed top-[80px] left-1/2 -translate-x-1/2 z-[99998]">
         <button 
           onClick={() => setShowModal(true)}
-          className="bg-red-600/95 hover:bg-red-500 text-white backdrop-blur-md px-5 py-2.5 rounded-full shadow-2xl shadow-red-600/30 border border-red-500/50 flex items-center gap-3 font-bold text-sm tracking-wider transition-all hover:scale-105 active:scale-95 group cursor-pointer pointer-events-auto"
+          className="bg-card/90 hover:bg-card text-red-300 border border-red-400/40 backdrop-blur-md px-5 py-2.5 rounded-full shadow-xl flex items-center gap-3 font-bold text-sm tracking-wider transition-all hover:scale-105 active:scale-95 group cursor-pointer pointer-events-auto"
         >
-          <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)] group-hover:bg-yellow-300" />
+          <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse group-hover:bg-red-300" />
           SISA WAKTU: <span className="font-mono text-base">{timeLeft}</span>
         </button>
       </div>
 
       {showModal && (
         <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto animate-in fade-in duration-200">
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative flex flex-col max-h-[90vh]">
+          <div className="bg-card border border-white/10 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative flex flex-col max-h-[90vh]">
             <button 
               onClick={() => setShowModal(false)}
               className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors z-10"
@@ -61,7 +61,7 @@ function GuestTimerBanner({ endTime }: { endTime: number | null }) {
             </button>
 
             <div className="p-8 text-center bg-gradient-to-br from-indigo-500/20 via-transparent to-purple-500/10 border-b border-white/5 shrink-0">
-              <div className="w-16 h-16 bg-gradient-to-tr from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(234,179,8,0.3)] rotate-3">
+              <div className="w-16 h-16 bg-gradient-to-tr from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(185,148,73,0.3)] rotate-3">
                 <Crown className="w-8 h-8 text-white -rotate-3" />
               </div>
               <h2 className="text-3xl font-black text-white mb-2">Tingkatkan ke SAKAGIS Pro</h2>
@@ -93,7 +93,7 @@ function GuestTimerBanner({ endTime }: { endTime: number | null }) {
                           <span className="text-[11px] block">{row.guest}</span>
                         </td>
                         <td className="p-4 text-center bg-yellow-500/5">
-                          <CheckCircle2 className="w-5 h-5 text-yellow-400 mx-auto mb-1 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+                          <CheckCircle2 className="w-5 h-5 text-yellow-400 mx-auto mb-1 drop-shadow-[0_0_8px_rgba(203,171,97,0.5)]" />
                           <span className="text-[11px] font-bold text-yellow-200 block">{row.pro}</span>
                         </td>
                       </tr>
@@ -116,7 +116,7 @@ function GuestTimerBanner({ endTime }: { endTime: number | null }) {
                   localStorage.setItem("defaultAuthTab", "register");
                   logoutGuest();
                 }}
-                className="flex-[2] py-3 px-4 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-white font-black rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                className="flex-[2] py-3 px-4 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-white font-black rounded-xl shadow-[0_0_20px_rgba(185,148,73,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 <Crown className="w-5 h-5" />
                 Daftar PRO Sekarang

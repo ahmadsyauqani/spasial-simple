@@ -116,7 +116,7 @@ export function ClockWidget() {
             onClick={() => setIsOpen(!isOpen)}
           >
             {/* Glassmorphic circle matching avatar layout but with indigo theme */}
-            <div className="relative flex flex-col items-center justify-center w-16 h-16 rounded-full border-2 border-indigo-500/70 bg-gradient-to-br from-indigo-950/95 to-slate-950/95 shadow-[0_4px_24px_rgba(99,102,241,0.25)] transition-all duration-300 hover:border-indigo-400 hover:shadow-[0_4px_30px_rgba(99,102,241,0.5)] select-none z-20">
+            <div className="relative flex flex-col items-center justify-center w-16 h-16 rounded-full border-2 border-indigo-500/70 bg-gradient-to-br from-indigo-950/95 to-slate-950/95 shadow-[0_4px_24px_rgba(140,123,178,0.25)] transition-all duration-300 hover:border-indigo-400 hover:shadow-[0_4px_30px_rgba(140,123,178,0.5)] select-none z-20">
               <span className="text-[9px] text-indigo-300 font-bold uppercase tracking-wider leading-none mb-0.5">
                 {dayName}
               </span>

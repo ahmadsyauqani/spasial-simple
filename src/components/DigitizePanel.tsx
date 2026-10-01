@@ -55,8 +55,8 @@ export function DigitizePanel() {
       name: newLayerName,
       geometryType: newLayerType,
       style: { 
-        color: newLayerType === 'Point' ? '#ef4444' : (newLayerType === 'Line' ? '#10b981' : '#6366f1'), 
-        fillColor: newLayerType === 'Point' ? '#ef4444' : (newLayerType === 'Line' ? '#10b981' : '#6366f1'), 
+        color: newLayerType === 'Point' ? '#bd6270' : (newLayerType === 'Line' ? '#4e8266' : '#8c7bb2'), 
+        fillColor: newLayerType === 'Point' ? '#bd6270' : (newLayerType === 'Line' ? '#4e8266' : '#8c7bb2'), 
         fillOpacity: 0.2, 
         weight: 2 
       },
@@ -319,7 +319,7 @@ export function DigitizePanel() {
                   <button
                     key={type}
                     onClick={() => setNewLayerType(type)}
-                    className={`flex flex-col items-center gap-1.5 py-2.5 rounded-lg transition-all ${newLayerType === type ? 'bg-lavender dark:bg-orange-500 text-navy dark:text-white shadow-md' : 'text-muted-foreground hover:bg-muted dark:hover:bg-white/5'}`}
+                    className={`flex flex-col items-center gap-1.5 py-2.5 rounded-lg transition-all ${newLayerType === type ? 'bg-lavender dark:bg-orange-500 text-navy shadow-md' : 'text-muted-foreground hover:bg-muted dark:hover:bg-white/5'}`}
                   >
                     {getGeomIcon(type)}
                     <span className="text-[9px] font-bold uppercase tracking-wider">{type}</span>
@@ -335,7 +335,7 @@ export function DigitizePanel() {
                   value={newLayerName}
                   onChange={(e) => setNewLayerName(e.target.value)}
                 />
-                <button onClick={createEmptyLayer} className="bg-lavender dark:bg-orange-500 text-navy dark:text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-md active:scale-95">
+                <button onClick={createEmptyLayer} className="bg-lavender dark:bg-orange-500 text-navy p-2.5 rounded-xl hover:opacity-90 transition-all shadow-md active:scale-95">
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
@@ -353,7 +353,7 @@ export function DigitizePanel() {
                   <div key={layer.id} className={`group flex flex-col rounded-2xl border transition-all duration-300 ${expandedLayerId === layer.id ? 'bg-muted/50 dark:bg-[#25282c] border-lavender dark:border-orange-500/30 shadow-md' : 'bg-card border-border hover:border-lavender/50 dark:hover:border-white/10'}`}>
                     <div className="flex items-center justify-between p-3.5 cursor-pointer" onClick={() => setExpandedLayerId(expandedLayerId === layer.id ? null : (layer.id as string))}>
                       <div className="flex items-center gap-3">
-                        <div className={`p-1.5 rounded-lg ${activeDigitizingLayerId === layer.id ? 'bg-lavender dark:bg-orange-500 text-navy dark:text-white' : 'bg-muted text-muted-foreground'}`}>
+                        <div className={`p-1.5 rounded-lg ${activeDigitizingLayerId === layer.id ? 'bg-lavender dark:bg-orange-500 text-navy' : 'bg-muted text-muted-foreground'}`}>
                           {getGeomIcon(layer.geometryType)}
                         </div>
                         <div className="flex flex-col">

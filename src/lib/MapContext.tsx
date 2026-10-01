@@ -36,8 +36,9 @@ export type BasemapType = "dark" | "citra" | "hybrid" | "citra_terang" | "osm" |
 
 export const BASEMAP_OPTIONS: Record<BasemapType, { url: string, attribution: string, name: string }> = {
   dark: {
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://carto.com/">CartoDB</a>',
+    // Carto basemaps now require an API key for browser requests; Esri Canvas is key-free.
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
     name: "Peta Gelap"
   },
   citra: {

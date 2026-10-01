@@ -294,7 +294,7 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
       if (!geojsonData) throw new Error("File kosong atau tidak terbaca.");
       const firstFeature = geojsonData.features?.find((feature: any) => feature.geometry);
       const geometryType = firstFeature?.geometry?.type || "Vector";
-      const color = geometryType.includes("Line") ? "#10b981" : geometryType.includes("Point") ? "#ef4444" : "#3b82f6";
+      const color = geometryType.includes("Line") ? "#4e8266" : geometryType.includes("Point") ? "#bd6270" : "#3b82f6";
       setWizardFile(file);
       setWizardGeojson(geojsonData);
       setWizardCrs(geojsonData.detected_crs || "WGS84 / EPSG:4326");
