@@ -33,6 +33,9 @@ import { DissolveAnalysisButton } from "./DissolveAnalysisPanel";
 import { SpatialJoinButton } from "./SpatialJoinPanel";
 import { TopologyValidationButton } from "./TopologyValidationPanel";
 import { SliverDetectionButton } from "./SliverDetectionPanel";
+import { CrsReprojectButton } from "./CrsReprojectPanel";
+import { TopologyAutofixButton } from "./TopologyAutofixPanel";
+import { ChangeDetectionButton } from "./ChangeDetectionPanel";
 
 const PdfOverlayPanel = dynamic(() => import("./PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
 
@@ -63,6 +66,9 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
     { key: "dissolve", label: "Dissolve", category: "Geometry", description: "Satukan fitur berdasarkan atribut.", icon: "◉", component: <DissolveAnalysisButton /> },
     { key: "join", label: "Spatial Join", category: "Relation", description: "Hubungkan atribut secara spasial.", icon: "⌘", component: <SpatialJoinButton /> },
     { key: "sliver", label: "Sliver", category: "Quality", description: "Deteksi gap dan overlap tipis.", icon: "△", component: <SliverDetectionButton /> },
+    { key: "autofix", label: "Auto-fix", category: "Quality", description: "Perbaiki gap, sliver, overlap otomatis (server).", icon: "⚒", component: <TopologyAutofixButton /> },
+    { key: "crs", label: "CRS", category: "Geometry", description: "Cek & reproyeksi CRS file besar (server).", icon: "⊚", component: <CrsReprojectButton /> },
+    { key: "change", label: "Perubahan", category: "Relation", description: "Bandingkan dua snapshot bidang (server).", icon: "⇄", component: <ChangeDetectionButton /> },
   ];
   const analysisCategories = ["Semua", "Overlay", "Geometry", "Quality", "Relation"];
   const visibleAnalysisTools = analysisTools.filter((tool) =>

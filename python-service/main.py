@@ -510,6 +510,140 @@ async def convert_kmz(file: UploadFile = File(...)):
         print(f"Error in convert_kmz: {e}")
         raise HTTPException(status_code=500, detail=f"Gagal memproses KMZ: {str(e)}")
 
+# ===========================================================================
+# Async job endpoints: CRS inspect/reproject, topology autofix, change detection
+# ===========================================================================
+from fastapi import Request as _Request
+import shutil as _shutil
+import geo_tools as _gt
+
+
+def _parse_bool(v, default=False):
+    if v is None or v == "":
+        return default
+    if isinstance(v, bool):
+        return v
+    return str(v).strip().lower() in ("1", "true", "yes", "on", "y")
+
+
+def _check_content_length(request: _Request):
+    cl = request.headers.get("content-length")
+    if cl:
+        try:
+            if int(cl) > _gt.MAX_UPLOAD_BYTES:
+                raise HTTPException(status_code=413, detail="Ukuran unggahan melebihi batas 200 MB")
+        except ValueError:
+            pass
+
+
+async def _read_inputs(request: _Request, file_fields):
+    """Read either multipart (files + form fields) or JSON body.
+
+    Returns (tmpdir, paths: dict field->path|None, geojsons: dict field->dict|None, params: dict).
+    Caller is responsible for cleaning tmpdir (handed to job runner).
+    """
+    _check_content_length(request)
+    ctype = request.headers.get("content-type", "")
+    tmpdir = tempfile.mkdtemp(prefix="sakagis_")
+    paths = {f: None for f in file_fields}
+    geojsons = {f: None for f in file_fields}
+    params = {}
+    try:
+        if "multipart/form-data" in ctype:
+            form = await request.form()
+            for key, val in form.multi_items():
+                if hasattr(val, "filename") and getattr(val, "filename", None):
+                    if key in file_fields:
+                        paths[key] = _gt.stream_upload_to_tmp(val, tmpdir, key)
+                else:
+                    params[key] = val
+            # geojson may also be sent as form text fields
+            for f in file_fields:
+                gkey = "geojson" if f == "file" else f.replace("_file", "_geojson")
+                if paths[f] is None and isinstance(params.get(gkey), str):
+                    geojsons[f] = json.loads(params.pop(gkey))
+        else:
+            body = await request.json()
+            if not isinstance(body, dict):
+                raise HTTPException(status_code=400, detail="Body JSON harus berupa objek")
+            for f in file_fields:
+                gkey = "geojson" if f == "file" else f.replace("_file", "_geojson")
+                geojsons[f] = body.get(gkey)
+            params = {k: v for k, v in body.items() if not k.endswith("geojson")}
+        for f in file_fields:
+            if paths[f] is None and geojsons[f] is None:
+                label = "file atau geojson" if f == "file" else f"{f} atau {f.replace('_file', '_geojson')}"
+                raise HTTPException(status_code=400, detail=f"Data masukan '{label}' wajib diisi")
+        return tmpdir, paths, geojsons, params
+    except HTTPException:
+        _shutil.rmtree(tmpdir, ignore_errors=True)
+        raise
+    except ValueError as e:
+        _shutil.rmtree(tmpdir, ignore_errors=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        _shutil.rmtree(tmpdir, ignore_errors=True)
+        raise HTTPException(status_code=400, detail=f"Gagal membaca masukan: {e}")
+
+
+@app.get("/jobs/{job_id}")
+def get_job_status(job_id: str):
+    job = _gt.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job tidak ditemukan atau sudah kedaluwarsa")
+    return JSONResponse(content=_gt.job_public_view(job))
+
+
+@app.post("/crs/inspect-reproject", status_code=202)
+async def crs_inspect_reproject(request: _Request):
+    tmpdir, paths, geojsons, params = await _read_inputs(request, ["file"])
+    p = {
+        "target_epsg": int(params.get("target_epsg") or 4326),
+        "source_epsg": params.get("source_epsg") or None,
+        "sample_only": _parse_bool(params.get("sample_only"), False),
+        "hint_lon": params.get("hint_lon"),
+        "hint_lat": params.get("hint_lat"),
+    }
+    job_id = _gt.create_job()
+    _gt.submit_job(job_id, _gt.run_crs_inspect, paths["file"], geojsons["file"], p, cleanup_paths=[tmpdir])
+    return JSONResponse(status_code=202, content={"job_id": job_id, "status": "queued", "poll_url": f"/jobs/{job_id}"})
+
+
+@app.post("/topology/autofix", status_code=202)
+async def topology_autofix(request: _Request):
+    tmpdir, paths, geojsons, params = await _read_inputs(request, ["file"])
+    p = {
+        "snap_tolerance_m": float(params.get("snap_tolerance_m") or 0.5) if params.get("snap_tolerance_m") not in (None, "") else 0.5,
+        "sliver_min_area_m2": float(params.get("sliver_min_area_m2")) if params.get("sliver_min_area_m2") not in (None, "") else 1.0,
+        "sliver_thinness": float(params.get("sliver_thinness")) if params.get("sliver_thinness") not in (None, "") else 0.05,
+        "fix_overlaps": _parse_bool(params.get("fix_overlaps"), True),
+        "fix_gaps": _parse_bool(params.get("fix_gaps"), True),
+        "fix_invalid": _parse_bool(params.get("fix_invalid"), True),
+        "id_field": params.get("id_field") or None,
+    }
+    job_id = _gt.create_job()
+    _gt.submit_job(job_id, _gt.run_topology_autofix, paths["file"], geojsons["file"], p, cleanup_paths=[tmpdir])
+    return JSONResponse(status_code=202, content={"job_id": job_id, "status": "queued", "poll_url": f"/jobs/{job_id}"})
+
+
+@app.post("/change-detection", status_code=202)
+async def change_detection(request: _Request):
+    tmpdir, paths, geojsons, params = await _read_inputs(request, ["old_file", "new_file"])
+    p = {
+        "id_field": params.get("id_field") or None,
+        "iou_threshold": float(params.get("iou_threshold")) if params.get("iou_threshold") not in (None, "") else 0.9,
+        "min_match_iou": float(params.get("min_match_iou")) if params.get("min_match_iou") not in (None, "") else 0.3,
+        "compare_attributes": _parse_bool(params.get("compare_attributes"), True),
+    }
+    job_id = _gt.create_job()
+    _gt.submit_job(
+        job_id, _gt.run_change_detection,
+        paths["old_file"], geojsons["old_file"], paths["new_file"], geojsons["new_file"], p,
+        cleanup_paths=[tmpdir],
+    )
+    return JSONResponse(status_code=202, content={"job_id": job_id, "status": "queued", "poll_url": f"/jobs/{job_id}"})
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
