@@ -42,6 +42,17 @@ export function StudioOverview({ onExplore, onUpload }: {
     return () => { events.forEach(event => mapInstance.off(event, collapse)); };
   }, [mapInstance, collapsed, collapse]);
 
+  // Explicit tool intent takes precedence over onboarding, including keyboard use.
+  useEffect(() => {
+    if (collapsed) return;
+    const onToolIntent = (event: MouseEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('.map-action-controls, .map-instrument-dock')) collapse();
+    };
+    document.addEventListener('click', onToolIntent, true);
+    return () => document.removeEventListener('click', onToolIntent, true);
+  }, [collapsed, collapse]);
+
   if (collapsed) {
     return (
       <button className="studio-overview-fab" onClick={() => onExplore("current")} aria-label="Buka explorer 3D">

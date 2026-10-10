@@ -16,7 +16,7 @@ const FlightPathPlanner = dynamic(
   () => import("@/components/FlightPathPlanner").then(m => m.FlightPathPlanner),
   { ssr: false }
 );
-import { RefreshCcw, Database, UploadCloud, Pin, Cpu, X, BarChart3, LayoutGrid, HardDrive, Undo2, Check, MousePointer2 } from "lucide-react";
+import { RefreshCcw, Database, UploadCloud, Cpu, X, BarChart3, LayoutGrid, HardDrive, Undo2, Check, MousePointer2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -35,8 +35,9 @@ export default function Home() {
   const [sceneDestination, setSceneDestination] = useState<SceneDestination | null>(null);
   const [isConverterOpen, setIsConverterOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"digitize" | "dataset">("digitize");
-  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  // Panel opens only on explicit click/keyboard; never on hover.
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const panelTriggerRef = useRef<HTMLElement | null>(null);
   const [isDeviceHubOpen, setIsDeviceHubOpen] = useState(false);
   const [isFlightPlannerOpen, setIsFlightPlannerOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<"data" | "digitize" | "analysis" | "layout" | "device">("digitize");
@@ -47,7 +48,7 @@ export default function Home() {
   } = useMapContext();
 
   const isDrawing = Boolean(activeDigitizingLayerId);
-  const isPanelVisible = !isDrawing && !isGpsPanelOpen && (isSidebarPinned || isHovered);
+  const isPanelVisible = !isDrawing && !isGpsPanelOpen && isPanelOpen;
 
   const stopDrawing = () => {
     try {
@@ -59,15 +60,37 @@ export default function Home() {
   };
 
   const openPanel = (tab: "digitize" | "dataset", tool: "data" | "digitize" | "analysis") => {
+    panelTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (isDrawing && tool !== "digitize") stopDrawing();
     setIsDeviceHubOpen(false);
     setIsAttributeTableOpen(false);
     setLayoutComposerOpen(false);
+    const sameTarget = isPanelOpen && activeTool === tool && activeTab === tab;
     setActiveTool(tool);
     setActiveTab(tab);
-    setIsSidebarPinned(true);
-    setIsHovered(true);
+    setIsPanelOpen(!sameTarget);
   };
+
+  const closePanel = () => {
+    setIsPanelOpen(false);
+    panelTriggerRef.current?.focus({ preventScroll: true });
+  };
+
+  // "Analisis" from a layer's contextual actions switches the single workspace panel to the analysis view.
+  useEffect(() => {
+    const onOpenAnalysis = () => {
+      if (isDrawing) stopDrawing();
+      setIsDeviceHubOpen(false);
+      setIsAttributeTableOpen(false);
+      setLayoutComposerOpen(false);
+      setActiveTool("analysis");
+      setActiveTab("dataset");
+      setIsPanelOpen(true);
+    };
+    document.addEventListener("sakagis:open-analysis", onOpenAnalysis);
+    return () => document.removeEventListener("sakagis:open-analysis", onOpenAnalysis);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDrawing]);
 
   return (
     <AuthGuard>
@@ -77,15 +100,13 @@ export default function Home() {
       <SearchControl />
       <AnalysisResultsPanel hidden={isPanelVisible || isGpsPanelOpen} />
       <FeatureExportDialogHost />
-      <header className="studio-topbar"><div className="studio-wordmark"><span className="studio-logo-mark">S</span><span>SAKAGIS<small>SPATIAL STUDIO</small></span></div><StudioClock /></header>
+      <header className="studio-topbar" data-hidden={isPanelVisible}><div className="studio-wordmark"><img src="/sakagis-mark.svg" width={32} height={32} alt="" /><span>SAKAGIS<small>SPATIAL STUDIO</small></span></div><StudioClock /></header>
       {!isPanelVisible && !isDrawing && !isGpsPanelOpen && !isDeviceHubOpen && !isAttributeTableOpen && <StudioOverview onExplore={setSceneDestination} onUpload={() => openPanel("dataset", "data")} />}
       {sceneDestination && <SceneExplorer destination={sceneDestination} onClose={() => setSceneDestination(null)} />}
 
       {/* ── Icon Rail: compact pill, always visible, h-fit ── */}
       <div
         className="desktop-tool-rail absolute top-4 left-4 z-20 hidden lg:flex flex-col items-center gap-1 py-2 px-1.5 rounded-2xl border border-border/50 bg-card/85 backdrop-blur-2xl shadow-xl w-[52px] overflow-hidden"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         {/* Accent line */}
         <div className={cn(
@@ -101,9 +122,9 @@ export default function Home() {
         <div className="relative p-1 group/logo mt-1">
           <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full scale-150 opacity-0 group-hover/logo:opacity-100 transition-opacity duration-500" />
           <img
-            src="/logo-sakagis.png"
+            src="/sakagis-mark.svg"
             alt="SAKAGIS"
-            className="relative w-7 h-7 object-contain mix-blend-multiply dark:invert dark:mix-blend-screen"
+            className="relative w-8 h-8 object-contain"
           />
         </div>
 
@@ -117,6 +138,8 @@ export default function Home() {
         <button
           onClick={() => openPanel("digitize", "digitize")}
            aria-label="Digitasi Data"
+          aria-controls="workspace-panel"
+          aria-expanded={isPanelVisible && activeTool === "digitize"}
           className={cn(
             "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
             activeTool === "digitize"
@@ -131,6 +154,8 @@ export default function Home() {
         <button
           onClick={() => openPanel("dataset", "data")}
            aria-label="Data dan Layer"
+          aria-controls="workspace-panel"
+          aria-expanded={isPanelVisible && activeTool === "data"}
           className={cn(
             "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
             activeTool === "data"
@@ -144,6 +169,8 @@ export default function Home() {
         <button
           onClick={() => openPanel("dataset", "analysis")}
            aria-label="Analisis Spasial"
+          aria-controls="workspace-panel"
+          aria-expanded={isPanelVisible && activeTool === "analysis"}
           className={cn(
             "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
             activeTool === "analysis"
@@ -155,7 +182,7 @@ export default function Home() {
         </button>
 
         <button
-          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("layout"); setIsSidebarPinned(false); setIsHovered(false); setIsDeviceHubOpen(false); setIsAttributeTableOpen(false); setLayoutComposerOpen(true); }}
+          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("layout"); setIsPanelOpen(false); setIsDeviceHubOpen(false); setIsAttributeTableOpen(false); setLayoutComposerOpen(true); }}
            aria-label="Layout Peta"
           className={cn(
             "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
@@ -172,7 +199,7 @@ export default function Home() {
 
         {/* Device Hub button */}
         <button
-          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("device"); setIsSidebarPinned(false); setIsHovered(false); setIsAttributeTableOpen(false); setLayoutComposerOpen(false); setIsDeviceHubOpen(true); }}
+          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("device"); setIsPanelOpen(false); setIsAttributeTableOpen(false); setLayoutComposerOpen(false); setIsDeviceHubOpen(true); }}
            aria-label="Perangkat dan GPS"
           className={cn(
             "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
@@ -189,7 +216,7 @@ export default function Home() {
 
         {/* Attribute Table Toggle */}
         <button
-          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("data"); setIsSidebarPinned(false); setIsDeviceHubOpen(false); setLayoutComposerOpen(false); setIsAttributeTableOpen(!isAttributeTableOpen); }}
+          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("data"); setIsPanelOpen(false); setIsDeviceHubOpen(false); setLayoutComposerOpen(false); setIsAttributeTableOpen(!isAttributeTableOpen); }}
            aria-label="Tabel Atribut"
           className={cn(
             "p-2.5 rounded-xl transition-all duration-200 w-full flex justify-center",
@@ -200,41 +227,28 @@ export default function Home() {
         >
           <Table2 className="w-[17px] h-[17px]" />
         </button>
-
-        {/* Thin divider */}
-        <div className="w-5 h-px bg-border/25 rounded-full my-0.5" />
-
-        {/* Pin button */}
-        <button
-          onClick={() => setIsSidebarPinned(!isSidebarPinned)}
-           aria-label={isSidebarPinned ? "Lepas Pin" : "Pin Panel"}
-          className={cn(
-            "p-2 rounded-xl transition-all duration-200 w-full flex justify-center mb-1",
-            isSidebarPinned
-              ? "bg-orange-500/20 text-orange-400"
-              : "text-muted-foreground/40 hover:bg-white/10 hover:text-white"
-          )}
-        >
-          <Pin className="w-3.5 h-3.5" />
-        </button>
       </div>
-
-      {/* Invisible pointer bridge keeps the desktop panel open across the rail gap. */}
-      <div
-        className="studio-pointer-bridge pointer-events-auto absolute left-[68px] top-4 z-[19] hidden h-[75vh] w-2 lg:block"
-        onMouseEnter={() => setIsHovered(true)}
-      />
 
       {/* ── Mobile backdrop for bottom sheet ── */}
       {isPanelVisible && (
         <div
-          className="workspace-backdrop lg:hidden fixed inset-0 z-[650] bg-black/40 backdrop-blur-[2px]"
-          onClick={() => { setIsSidebarPinned(false); setIsHovered(false); }}
+          className="workspace-backdrop lg:hidden fixed inset-0 z-[25] bg-black/40 backdrop-blur-[2px]"
+          onClick={closePanel}
         />
       )}
 
       {/* ── Content Panel: side panel (desktop) / bottom sheet (mobile) ── */}
       <div
+        id="workspace-panel"
+        inert={!isPanelVisible}
+        aria-hidden={!isPanelVisible}
+        data-open={isPanelVisible}
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && !event.defaultPrevented) {
+            event.stopPropagation();
+            closePanel();
+          }
+        }}
         className={cn(
           "workspace-panel absolute z-[700] flex flex-col rounded-2xl border border-border/50 bg-card/85 backdrop-blur-2xl shadow-xl overflow-hidden",
           "left-2 right-2 bottom-[calc(76px+env(safe-area-inset-bottom))] max-h-[62vh]",
@@ -244,8 +258,6 @@ export default function Home() {
             ? "opacity-100 translate-x-0 translate-y-0 pointer-events-auto"
             : "opacity-0 pointer-events-none translate-y-full lg:translate-y-0 lg:-translate-x-3"
         )}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         {/* Accent line */}
         <div className={cn(
@@ -259,13 +271,16 @@ export default function Home() {
 
         {/* Brand header */}
         <div className="workspace-panel-header flex items-center justify-between px-3 py-2.5 border-b border-border/20 shrink-0">
-          <div className="flex flex-col">
+          <div className="flex items-center gap-2.5">
+            <img src="/sakagis-mark.svg" width={32} height={32} alt="" />
+            <div className="flex flex-col">
             <span className="text-sm font-black tracking-tighter bg-gradient-to-br from-navy to-navy/70 dark:from-white dark:to-white/60 bg-clip-text text-transparent leading-tight">
               SAKAGIS
             </span>
             <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-orange-500/80">
               Spatial Studio
             </span>
+            </div>
           </div>
           <div className="flex items-center gap-0.5">
             <button
@@ -278,8 +293,8 @@ export default function Home() {
             <ThemeToggle />
             <GpsTrackingTrigger />
             <button
-               onClick={() => { setIsSidebarPinned(false); setIsHovered(false); }}
-              className="lg:hidden p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-white"
+              onClick={closePanel}
+              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-white"
               title="Tutup Panel"
             >
               <X className="w-3.5 h-3.5" />
@@ -342,11 +357,13 @@ export default function Home() {
         <button
           onClick={() => openPanel("digitize", "digitize")}
           aria-label="Buka menu digitasi"
-          aria-current={activeTool === "digitize" && isSidebarPinned ? "page" : undefined}
-          data-active={activeTool === "digitize" && isSidebarPinned}
+          aria-controls="workspace-panel"
+          aria-expanded={isPanelVisible && activeTool === "digitize"}
+          aria-current={activeTool === "digitize" && isPanelOpen ? "page" : undefined}
+          data-active={activeTool === "digitize" && isPanelOpen}
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",
-            activeTool === "digitize" && isSidebarPinned ? "text-orange-400" : "text-muted-foreground"
+            activeTool === "digitize" && isPanelOpen ? "text-orange-400" : "text-muted-foreground"
           )}
         >
           <Database className="w-5 h-5" />
@@ -355,11 +372,13 @@ export default function Home() {
         <button
           onClick={() => openPanel("dataset", "data")}
           aria-label="Buka menu dataset"
-          aria-current={activeTool === "data" && isSidebarPinned ? "page" : undefined}
-          data-active={activeTool === "data" && isSidebarPinned}
+          aria-controls="workspace-panel"
+          aria-expanded={isPanelVisible && activeTool === "data"}
+          aria-current={activeTool === "data" && isPanelOpen ? "page" : undefined}
+          data-active={activeTool === "data" && isPanelOpen}
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",
-            activeTool === "data" && isSidebarPinned ? "text-cyan-400" : "text-muted-foreground"
+            activeTool === "data" && isPanelOpen ? "text-cyan-400" : "text-muted-foreground"
           )}
         >
           <UploadCloud className="w-5 h-5" />
@@ -368,11 +387,13 @@ export default function Home() {
         <button
           onClick={() => openPanel("dataset", "analysis")}
           aria-label="Buka menu analisis spasial"
-          aria-current={activeTool === "analysis" && isSidebarPinned ? "page" : undefined}
-          data-active={activeTool === "analysis" && isSidebarPinned}
+          aria-controls="workspace-panel"
+          aria-expanded={isPanelVisible && activeTool === "analysis"}
+          aria-current={activeTool === "analysis" && isPanelOpen ? "page" : undefined}
+          data-active={activeTool === "analysis" && isPanelOpen}
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",
-            activeTool === "analysis" && isSidebarPinned ? "text-emerald-400" : "text-muted-foreground"
+            activeTool === "analysis" && isPanelOpen ? "text-emerald-400" : "text-muted-foreground"
           )}
           title="Analisis Spasial"
         >
@@ -380,7 +401,7 @@ export default function Home() {
           <span className="text-[9px] font-bold uppercase tracking-wide">Analisis</span>
         </button>
         <button
-          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("layout"); setIsSidebarPinned(false); setIsHovered(false); setIsDeviceHubOpen(false); setIsAttributeTableOpen(false); setLayoutComposerOpen(true); }}
+          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("layout"); setIsPanelOpen(false); setIsDeviceHubOpen(false); setIsAttributeTableOpen(false); setLayoutComposerOpen(true); }}
           aria-label="Buka layout peta"
           data-active={activeTool === "layout"}
           className={cn(
@@ -393,7 +414,7 @@ export default function Home() {
           <span className="text-[9px] font-bold uppercase tracking-wide">Layout</span>
         </button>
         <button
-          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("data"); setIsSidebarPinned(false); setIsDeviceHubOpen(false); setLayoutComposerOpen(false); setIsAttributeTableOpen(!isAttributeTableOpen); }}
+          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("data"); setIsPanelOpen(false); setIsDeviceHubOpen(false); setLayoutComposerOpen(false); setIsAttributeTableOpen(!isAttributeTableOpen); }}
           aria-label="Buka tabel atribut"
           data-active={isAttributeTableOpen}
           className={cn(
@@ -405,7 +426,7 @@ export default function Home() {
           <span className="text-[9px] font-bold uppercase tracking-wide">Tabel</span>
         </button>
         <button
-          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("device"); setIsSidebarPinned(false); setIsHovered(false); setIsAttributeTableOpen(false); setLayoutComposerOpen(false); setIsDeviceHubOpen(true); }}
+          onClick={() => { if (isDrawing) stopDrawing(); setActiveTool("device"); setIsPanelOpen(false); setIsAttributeTableOpen(false); setLayoutComposerOpen(false); setIsDeviceHubOpen(true); }}
           aria-label="Buka device hub"
           data-active={isDeviceHubOpen}
           className={cn(

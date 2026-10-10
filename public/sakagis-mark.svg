@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>SAKAGIS — spatial contour monogram</title>
+  <rect x="1" y="1" width="62" height="62" rx="18" fill="#13252d" stroke="#36545f" stroke-width="2"/>
+  <path d="m12 39 20 12 20-12M12 32l20 12 20-12M12 25l20 12 20-12-20-12-20 12Z" stroke="#6494ae" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="m43 22-11-6-12 7 23 14-11 7-11-6" stroke="#a7cec1" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="44" cy="22" r="3" fill="#a7cec1" stroke="#13252d" stroke-width="1.5"/>
+</svg>

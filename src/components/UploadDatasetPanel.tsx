@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
-import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff, Search, GripVertical, Cloud, CloudOff, HardDrive, RefreshCw } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff, Search, GripVertical, Cloud, CloudOff, HardDrive, RefreshCw, Table2, PenLine, BarChart3 } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import * as turf from "@turf/turf";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
@@ -40,7 +40,8 @@ import { ChangeDetectionButton } from "./ChangeDetectionPanel";
 const PdfOverlayPanel = dynamic(() => import("./PdfOverlayPanel").then(mod => mod.PdfOverlayPanel), { ssr: false });
 
 export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "analysis" }) {
-  const { layers, setLayers, setZoomFeature, cacheLayerGeojson, areaUnit, setAreaUnit } = useMapContext();
+  const { layers, setLayers, setZoomFeature, cacheLayerGeojson, areaUnit, setAreaUnit, selectedLayerId, setSelectedLayerId } = useMapContext();
+  const focusedLayer = selectedLayerId ? layers.find((layer) => layer.id === selectedLayerId) : undefined;
   const { isGuest } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -357,9 +358,29 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
           <div className="analysis-workspace-header">
             <div>
               <strong>Analisis Spasial</strong>
-              <span>Pilih tool, atur parameter, lalu simpan hasil sebagai layer baru.</span>
+              <span>Alur yang sama untuk setiap tool. Data asli tidak pernah ditimpa.</span>
             </div>
             <span className="analysis-layer-status">{layers.length} layer</span>
+          </div>
+          <ol className="analysis-flow" aria-label="Alur analisis">
+            <li><b>1</b> Pilih data</li>
+            <li><b>2</b> Atur parameter</li>
+            <li><b>3</b> Jalankan</li>
+            <li><b>4</b> Tinjau hasil</li>
+          </ol>
+          <div className={cn("analysis-focus", focusedLayer ? "is-set" : "")} data-testid="analysis-focus">
+            {focusedLayer ? (
+              <>
+                <Layers className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0 flex-1 truncate"><small>Layer fokus</small>{focusedLayer.name}</span>
+                <button type="button" onClick={() => setSelectedLayerId(null)} aria-label="Lepas layer fokus"><X className="h-3.5 w-3.5" /></button>
+              </>
+            ) : (
+              <>
+                <Info className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0 flex-1"><small>Tip</small>Pilih layer di Layer Manager agar tool langsung terisi.</span>
+              </>
+            )}
           </div>
           <div className="analysis-workspace-search">
             <Search className="h-3.5 w-3.5" />
@@ -1083,7 +1104,7 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
 import { ExportLayerDialog } from "./ExportLayerDialog";
 
 function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => void }) {
-  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache, setLayers, topologyErrors, activeDigitizingLayerId, activeEditFeature } = useMapContext();
+  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache, setLayers, topologyErrors, activeDigitizingLayerId, activeEditFeature, selectedLayerId, setSelectedLayerId, setIsAttributeTableOpen, setActiveTableLayerId, setActiveDigitizingLayerId } = useMapContext();
   const { isGuest } = useAuth();
   const style = layer.style || { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2, dissolve_key: 'none' };
   const colorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1096,6 +1117,7 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
     ? topologyErrors?.features?.length || 0
     : 0;
   const isActive = activeDigitizingLayerId === layer.id || activeEditFeature?.layerId === layer.id;
+  const isSelected = Boolean(layer.id) && selectedLayerId === layer.id;
 
   useEffect(() => {
     const updateConnection = () => setIsOnline(navigator.onLine);
@@ -1255,12 +1277,20 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
         "bg-white dark:bg-white/5 shadow-sm",
         isActive
           ? "border-cyan-300/70 bg-cyan-500/[0.06] shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-300/20"
+          : isSelected
+          ? "border-primary/60 bg-primary/[0.08] ring-1 ring-primary/30 shadow-md"
           : isPinned
           ? "border-primary/40 shadow-primary/10 shadow-md"
           : "border-border/60 hover:border-primary/30 hover:shadow-md"
       )}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      data-selected={isSelected}
+      onClick={() => { if (layer.id) setSelectedLayerId(isSelected ? null : layer.id); }}
+      onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); if (layer.id) setSelectedLayerId(isSelected ? null : layer.id); } }}
       onDoubleClick={() => { if (layer.id) triggerZoomToLayer(layer.id); }}
-      title="Double klik untuk Zoom ke layer ini"
+      title="Klik untuk memilih layer · Double klik untuk zoom"
     >
       {/* Accent bar top */}
       <div className={cn(
@@ -1357,6 +1387,17 @@ function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => voi
           ? "max-h-24 opacity-100" 
           : "max-h-0 opacity-0 group-hover:max-h-24 group-hover:opacity-100"
       )}>
+        {isSelected && (
+          <div className="layer-context-actions" data-testid="layer-context-actions" onClick={(e) => e.stopPropagation()}>
+            <span className="layer-context-label">Tindakan untuk layer ini</span>
+            <div className="layer-context-grid">
+              <button type="button" onClick={() => triggerZoomToLayer(layer.id!)}><Maximize className="h-3.5 w-3.5" /> Zoom</button>
+              <button type="button" onClick={() => { setActiveTableLayerId(layer.id!); setIsAttributeTableOpen(true); }}><Table2 className="h-3.5 w-3.5" /> Tabel atribut</button>
+              <button type="button" onClick={() => setActiveDigitizingLayerId(layer.id!)}><PenLine className="h-3.5 w-3.5" /> Digitasi</button>
+              <button type="button" onClick={() => document.dispatchEvent(new CustomEvent("sakagis:open-analysis", { detail: { layerId: layer.id } }))}><BarChart3 className="h-3.5 w-3.5" /> Analisis</button>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/20 bg-muted/20 dark:bg-black/10">
           {/* Reorder */}
           <div className="flex items-center bg-muted/40 dark:bg-black/20 rounded-xl p-0.5 gap-0.5">

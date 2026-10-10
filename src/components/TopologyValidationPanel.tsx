@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMapContext } from "@/lib/MapContext";
 import * as turf from "@turf/turf";
 import { toast } from "sonner";
@@ -39,10 +39,17 @@ export function TopologyValidationButton() {
     setTopologyErrors,
     setZoomFeature,
     cacheLayerGeojson,
+    selectedLayerId: focusedLayerId,
   } = useMapContext();
 
   const [isOpen, setIsOpen] = useState(false);
   const [targetLayerId, setTargetLayerId] = useState("");
+  // Pre-fill from the layer focused in the Layer Manager when the dialog opens.
+  useEffect(() => {
+    if (isOpen && focusedLayerId && !targetLayerId) setTargetLayerId(focusedLayerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, focusedLayerId]);
+
   const [referenceLayerId, setReferenceLayerId] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState("");

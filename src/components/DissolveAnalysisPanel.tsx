@@ -23,10 +23,17 @@ export function DissolveAnalysisButton() {
     areaUnit,
     dissolveResult,
     setDissolveResult,
+    selectedLayerId: focusedLayerId,
   } = useMapContext();
 
   const [isOpen, setIsOpen] = useState(false);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  // Pre-fill from the layer focused in the Layer Manager when the dialog opens.
+  useEffect(() => {
+    if (isOpen && focusedLayerId && !selectedLayerId) setSelectedLayerId(focusedLayerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, focusedLayerId]);
+
   const [availableAttributes, setAvailableAttributes] = useState<string[]>([]);
   const [selectedAttribute, setSelectedAttribute] = useState<string>("none");
   const [isProcessing, setIsProcessing] = useState(false);

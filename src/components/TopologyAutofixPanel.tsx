@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useMapContext } from "@/lib/MapContext";
 import { toast } from "sonner";
 import {
@@ -164,10 +164,18 @@ function NumberField({
 }
 
 export function TopologyAutofixButton() {
-  const { layers, layerGeojsonCache, setZoomFeature, fetchLayers } = useMapContext();
+  const { layers, layerGeojsonCache, setZoomFeature, fetchLayers,
+    selectedLayerId: focusedLayerId,
+  } = useMapContext();
 
   const [isOpen, setIsOpen] = useState(false);
   const [targetLayerId, setTargetLayerId] = useState("");
+  // Pre-fill from the layer focused in the Layer Manager when the dialog opens.
+  useEffect(() => {
+    if (isOpen && focusedLayerId && !targetLayerId) setTargetLayerId(focusedLayerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, focusedLayerId]);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [progress, setProgress] = useState<{ percent: number; message: string } | null>(null);

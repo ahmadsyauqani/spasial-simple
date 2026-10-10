@@ -27,10 +27,17 @@ export function SpatialJoinButton() {
     layerGeojsonCache,
     spatialJoinResult,
     setSpatialJoinResult,
+    selectedLayerId: focusedLayerId,
   } = useMapContext();
 
   const [isOpen, setIsOpen] = useState(false);
   const [targetLayerId, setTargetLayerId] = useState("");
+  // Pre-fill from the layer focused in the Layer Manager when the dialog opens.
+  useEffect(() => {
+    if (isOpen && focusedLayerId && !targetLayerId) setTargetLayerId(focusedLayerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, focusedLayerId]);
+
   const [sourceLayerId, setSourceLayerId] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState("");

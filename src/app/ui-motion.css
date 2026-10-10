@@ -1,0 +1,136 @@
+/* Motion belongs to the interface, never the map's transform hierarchy. */
+:root {
+  --motion-fast: 160ms;
+  --motion-panel: 240ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.workspace-panel {
+  transition-property: opacity, transform, visibility;
+  transition-duration: var(--motion-panel);
+  transition-timing-function: var(--motion-ease);
+}
+.workspace-panel[data-open="false"] { visibility: hidden; }
+.workspace-panel[data-open="true"] { visibility: visible; }
+
+/* An inset ring remains visible inside clipped toolbars. */
+:where(.sakagis-app, [data-slot="dialog-content"], [data-slot="popover-content"])
+  :is(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--studio-mint);
+  outline-offset: -3px;
+}
+.analysis-workspace-search:focus-within,
+.analysis-tool-card:focus-within { border-color: var(--studio-mint); }
+
+:is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-actions) button {
+  transition: background-color var(--motion-fast), color var(--motion-fast), border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+:is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-actions) button > svg {
+  transition: transform var(--motion-fast) var(--motion-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(.desktop-tool-rail, .map-action-controls, .map-instrument-actions) button:not(:disabled):hover > svg {
+    transform: translateY(-1px);
+  }
+}
+:is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-actions) button:not(:disabled):active > svg {
+  transform: scale(0.92);
+}
+
+@keyframes ui-surface-in {
+  from { opacity: 0; translate: 0 6px; }
+  to { opacity: 1; translate: 0 0; }
+}
+:is(.basemap-gallery, .coordinate-details-popover, .studio-overview-fab) {
+  animation: ui-surface-in var(--motion-panel) var(--motion-ease) both;
+}
+[data-slot="dialog-content"] {
+  animation-duration: var(--motion-panel);
+  animation-timing-function: var(--motion-ease);
+  --tw-enter-scale: 0.99;
+  --tw-exit-scale: 0.99;
+}
+
+/* Ambient art stays still; status is communicated by color and text. */
+.studio-status-dot, .studio-terrain-grid, .studio-art-pin {
+  animation: none;
+}
+.studio-status-dot { box-shadow: 0 0 0 3px rgba(143, 199, 183, 0.12); }
+
+/* Include portalled UI; do not reset map transforms or canvas rendering. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+  :is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-actions) button > svg,
+  .studio-primary, .studio-overview-fab, .studio-scene-card, .studio-round-arrow,
+  .analysis-tool-card { transform: none !important; }
+}
+
+/* Sage and steel chrome: improve useful contrast, not map brightness. */
+.dark .sakagis-app :is(.desktop-tool-rail, .workspace-panel, .mobile-bottom-nav, .basemap-gallery) {
+  background-color: rgba(19, 32, 42, 0.96);
+  border-color: rgba(141, 181, 202, 0.22);
+}
+.sakagis-app .basemap-gallery { color: var(--studio-text); }
+.sakagis-app .basemap-card { min-height: 56px; border-radius: 12px; }
+.sakagis-app .basemap-card strong { font-size: 11px; color: var(--studio-text); }
+.sakagis-app .basemap-card small { font-size: 10px; color: var(--studio-muted); }
+.sakagis-app .basemap-card[aria-pressed="true"] {
+  border-color: var(--studio-mint);
+  background: rgba(143, 199, 183, 0.12);
+  box-shadow: inset 3px 0 var(--studio-mint);
+}
+.sakagis-app .basemap-card-thumb {
+  position: relative;
+  overflow: hidden;
+}
+.sakagis-app .basemap-card-thumb::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 42%;
+  border: 1px solid rgba(233, 239, 241, 0.4);
+  box-shadow: 0 0 0 7px rgba(233, 239, 241, 0.12), inset 0 0 0 7px rgba(233, 239, 241, 0.12);
+  transform: rotate(-25deg) translateY(15px);
+}
+.sakagis-app .map-instrument-readout strong { color: #dbe8ef; }
+.sakagis-app .map-instrument-details { color: #a7cec1; }
+.sakagis-app .mobile-bottom-nav button[data-active="true"]::before { box-shadow: none; }
+
+/* Reserve separate lanes for coordinates, map actions and attribution. */
+@media (min-width: 1024px) {
+  .sakagis-app [data-map-ui="coordinate-bar"] {
+    left: 84px !important;
+    right: 254px !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
+  }
+  .sakagis-app .coordinate-details-popover {
+    position: fixed;
+    right: 254px;
+    bottom: 90px;
+  }
+  .sakagis-app [data-map-ui="coordinate-bar"] .map-instrument-bar {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+}
+@media (max-width: 1023px) {
+  .sakagis-app .map-instrument-dock {
+    left: 12px !important;
+    right: 58px !important;
+    bottom: calc(152px + env(safe-area-inset-bottom));
+  }
+  .sakagis-app .leaflet-control-zoom { margin-bottom: 98px; }
+  .sakagis-app .studio-overview { bottom: calc(220px + env(safe-area-inset-bottom)); }
+  .studio-overview h1 { font-size: 18px; }
+  .studio-overview .studio-overview-footer { display: none; }
+  .studio-overview-heading > button { width: 44px; height: 44px; }
+  .studio-overview .studio-primary { min-height: 44px; }
+}

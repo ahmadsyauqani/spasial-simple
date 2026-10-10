@@ -293,15 +293,15 @@ export default function MapArea() {
       >
         {/* Basemap Gallery */}
           <div className="relative flex flex-col gap-2">
-          <button onClick={() => setIsBasemapGalleryOpen((value) => !value)} title="Pilih peta dasar" className={`bg-card/70 backdrop-blur-xl text-card-foreground border rounded-full p-2.5 shadow-2xl transition-colors flex items-center justify-center ${isBasemapGalleryOpen ? 'border-primary bg-primary/15' : 'border-border/50 hover:bg-muted/80'}`}>
+          <button id="basemap-trigger" aria-expanded={isBasemapGalleryOpen} aria-controls="basemap-gallery" onClick={() => setIsBasemapGalleryOpen((value) => !value)} title="Pilih peta dasar" className={`bg-card/70 backdrop-blur-xl text-card-foreground border rounded-full p-2.5 shadow-2xl transition-colors flex items-center justify-center ${isBasemapGalleryOpen ? 'border-primary bg-primary/15' : 'border-border/50 hover:bg-muted/80'}`}>
             <Layers className="w-5 h-5 text-primary" />
           </button>
-          {isBasemapGalleryOpen && <div className="basemap-gallery absolute bottom-full left-0 mb-3 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-border/50 bg-card/90 p-3 shadow-2xl backdrop-blur-2xl">
+          {isBasemapGalleryOpen && <div id="basemap-gallery" role="region" aria-label="Peta dasar" onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); setIsBasemapGalleryOpen(false); document.getElementById('basemap-trigger')?.focus(); } }} className="basemap-gallery absolute bottom-full left-0 mb-3 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-border/50 bg-card/90 p-3 shadow-2xl backdrop-blur-2xl">
             <div className="mb-2 flex items-center justify-between"><div><strong className="block text-[10px] font-black uppercase tracking-widest text-foreground">Basemap Gallery</strong><span className="text-[9px] text-muted-foreground">Pilih sumber peta dasar</span></div><span className="rounded-full bg-primary/15 px-2 py-1 text-[8px] font-bold uppercase text-primary">{BASEMAP_OPTIONS[activeBasemap].name}</span></div>
             <div className="grid grid-cols-2 gap-2">
               {(Object.keys(BASEMAP_OPTIONS) as BasemapType[]).map((key) => {
                 const swatches: Record<BasemapType, string> = { dark: 'linear-gradient(135deg,#111827,#374151)', citra: 'linear-gradient(135deg,#6b8e63,#d4a373)', hybrid: 'linear-gradient(135deg,#365c87,#8ca66b)', citra_terang: 'linear-gradient(135deg,#89a878,#e4c28c)', osm: 'linear-gradient(135deg,#d9e7d4,#f5f1df)', bpn: 'linear-gradient(135deg,#222,#6b7280)' };
-                return <button key={key} type="button" onClick={() => { setActiveBasemap(key); setIsBasemapGalleryOpen(false); }} className={`basemap-card ${activeBasemap === key ? 'active' : ''}`}><span className="basemap-card-thumb" style={{ background: swatches[key] }} /><span className="min-w-0 text-left"><strong>{BASEMAP_OPTIONS[key].name}</strong><small>{activeBasemap === key ? 'Aktif' : 'Pilih basemap'}</small></span></button>;
+                return <button key={key} type="button" aria-pressed={activeBasemap === key} onClick={() => { setActiveBasemap(key); setIsBasemapGalleryOpen(false); document.getElementById('basemap-trigger')?.focus(); }} className={`basemap-card ${activeBasemap === key ? 'active' : ''}`}><span className="basemap-card-thumb" style={{ background: swatches[key] }} /><span className="min-w-0 text-left"><strong>{BASEMAP_OPTIONS[key].name}</strong><small>{activeBasemap === key ? 'Aktif' : 'Pilih basemap'}</small></span></button>;
               })}
             </div>
           </div>

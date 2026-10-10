@@ -247,6 +247,9 @@ interface MapContextType {
   setIsAttributeTableOpen: (val: boolean) => void;
   activeTableLayerId: string | null;
   setActiveTableLayerId: (id: string | null) => void;
+  /** Layer the user focused in the Layer Manager; analysis dialogs pre-fill from it. */
+  selectedLayerId: string | null;
+  setSelectedLayerId: (id: string | null) => void;
   gpsAccuracyPosition: GpsAccuracyPosition | null;
   setGpsAccuracyPosition: React.Dispatch<React.SetStateAction<GpsAccuracyPosition | null>>;
   gpsAccuracySamples: GpsAccuracyPosition[];
@@ -277,6 +280,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
   const [isLayoutComposerOpen, setLayoutComposerOpen] = useState(false);
   const [isAttributeTableOpen, setIsAttributeTableOpen] = useState(false);
   const [activeTableLayerId, setActiveTableLayerId] = useState<string | null>(null);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [gpsAccuracyPosition, setGpsAccuracyPosition] = useState<GpsAccuracyPosition | null>(null);
   const [gpsAccuracySamples, setGpsAccuracySamples] = useState<GpsAccuracyPosition[]>([]);
   const [isGpsAccuracyTracking, setIsGpsAccuracyTracking] = useState(false);
@@ -436,6 +440,7 @@ export function MapProvider({ children }: { children: ReactNode }) {
       BASEMAP_OPTIONS,
       isAttributeTableOpen, setIsAttributeTableOpen,
       activeTableLayerId, setActiveTableLayerId,
+      selectedLayerId, setSelectedLayerId,
       gpsAccuracyPosition, setGpsAccuracyPosition,
       gpsAccuracySamples, setGpsAccuracySamples,
       isGpsAccuracyTracking, setIsGpsAccuracyTracking

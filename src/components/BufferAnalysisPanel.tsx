@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMapContext } from "@/lib/MapContext";
 import * as turf from "@turf/turf";
 import { toast } from "sonner";
@@ -24,10 +24,17 @@ export function BufferAnalysisButton() {
     areaUnit,
     bufferResult,
     setBufferResult,
+    selectedLayerId: focusedLayerId,
   } = useMapContext();
 
   const [isOpen, setIsOpen] = useState(false);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  // Pre-fill from the layer focused in the Layer Manager when the dialog opens.
+  useEffect(() => {
+    if (isOpen && focusedLayerId && !selectedLayerId) setSelectedLayerId(focusedLayerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, focusedLayerId]);
+
   const [bufferDistance, setBufferDistance] = useState<number>(100);
   const [bufferUnit, setBufferUnit] = useState<turf.Units>("meters");
   const [isProcessing, setIsProcessing] = useState(false);
