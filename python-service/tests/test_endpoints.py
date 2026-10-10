@@ -233,3 +233,37 @@ def test_job_polling_flow_and_errors():
     assert job["result"]["detected_crs"]["epsg"] == 4326
     x = job["result"]["geojson"]["features"][0]["geometry"]["coordinates"][0][0][0]
     assert 400000 < x < 500000  # UTM easting
+
+
+def _wait_done(job_id, timeout=30):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        r = client.get(f"/jobs/{job_id}")
+        if r.status_code == 200 and r.json()["status"] in ("done", "error"):
+            return r.json()
+        time.sleep(0.1)
+    raise AssertionError("job did not finish")
+
+
+def test_done_job_is_released_after_first_fetch():
+    fc = {"type": "FeatureCollection", "features": [
+        {"type": "Feature", "properties": {}, "geometry": box(112.95, -7.94, 112.951, -7.939).__geo_interface__}]}
+    r = client.post("/crs/inspect-reproject", json={"geojson": fc, "sample_only": True})
+    assert r.status_code == 202
+    job_id = r.json()["job_id"]
+    first = _wait_done(job_id)
+    assert first["status"] == "done" and "result" in first
+    # Memory is freed once the terminal state has been delivered.
+    assert client.get(f"/jobs/{job_id}").status_code == 404
+
+
+def test_cors_allowlist():
+    ok = client.options("/jobs/x", headers={"Origin": "https://spasial-simple.vercel.app",
+                                             "Access-Control-Request-Method": "GET"})
+    assert ok.headers.get("access-control-allow-origin") == "https://spasial-simple.vercel.app"
+    preview = client.options("/jobs/x", headers={"Origin": "https://spasial-simple-git-feat-abc.vercel.app",
+                                                  "Access-Control-Request-Method": "GET"})
+    assert preview.headers.get("access-control-allow-origin") == "https://spasial-simple-git-feat-abc.vercel.app"
+    bad = client.options("/jobs/x", headers={"Origin": "https://evil.example",
+                                              "Access-Control-Request-Method": "GET"})
+    assert "access-control-allow-origin" not in bad.headers

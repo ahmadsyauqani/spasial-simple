@@ -94,6 +94,11 @@ def get_job(job_id: str) -> Optional[Dict[str, Any]]:
         return dict(job) if job else None
 
 
+def delete_job(job_id: str) -> None:
+    with _jobs_lock:
+        _jobs.pop(job_id, None)
+
+
 def job_public_view(job: Dict[str, Any]) -> Dict[str, Any]:
     out = {"status": job["status"], "progress": job["progress"], "message": job["message"]}
     if job["status"] == "done":

@@ -8,10 +8,20 @@ import json
 
 app = FastAPI(title="GeoPackage Converter API", version="1.0.0")
 
-# Configure CORS so the Next.js frontend can call this API
+# Configure CORS so the Next.js frontend can call this API.
+# Default allowlist covers production + Vercel preview deploys + local dev;
+# override with a comma-separated CORS_ORIGINS env var.
+_default_origins = [
+    "https://spasial-simple.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:3100",
+    "http://127.0.0.1:3000",
+]
+_env_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, change this to your Vercel URL
+    allow_origins=_env_origins or _default_origins,
+    allow_origin_regex=r"https://spasial-simple(-[a-z0-9-]+)?\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -591,7 +601,12 @@ def get_job_status(job_id: str):
     job = _gt.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job tidak ditemukan atau sudah kedaluwarsa")
-    return JSONResponse(content=_gt.job_public_view(job))
+    view = _gt.job_public_view(job)
+    # Results can be large GeoJSON; free the memory as soon as the client has
+    # received a terminal state instead of holding it for the full TTL.
+    if job["status"] in ("done", "error"):
+        _gt.delete_job(job_id)
+    return JSONResponse(content=view)
 
 
 @app.post("/crs/inspect-reproject", status_code=202)

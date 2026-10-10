@@ -42,10 +42,13 @@ type DetectedCrs = {
 
 type Confidence = "declared" | "guessed" | "unknown";
 
+type CrsCandidate = { epsg: number; kind: string; zone?: string | number; lon?: number; lat?: number; on_land?: boolean };
+
 type InspectResult = {
   detected_crs: DetectedCrs;
   confidence: Confidence;
   guess_reason?: string | null;
+  crs_candidates?: CrsCandidate[];
   bounds_source?: number[] | null;
   bounds_wgs84?: number[] | null;
   feature_count?: number;
@@ -655,6 +658,34 @@ export function CrsReprojectButton() {
                   {inspectResult.guess_reason && (
                     <div className="mt-2 text-[10px] leading-relaxed text-amber-200/80">
                       <b>Alasan:</b> {inspectResult.guess_reason}
+                    </div>
+                  )}
+                  {/* TM-3 zones share identical false easting/northing, so the server
+                      cannot pick one reliably; let the user choose from ranked candidates. */}
+                  {confidence !== "declared" && (inspectResult.crs_candidates?.length ?? 0) > 1 && (
+                    <div className="mt-2">
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-200/80">
+                        Pilih zona sumber yang benar
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {inspectResult.crs_candidates!.slice(0, 8).map((c) => {
+                          const active = String(c.epsg) === sourceEpsgOverride;
+                          const label = c.kind === "TM3" ? `TM-3 ${c.zone}` : c.kind.startsWith("UTM") ? `UTM ${c.zone}${c.kind.endsWith("S") ? "S" : "N"}` : "WGS84";
+                          return (
+                            <button
+                              key={c.epsg}
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => setSourceEpsgOverride(String(c.epsg))}
+                              title={c.lon != null && c.lat != null ? `Pusat data ≈ ${c.lat.toFixed(3)}, ${c.lon.toFixed(3)}${c.on_land ? " · di darat" : " · di laut"}` : undefined}
+                              className={`rounded-full border px-2 py-1 text-[10px] font-bold transition-colors ${active ? "border-amber-400/60 bg-amber-500/20 text-amber-100" : "border-white/10 bg-black/20 text-white/70 hover:bg-white/10"}`}
+                            >
+                              {label} <span className="font-mono opacity-70">{c.epsg}</span>
+                              {c.on_land === false && <span className="ml-1 text-rose-300">⚠</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                   {detected?.proj4 && (
