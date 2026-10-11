@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useMapContext } from "@/lib/MapContext";
+import { normalizeJobStatus, useAnalysisHistory } from "@/lib/AnalysisHistoryContext";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -167,6 +168,8 @@ export function TopologyAutofixButton() {
   const { layers, layerGeojsonCache, setZoomFeature, fetchLayers,
     selectedLayerId: focusedLayerId,
   } = useMapContext();
+  const { startJob, updateJob, completeJob, failJob } = useAnalysisHistory();
+  const historyRunRef = useRef<string | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [targetLayerId, setTargetLayerId] = useState("");
@@ -229,6 +232,13 @@ export function TopologyAutofixButton() {
         status.message ||
         (status.status === "queued" ? "Menunggu antrean..." : status.status === "running" ? "Memproses..." : ""),
     });
+    if (historyRunRef.current) {
+      const raw = Number(status.progress) || 0;
+      updateJob(historyRunRef.current, normalizeJobStatus(status.status), {
+        progress: raw <= 1 ? raw * 100 : raw,
+        message: status.message,
+      });
+    }
   };
 
   const runAutofix = async () => {
@@ -245,6 +255,8 @@ export function TopologyAutofixButton() {
       return;
     }
 
+    const historyId = startJob({ label: "Auto-fix Topologi", operation: "topology-autofix", sourceNames: [selectedLayer.name], rerun: () => runAutofix() });
+    historyRunRef.current = historyId;
     setIsProcessing(true);
     setResult(null);
     setProgress({ percent: 0, message: "Mengunggah data ke server..." });
@@ -273,12 +285,18 @@ export function TopologyAutofixButton() {
         report: data.report || {},
         changes: Array.isArray(data.changes) ? data.changes : [],
       });
+      completeJob(historyId, {
+        geojson: data.geojson,
+        report: data.report || {},
+        summary: { changes: Array.isArray(data.changes) ? data.changes.length : 0, featuresOut: data.report?.features_out ?? data.geojson.features.length },
+      });
       setProgress(null);
       toast.success(
         `Auto-fix selesai: ${formatCount(Array.isArray(data.changes) ? data.changes.length : 0)} perubahan pada ${formatCount(data.report?.features_out ?? data.geojson.features.length)} bidang.`,
       );
     } catch (err: any) {
       console.error("Autofix error:", err);
+      failJob(historyId, err?.message || String(err));
       toast.error(`Gagal menjalankan auto-fix: ${err?.message || err}`);
       setProgress(null);
     } finally {
@@ -363,7 +381,6 @@ export function TopologyAutofixButton() {
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (isProcessing && !open) return;
         setIsOpen(open);
       }}
     >
@@ -629,7 +646,7 @@ export function TopologyAutofixButton() {
         </div>
 
         <DialogFooter className="border-t pt-4 flex-wrap gap-2">
-          <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isProcessing}>
+          <Button variant="ghost" onClick={() => setIsOpen(false)}>
             Tutup
           </Button>
           {result && (

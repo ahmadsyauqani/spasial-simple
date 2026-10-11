@@ -12,11 +12,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, updateFeaturePropertiesInSupabase } from "@/lib/database";
-import Draggable from 'react-draggable';
+import { useAuth } from "@/lib/AuthContext";
 import * as turf from "@turf/turf";
 import { cn } from "@/lib/utils";
 
 export function DigitizePanel() {
+  const { isGuest } = useAuth();
   const { 
     layers, setLayers, 
     layerGeojsonCache, cacheLayerGeojson,
@@ -198,7 +199,7 @@ export function DigitizePanel() {
     const { layerId, featureIndex } = activeEditFeature;
     const db_id = updatedProps.db_id;
 
-    if (db_id) {
+    if (db_id && !isGuest && !layerId.startsWith("local-")) {
       try {
         toast.loading("Updating database...", { id: "attr" });
         await updateFeaturePropertiesInSupabase(db_id, updatedProps);
@@ -209,9 +210,10 @@ export function DigitizePanel() {
       }
     }
 
-    const fc = { ...layerGeojsonCache[layerId] };
-    if (fc && fc.features[featureIndex]) {
-      fc.features[featureIndex].properties = updatedProps;
+    const source = layerGeojsonCache[layerId];
+    const index = featureIndex >= 0 ? featureIndex : source?.features.findIndex((feature: any) => feature.properties?.db_id === db_id);
+    const fc = source ? { ...source, features: source.features.map((feature: any, i: number) => i === index ? { ...feature, properties: updatedProps } : feature) } : null;
+    if (fc && index >= 0) {
       cacheLayerGeojson(layerId, fc);
       setLayers(prev => [...prev]);
       setActiveEditFeature(null);
@@ -444,8 +446,8 @@ export function DigitizePanel() {
 
       {/* Floating Draggable Attribute Inspector */}
       {activeEditFeature && (
-        <Draggable handle=".inspector-handle" bounds="body" nodeRef={nodeRef}>
-          <div ref={nodeRef} className="fixed top-24 left-[380px] z-[9999] w-[350px] bg-[#1a1c1e] text-gray-200 border border-orange-500/40 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+        <section aria-label="Edit atribut fitur">
+          <div ref={nodeRef} className="relative w-full min-w-0 bg-[#1a1c1e] text-gray-200 border border-orange-500/40 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
             {/* Window Header / Drag Handle */}
             <div className="inspector-handle bg-[#25282c] px-4 py-3.5 flex items-center justify-between border-b border-white/10 cursor-grab active:cursor-grabbing">
               <div className="flex items-center gap-2.5">
@@ -482,10 +484,11 @@ export function DigitizePanel() {
                        </div>
                        <textarea 
                          rows={1}
-                         defaultValue={props[f] || ""}
+                         value={props[f] ?? ""}
+                         aria-label={f}
                          placeholder={`Value for ${f}...`}
                          className="w-full bg-[#2a2d31] border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500/40 transition-all resize-none shadow-inner"
-                         onBlur={(e) => {
+                         onChange={(e) => {
                            const newProps = { ...activeEditFeature.properties, [f]: e.target.value };
                            setActiveEditFeature({ ...activeEditFeature, properties: newProps });
                          }}
@@ -505,10 +508,10 @@ export function DigitizePanel() {
             </div>
             
             <div className="bg-[#1e2023] px-4 py-2 border-t border-white/5 flex justify-center">
-               <span className="text-[8px] text-gray-600 font-medium">SAKAGIS Pro Inspector • Floating Mode</span>
+               <span className="text-[8px] text-gray-600 font-medium">Atribut fitur • layer sumber</span>
             </div>
           </div>
-        </Draggable>
+        </section>
       )}
     </>
   );

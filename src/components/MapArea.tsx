@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { MapContainer, TileLayer, ZoomControl, GeoJSON, CircleMarker, Circle, Marker, useMap, ImageOverlay, Polyline, Popup, Polygon, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
@@ -10,6 +10,9 @@ import { useMapContext, BASEMAP_OPTIONS, type BasemapType, type GpsAccuracyPosit
 import { Layers, LocateFixed, Loader2, Lock, Unlock, Magnet, MousePointer2, Settings2, Crosshair, Activity, Maximize, Compass, Ruler, Square } from "lucide-react";
 import { createOfflineTileLayer } from "@/lib/OfflineTileLayer";
 import { OfflineMapManager } from "./OfflineMapManager";
+import { useWorkspaceUI } from "@/lib/WorkspaceUIContext";
+import { useAnalysisHistory } from "@/lib/AnalysisHistoryContext";
+import AnalysisPreviewLayer from "./AnalysisPreviewLayer";
 
 // Fix for default Leaflet markers in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -156,17 +159,9 @@ function MapController() {
     // Sync initial state
     syncViewState();
 
-    const handleMapBlankClick = () => {
-      const selected = (map as L.Map & { _sakagisSelectedLayer?: any })._sakagisSelectedLayer;
-      if (!selected) return;
-      selected.setStyle(selected._sakagisBaseStyle || {});
-      selected._path?.classList.remove('parcel-selected');
-      (map as L.Map & { _sakagisSelectedLayer?: any })._sakagisSelectedLayer = undefined;
-    };
-    map.on('click', handleMapBlankClick);
 
     return () => {
-      map.off('click', handleMapBlankClick);
+
       map.pm.removeControls();
       document.removeEventListener('keydown', handleKeyDown);
       map.off('pm:edit', handleEdit);
@@ -230,6 +225,7 @@ function TileLayerWithOffline({ url, attribution, crossOrigin }: { url: string, 
 }
 
 export default function MapArea() {
+  const { activePreview } = useAnalysisHistory();
   const { 
     activeFeatureToZoom, layers, activeBasemap, setActiveBasemap, pdfOverlays,
     isTracking, trackingPath, gpsAccuracyPosition, gpsAccuracySamples, isGpsAccuracyTracking
@@ -367,6 +363,7 @@ export default function MapArea() {
           <LayerFeature key={layer.id!} layer={layer} />
         ))}
 
+        {!activePreview && <>
         <OverlapLayer />
         <ClipLayer />
         <MergeLayer />
@@ -375,8 +372,10 @@ export default function MapArea() {
         <DissolveLayer />
         <SpatialJoinLayer />
         <SliverLayer />
-        <SearchResultMarker />
         <TopologyErrorLayer />
+        </>}
+        <AnalysisPreviewLayer />
+        <SearchResultMarker />
 
         {/* User Location Marker */}
         {userLocation && locationActive && (
@@ -532,8 +531,8 @@ function OverlapLayer() {
         </div>
         <div class="bg-red-900/30 p-2 rounded border border-red-500/20 text-xs mb-2">
           <div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-red-300 font-bold">${format(areaSqm)}</span></div>
-          <div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${format(areaSqm * 0.9992)}</span></div>
-          <div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${format(areaSqm * 0.9998)}</span></div>
+
+
         </div>
         <div class="text-[10px] text-gray-400">${overlapResult?.layerAName} ∩ ${overlapResult?.layerBName}</div>
       </div>
@@ -611,8 +610,8 @@ function ClipLayer() {
     if (areaSqm > 1) {
       html += `<div class="bg-emerald-900/30 p-2 rounded border border-emerald-500/20 text-xs mb-2">`;
       html += `<div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-emerald-300 font-bold">${formatUnit(areaSqm)}</span></div>`;
-      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9992)}</span></div>`;
-      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9998)}</span></div>`;
+
+
       html += `</div>`;
     }
 
@@ -686,8 +685,8 @@ function MergeLayer() {
     if (areaSqm > 1) {
       html += `<div class="bg-violet-900/30 p-2 rounded border border-violet-500/20 text-xs mb-2">`;
       html += `<div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-violet-300 font-bold">${formatUnit(areaSqm)}</span></div>`;
-      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9992)}</span></div>`;
-      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9998)}</span></div>`;
+
+
       html += `</div>`;
     }
 
@@ -756,8 +755,8 @@ function BufferLayer() {
     if (areaSqm > 1) {
       html += `<div class="bg-sky-900/30 p-2 rounded border border-sky-500/20 text-xs mb-2">`;
       html += `<div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-sky-300 font-bold">${formatUnit(areaSqm)}</span></div>`;
-      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9992)}</span></div>`;
-      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9998)}</span></div>`;
+
+
       html += `</div>`;
     }
 
@@ -813,8 +812,8 @@ function UnionLayer() {
     if (areaSqm > 1) {
       html += `<div class="bg-amber-900/30 p-2 rounded border border-amber-500/20 text-xs mb-2">`;
       html += `<div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-amber-300 font-bold">${formatUnit(areaSqm)}</span></div>`;
-      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9992)}</span></div>`;
-      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9998)}</span></div>`;
+
+
       html += `</div>`;
     }
 
@@ -884,8 +883,8 @@ function DissolveLayer() {
     if (areaSqm > 1) {
       html += `<div class="bg-fuchsia-900/30 p-2 rounded border border-fuchsia-500/20 text-xs mb-2">`;
       html += `<div class="flex justify-between mt-1"><span class="text-gray-300">WGS 84</span><span class="font-mono text-fuchsia-300 font-bold">${formatUnit(areaSqm)}</span></div>`;
-      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">UTM</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9992)}</span></div>`;
-      html += `<div class="flex justify-between mt-1"><span class="text-gray-300">TM-3</span><span class="font-mono text-gray-100">${formatUnit(areaSqm * 0.9998)}</span></div>`;
+
+
       html += `</div>`;
     }
 
@@ -1066,7 +1065,7 @@ function CursorCoordinates() {
   const { 
     layers, layerGeojsonCache, 
     isTracking, trackingPath,
-    setActiveDigitizingLayerId, areaUnit
+    activeDigitizingLayerId, setActiveDigitizingLayerId, areaUnit
   } = useMapContext();
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [isLocked, setIsLocked] = useState(false);
@@ -1198,6 +1197,16 @@ function CursorCoordinates() {
   };
 
   useEffect(() => { finishMeasureRef.current = finishMeasure; });
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || target?.closest('input,textarea,select,[contenteditable="true"],[role="dialog"]') || document.querySelector('[role="dialog"][data-state="open"]')) return;
+      if (event.key.toLowerCase() === 'm' && !activeDigitizingLayerId && !map.pm.globalDrawModeEnabled() && !map.pm.globalEditModeEnabled()) { event.preventDefault(); startMeasure('distance'); }
+      if (event.key === 'Escape' && isMeasuringRef.current) cancelMeasure();
+    };
+    document.addEventListener('keydown', key);
+    return () => document.removeEventListener('keydown', key);
+  }, [activeDigitizingLayerId, map]);
 
   const calculateScale = (z: number, l: number) => {
     const metersPerPixel = 156543.03392 * Math.cos(l * Math.PI / 180) / Math.pow(2, z);
@@ -1558,7 +1567,10 @@ function CursorCoordinates() {
 }
 
 function LayerFeature({ layer }: { layer: any }) {
+  const { selectFeature, releaseFeature } = useWorkspaceUI();
   const [featureCollection, setFeatureCollection] = useState<any>(null);
+  const revisionCounter = useRef(0);
+  const geometryRevision = useMemo(() => ++revisionCounter.current, [featureCollection]);
   const { 
     setLayerArea, areaUnit, zoomToLayerId, triggerZoomToLayer, 
     cacheLayerGeojson, layerGeojsonCache, setActiveEditFeature,
@@ -1650,43 +1662,7 @@ function LayerFeature({ layer }: { layer: any }) {
           const areaSqMeters = turf.area(finalData);
           const wgs84_sqm = areaSqMeters;
           
-          let utm_epsg = undefined;
-          let tm3_epsg = undefined;
-          let utm_sqm = undefined;
-          let tm3_sqm = undefined;
-
-          // Estimasi Planar Area berdasarkan Centroid untuk Proyeksi Lokal Indonesia
-          try {
-            const centroid = turf.centroid(finalData).geometry.coordinates; // [lng, lat]
-            const lng = centroid[0];
-            const lat = centroid[1];
-            
-            // UTM Zone Calculation (Universal)
-            const utmZone = Math.floor((lng + 180) / 6) + 1;
-            const isSouth = lat < 0;
-            utm_epsg = `${isSouth ? 32700 + utmZone : 32600 + utmZone}`;
-            utm_sqm = wgs84_sqm * 0.9992;
-            
-            // TM-3 Zone Calculation (Khusus ATR/BPN Indonesia)
-            // CM Dasar Indonesia: Sabang 94.5 (EPSG:23826 Zone 46.1)
-            const tm3Index = Math.round((lng - 94.5) / 3);
-            if (tm3Index >= 0 && tm3Index <= 20) {
-              const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
-              const subZone = (tm3Index % 2 === 0) ? 2 : 1;
-              tm3_epsg = `${23826 + tm3Index} (Zona ${baseZone}-${subZone})`;
-              tm3_sqm = wgs84_sqm * 0.9998;
-            }
-          } catch (internalE) {
-             console.warn("Gagal kalkulasi centroid lokal", internalE);
-          }
-
-          setLayerArea(layer.id, {
-            wgs84_sqm,
-            utm_sqm,
-            utm_epsg,
-            tm3_sqm,
-            tm3_epsg
-          });
+          setLayerArea(layer.id, { wgs84_sqm });
         } catch (e) {
           console.warn("Gagal menghitung luas Turf:", e);
         }
@@ -1727,248 +1703,23 @@ function LayerFeature({ layer }: { layer: any }) {
     // Enable snapping for this layer in Geoman
     mapLayer.options.snappable = true;
 
-    // Digitizing Edit Trigger
-    // Keep one clearly selected feature at a time. The selection effect is
-    // intentionally local to the map layer, so it does not mutate GeoJSON.
-    (mapLayer as any)._sakagisBaseStyle = style;
-    mapLayer.on('click', (e: L.LeafletMouseEvent) => {
-      L.DomEvent.stopPropagation(e);
-      const leafletMap = mapLayer._map as (L.Map & { _sakagisSelectedLayer?: any }) | undefined;
-      const previous = leafletMap?._sakagisSelectedLayer;
-      if (previous && previous !== mapLayer) {
-        previous.setStyle(previous._sakagisBaseStyle || style);
-        previous._path?.classList.remove('parcel-selected');
-      }
-      if (leafletMap) leafletMap._sakagisSelectedLayer = mapLayer;
-      mapLayer._sakagisBaseStyle = style;
-      mapLayer.setStyle({
-        weight: 4,
-        color: '#a7cec1',
-        fillColor: '#8fc7b7',
-        fillOpacity: Math.min(0.62, Math.max(0.32, Number(style.fillOpacity ?? 0.2) + 0.2)),
-        className: 'parcel-selected',
-      });
-      mapLayer._path?.classList.add('parcel-selected');
-      mapLayer.bringToFront?.();
-      // Popup content remains the detailed action surface for the selected field.
+    mapLayer.options.bubblingMouseEvents = false;
+    const id = feature.properties?.NIB ?? feature.properties?.nib ?? feature.properties?.id_bidang ?? feature.id ?? feature.properties?.ID ?? "Tanpa ID";
+    mapLayer.on('add', () => mapLayer.getElement()?.setAttribute('data-feature-id', String(id)));
+    mapLayer.on('remove', () => releaseFeature(mapLayer));
+    mapLayer.on('click', (event: L.LeafletMouseEvent) => {
+      if (map.pm.globalDrawModeEnabled() || map.pm.globalEditModeEnabled()) return;
+      if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+      const source = layerGeojsonCache[layer.id];
+      const index = source?.features?.findIndex((item: any) => item === feature || JSON.stringify(item.geometry) === JSON.stringify(feature.geometry)) ?? -1;
+      selectFeature({ layerId: layer.id, layerName: layer.name, feature, featureIndex: index, path: mapLayer });
     });
-
-    if (feature.properties) {
-      const parcelId = feature.properties.NIB ?? feature.properties.nib ?? feature.properties.id_bidang ?? feature.properties.ID ?? feature.properties.FID ?? "Tanpa ID";
-      const featureGeometryType = feature.geometry?.type || "Unknown";
-      
-      // Hitung luas, panjang, keliling menggunakan Turf
-      let localAreaHtml = "";
-      try {
-         const geomType = feature.geometry.type;
-         
-         if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
-            const wgsSqM = turf.area(feature);
-            let perimeterM = 0;
-            try {
-              perimeterM = turf.length(feature, { units: 'meters' });
-            } catch(e) {
-              console.warn("Gagal menghitung keliling:", e);
-            }
-
-            if (wgsSqM > 1) { 
-               let utmSqM = wgsSqM * 0.9992;
-               let tm3SqM = wgsSqM * 0.9998;
-               
-               let utm_epsg = "";
-               let tm3_epsg = "";
-               try {
-                 const centroid = turf.centroid(feature).geometry.coordinates; // [lng, lat]
-                 const lng = centroid[0];
-                 const lat = centroid[1];
-                 const utmZone = Math.floor((lng + 180) / 6) + 1;
-                 utm_epsg = ` Zona ${utmZone}`;
-                 const tm3Index = Math.round((lng - 94.5) / 3);
-                 if (tm3Index >= 0 && tm3Index <= 20) {
-                   const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
-                   const subZone = (tm3Index % 2 === 0) ? 2 : 1;
-                   tm3_epsg = ` Zona ${baseZone}-${subZone}`;
-                 }
-               } catch(e) {}
-                
-               localAreaHtml += `
-               <div class="mb-2 bg-black/40 p-2 text-xs rounded border border-primary/20">
-                 <span class="text-[10px] uppercase font-bold text-white/50 mb-1 block tracking-wider">📐 Area Poligon</span>
-                 <div class="flex justify-between items-center mt-1">
-                    <span class="text-gray-300">Luas (WGS 84)</span>
-                    <span class="font-mono text-primary font-bold">${formatUnit(wgsSqM)}</span>
-                 </div>
-                 <div class="flex justify-between items-center mt-1">
-                    <span class="text-gray-300">Luas (UTM${utm_epsg})</span>
-                    <span class="font-mono text-gray-100">${formatUnit(utmSqM)}</span>
-                 </div>
-                 <div class="flex justify-between items-center mt-1">
-                    <span class="text-gray-300">Luas (TM-3${tm3_epsg})</span>
-                    <span class="font-mono text-gray-100">${formatUnit(tm3SqM)}</span>
-                 </div>
-                 <div class="flex justify-between items-center mt-1 border-t border-white/10 pt-1">
-                    <span class="text-gray-300">Keliling</span>
-                    <span class="font-mono text-indigo-400 font-bold">${formatLength(perimeterM)}</span>
-                 </div>
-               </div>`;
-            }
-         } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
-            const lengthM = turf.length(feature, { units: 'meters' });
-            
-            localAreaHtml += `
-            <div class="mb-2 bg-black/40 p-2 text-xs rounded border border-primary/20">
-              <span class="text-[10px] uppercase font-bold text-white/50 mb-1 block tracking-wider">📏 Garis</span>
-              <div class="flex justify-between items-center mt-1">
-                 <span class="text-gray-300">Panjang</span>
-                 <span class="font-mono text-primary font-bold">${formatLength(lengthM)}</span>
-              </div>
-            </div>`;
-         }
-      } catch(e) {
-         console.warn("Gagal menghitung dimensi:", e);
-      }
-
-      // Build an elegant HTML table for the properties
-      let popupContent = `<div class="p-2 min-w-[230px] flex flex-col gap-2">`;
-      popupContent += `<div class="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-2.5"><div class="flex items-center justify-between gap-2"><h4 class="font-black text-sm text-white tracking-wide">Detail Bidang</h4><span class="rounded-full bg-cyan-400/15 px-2 py-0.5 text-[9px] font-bold uppercase text-cyan-300">${featureGeometryType}</span></div><div class="mt-1 font-mono text-[11px] font-bold text-cyan-200">${parcelId}</div></div>`;
-      popupContent += `<h4 class="font-bold text-[10px] uppercase tracking-widest border-b border-white/20 pb-1 mb-1 text-white/60">Informasi Atribut</h4>`;
-      popupContent += localAreaHtml;
-      popupContent += `<div class="max-h-48 overflow-y-auto pr-2 text-sm">`;
-      popupContent += `<table class="w-full text-left border-collapse"><tbody>`;
-      for (const key in feature.properties) {
-        if (key === "db_id" || key === "FID") continue; // Sembunyikan field internal
-        const value = feature.properties[key];
-        let displayValue = value === null ? "null" : value;
-        
-        // Jika value adalah data URL gambar (Base64), tampilkan sebagai <img>
-        if (typeof value === 'string' && value.startsWith('data:image/')) {
-          displayValue = `<div class="mt-1"><img src="${value}" class="max-w-[150px] h-auto rounded border border-white/20" alt="${key}" /></div>`;
-        }
-        
-        popupContent += `
-          <tr class="border-b border-white/10 last:border-0 hover:bg-white/10 transition-colors">
-            <td class="py-1.5 pr-3 font-medium text-gray-300 w-1/3 align-top">${key}</td>
-            <td class="py-1.5 text-white font-mono break-words">${displayValue}</td>
-          </tr>
-        `;
-      }
-      
-      const btnId = `edit-btn-${Math.random().toString(36).substr(2, 9)}`;
-      const zoomBtnId = `zoom-btn-${Math.random().toString(36).substr(2, 9)}`;
-      const copyBtnId = `copy-btn-${Math.random().toString(36).substr(2, 9)}`;
-      const exportBtnId = `export-btn-${Math.random().toString(36).substr(2, 9)}`;
-      popupContent += `</tbody></table></div>`;
-      
-      // Action toolbar bidang
-      popupContent += `
-        <div class="mt-3 pt-2 border-t border-white/10 grid grid-cols-4 gap-1">
-          <button id="${zoomBtnId}" class="px-2 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/35 text-indigo-200 text-[9px] font-black uppercase rounded-lg">Zoom</button>
-          <button id="${copyBtnId}" class="px-2 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-200 text-[9px] font-black uppercase rounded-lg">Copy ID</button>
-          <button id="${exportBtnId}" class="px-2 py-1.5 bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase rounded-lg">Export</button>
-          <button id="${btnId}" class="px-2 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[9px] font-black uppercase rounded-lg">Edit</button>
-        </div>
-      `;
-
-      popupContent += `</div>`;
-      mapLayer.bindPopup(popupContent, {
-        className: "custom-popup-dark",
-        maxWidth: 300
-      });
-
-      // Efek Visual (Highlight) ketika di-klik / popup terbuka
-      mapLayer.on('popupopen', (e: any) => {
-        // Bind event ke tombol edit di dalam popup
-        const editBtn = document.getElementById(btnId);
-        const zoomBtn = document.getElementById(zoomBtnId);
-        const copyBtn = document.getElementById(copyBtnId);
-        const exportBtn = document.getElementById(exportBtnId);
-        if (zoomBtn) {
-          zoomBtn.onclick = (ev) => {
-            ev.stopPropagation();
-            try {
-              const bounds = mapLayer.getBounds ? mapLayer.getBounds() : null;
-              if (bounds?.isValid?.()) mapLayer._map?.fitBounds(bounds, { padding: [40, 40], maxZoom: 19 });
-            } catch (_) {}
-          };
-        }
-        if (copyBtn) {
-          copyBtn.onclick = (ev) => {
-            ev.stopPropagation();
-            const value = String(parcelId);
-            navigator.clipboard?.writeText(value).then(() => toast.success("ID bidang disalin."));
-          };
-        }
-        if (exportBtn) {
-          exportBtn.onclick = (ev) => {
-            ev.stopPropagation();
-            window.dispatchEvent(new CustomEvent("sakagis:export-feature", {
-              detail: { feature, fileName: String(parcelId).replace(/\s+/g, '_') || 'fitur' }
-            }));
-            mapLayer.closePopup();
-          };
-        }
-        if (editBtn) {
-          editBtn.onclick = (ev) => {
-            ev.stopPropagation();
-            const isLocal = layer.id?.startsWith('local-');
-            if (isLocal) {
-              const fc = layerGeojsonCache[layer.id];
-              const featureIndex = fc?.features.findIndex((f: any) => 
-                JSON.stringify(f.geometry.coordinates) === JSON.stringify(feature.geometry.coordinates)
-              );
-              setActiveEditFeature({
-                layerId: layer.id,
-                featureIndex: featureIndex !== undefined ? featureIndex : -1,
-                properties: feature.properties || {}
-              });
-            } else {
-              setActiveEditFeature({ 
-                layerId: layer.id, 
-                featureIndex: -1, 
-                properties: feature.properties || {} 
-              });
-            }
-            setIsDigitizePanelExpanded(true);
-            mapLayer.closePopup();
-          };
-        }
-
-        const l = e.target;
-        l.setStyle({
-          weight: 4,
-          color: '#00f6ff',
-          fillOpacity: 0.6,
-          className: 'bling-bling-polygon'
-        });
-        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-          l.bringToFront();
-        }
-      });
-
-      // Kembalikan seperti semula ketika popup ditutup
-      mapLayer.on('popupclose', (e: any) => {
-        const leafletMap = mapLayer._map as (L.Map & { _sakagisSelectedLayer?: any }) | undefined;
-        if (leafletMap?._sakagisSelectedLayer === mapLayer) {
-          mapLayer.setStyle({
-            ...style,
-            weight: 4,
-            color: '#a7cec1',
-            fillColor: '#8fc7b7',
-            fillOpacity: Math.min(0.62, Math.max(0.32, Number(style.fillOpacity ?? 0.2) + 0.2)),
-            className: 'parcel-selected',
-          });
-        } else {
-          e.target.setStyle(style);
-          e.target._path?.classList.remove('parcel-selected');
-        }
-      });
-    }
   };
 
   return (
     <GeoJSON 
       data={featureCollection}
-      key={`${layer.id}-${featureCollection?.features?.length || 0}-${JSON.stringify(style)}-${areaUnit}`}
+      key={`${layer.id}-${geometryRevision}-${JSON.stringify(style)}`}
       style={() => style}
       pointToLayer={(feature, latlng) => {
         return L.circleMarker(latlng, {

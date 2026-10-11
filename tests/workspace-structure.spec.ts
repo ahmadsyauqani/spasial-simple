@@ -4,6 +4,7 @@ import { test, expect, type Page } from '@playwright/test';
 test.skip(!process.env.E2E_BASE_URL && !process.env.CI, 'needs running dev server');
 
 async function enterGuest(page: Page) {
+  await page.route('**/*.supabase.co/**', route => route.fulfill({status:200,contentType:'application/json',body:'[]'}));
   await page.addInitScript(() => localStorage.setItem('sakagis-overview-dismissed', '1'));
   await page.goto('/');
   await page.getByRole('button', { name: 'Guest', exact: true }).click();
@@ -73,11 +74,11 @@ test.describe('desktop', () => {
     await expect(first).toHaveAttribute('data-selected', 'true');
     const actions = page.getByTestId('layer-context-actions');
     await expect(actions).toBeVisible();
-    await expect(actions.getByRole('button', { name: /Tabel atribut/ })).toBeVisible();
+    await expect(actions.getByRole('button', { name: /tabel atribut/i })).toBeVisible();
     await page.screenshot({ path: 'test-results/ws-layer-context.png' });
 
     // "Analisis" jumps to the analysis view with the layer in focus.
-    await actions.getByRole('button', { name: 'Analisis' }).click();
+    await actions.getByRole('button', { name: /Buka analisis/ }).click();
     await expect(page.getByTestId('analysis-focus')).toHaveClass(/is-set/);
     await expect(page.getByTestId('analysis-focus')).toContainText(firstName.slice(0, 12));
 
@@ -89,6 +90,16 @@ test.describe('desktop', () => {
     const label = await dlg.locator('select').first().locator('option:checked').innerText();
     expect(label).toContain(firstName.slice(0, 12));
     await page.screenshot({ path: 'test-results/ws-analysis-prefill.png' });
+
+    // Clicking a parcel gives a spatial selection cue; blank map clears it.
+    await page.keyboard.press('Escape');
+    await page.getByTitle('Tutup Panel',{exact:true}).click();
+    const parcel = page.locator('path[data-feature-id="T1"]');
+    await expect(parcel).toBeVisible();
+    await parcel.click();
+    await expect(parcel).toHaveClass(/parcel-selected/);
+    await page.locator('.leaflet-container').click({ position: { x: 90, y: 180 } });
+    await expect(parcel).not.toHaveClass(/parcel-selected/);
   });
 });
 

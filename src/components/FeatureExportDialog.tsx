@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import * as turf from "@turf/turf";
 import tokml from "tokml";
 import { getProj4Def } from "@/lib/crs";
+import { useWorkspaceUI } from "@/lib/WorkspaceUIContext";
 
 type ExportFormat = "geojson" | "kml" | "csv";
 type ExportRequest = { feature: any; fileName: string } | null;
@@ -28,7 +29,7 @@ function download(content: BlobPart, fileName: string, type: string) {
 }
 
 export function FeatureExportDialogHost() {
-  const [request, setRequest] = useState<ExportRequest>(null);
+  const { exportRequest: request, setExportRequest: setRequest } = useWorkspaceUI();
 
   useEffect(() => {
     const handle = (event: Event) => {

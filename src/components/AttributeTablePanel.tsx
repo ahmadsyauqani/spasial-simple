@@ -1,8 +1,15 @@
 "use client";
 
 import { useMapContext } from "@/lib/MapContext";
+import { useAuth } from "@/lib/AuthContext";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { X, Search, Table2, Layers, SearchX, Check, Minus, Maximize2, Minimize2, GripVertical, Pencil, Save, Merge, Unlink } from "lucide-react";
+import {
+  ATTRIBUTE_TABLE_ROW_HEIGHT,
+  getVirtualWindow,
+  indexAndFilterFeatures,
+  type AttributeTableRow,
+} from "./attributeTableVirtualization";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Draggable from "react-draggable";
@@ -22,6 +29,7 @@ function useIsMobile() {
 }
 
 export function AttributeTablePanel() {
+  const { isGuest } = useAuth();
   const {
     isAttributeTableOpen,
     setIsAttributeTableOpen,
@@ -49,6 +57,9 @@ export function AttributeTablePanel() {
   const nodeRef = useRef<HTMLDivElement>(null);
   const resizeStartRef = useRef<{ x: number, y: number, w: number, h: number } | null>(null);
   const positionedRef = useRef(false);
+  const tableBodyRef = useRef<HTMLDivElement>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const [tableViewport, setTableViewport] = useState({ scrollTop: 0, height: 320 });
 
   // Center the window on first open
   useEffect(() => {
@@ -119,6 +130,70 @@ export function AttributeTablePanel() {
     setSelectedIds(new Set());
   }, [activeTableLayerId]);
 
+  // The table uses fixed-height rows, so only the visible slice plus overscan
+  // is mounted. ResizeObserver keeps the window correct for resize/maximize.
+  useEffect(() => {
+    const element = tableBodyRef.current;
+    if (!element || isMinimized) return;
+
+    const updateViewport = () => {
+      setTableViewport({
+        scrollTop: element.scrollTop,
+        height: element.clientHeight || 320,
+      });
+    };
+    updateViewport();
+
+    const observer = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(updateViewport)
+      : null;
+    observer?.observe(element);
+    return () => observer?.disconnect();
+  }, [activeTableLayerId, isMaximized, isMinimized, isMobile]);
+
+  useEffect(() => {
+    const element = tableBodyRef.current;
+    if (!element) return;
+    element.scrollTop = 0;
+    setTableViewport({ scrollTop: 0, height: element.clientHeight || 320 });
+  }, [activeTableLayerId, searchTerm]);
+
+  useEffect(() => () => {
+    if (scrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollFrameRef.current);
+    }
+  }, []);
+
+  const handleTableScroll = () => {
+    const element = tableBodyRef.current;
+    if (!element || scrollFrameRef.current !== null) return;
+    scrollFrameRef.current = window.requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      setTableViewport({
+        scrollTop: element.scrollTop,
+        height: element.clientHeight || 320,
+      });
+    });
+  };
+
+  const handleTableKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const element = tableBodyRef.current;
+    if (!element) return;
+    if (event.key === "PageDown" || event.key === "PageUp") {
+      event.preventDefault();
+      element.scrollBy({
+        top: event.key === "PageDown" ? element.clientHeight : -element.clientHeight,
+        behavior: "auto",
+      });
+    } else if (event.key === "Home" && event.ctrlKey) {
+      event.preventDefault();
+      element.scrollTo({ top: 0, behavior: "auto" });
+    } else if (event.key === "End" && event.ctrlKey) {
+      event.preventDefault();
+      element.scrollTo({ top: element.scrollHeight, behavior: "auto" });
+    }
+  };
+
   const activeGeoJson = activeTableLayerId ? layerGeojsonCache[activeTableLayerId] : null;
 
   // Extract all unique headers (property keys) from the features
@@ -133,21 +208,21 @@ export function AttributeTablePanel() {
     return Array.from(keys);
   }, [activeGeoJson]);
 
-  // Filter features based on search term
-  const filteredFeatures = useMemo(() => {
+  // Filter rows without cloning feature objects. The source index remains stable
+  // through filtering and virtualized rendering.
+  const filteredFeatures = useMemo<AttributeTableRow[]>(() => {
     if (!activeGeoJson || !activeGeoJson.features) return [];
-    if (!searchTerm) return activeGeoJson.features.map((f: any, i: number) => ({ ...f, _originalIndex: i }));
-
-    const lowerSearch = searchTerm.toLowerCase();
-    return activeGeoJson.features
-      .map((f: any, i: number) => ({ ...f, _originalIndex: i }))
-      .filter((f: any) => {
-        if (!f.properties) return false;
-        return Object.values(f.properties).some(val =>
-          String(val).toLowerCase().includes(lowerSearch)
-        );
-      });
+    return indexAndFilterFeatures(activeGeoJson.features, searchTerm);
   }, [activeGeoJson, searchTerm]);
+
+  const virtualWindow = useMemo(
+    () => getVirtualWindow(filteredFeatures.length, tableViewport.scrollTop, tableViewport.height),
+    [filteredFeatures.length, tableViewport],
+  );
+  const visibleFeatures = useMemo(
+    () => filteredFeatures.slice(virtualWindow.startIndex, virtualWindow.endIndex),
+    [filteredFeatures, virtualWindow.startIndex, virtualWindow.endIndex],
+  );
 
   const handleEditSave = async (f: any, key: string, originalIndex: number) => {
     if (!activeTableLayerId || !activeGeoJson) return;
@@ -159,17 +234,13 @@ export function AttributeTablePanel() {
     }
 
     try {
-      if (f.properties.db_id) {
+      if (!isGuest && !activeTableLayerId.startsWith('local-') && f.properties?.db_id) {
         const { updateFeaturePropertiesInSupabase } = await import('@/lib/database');
         const newProps = { ...f.properties, [key]: editValue };
         await updateFeaturePropertiesInSupabase(f.properties.db_id, newProps);
       }
 
-      const updatedFC = { ...activeGeoJson };
-      if (!updatedFC.features[originalIndex].properties) {
-        updatedFC.features[originalIndex].properties = {};
-      }
-      updatedFC.features[originalIndex].properties[key] = editValue;
+      const updatedFC = { ...activeGeoJson, features: activeGeoJson.features.map((feature: any, index: number) => index === originalIndex ? { ...feature, properties: { ...feature.properties, [key]: editValue } } : feature) };
       cacheLayerGeojson(activeTableLayerId, updatedFC);
 
       toast.success(`Atribut diperbarui`);
@@ -189,14 +260,14 @@ export function AttributeTablePanel() {
     }
   };
 
-  const openEditDialog = (f: any) => {
+  const openEditDialog = (f: any, originalIndex: number) => {
     const values: Record<string, string> = {};
     headers.forEach(h => {
       if (h === "db_id" || h === "FID") return;
       const v = f.properties?.[h];
       values[h] = v !== undefined && v !== null ? String(v) : "";
     });
-    setEditingFeature({ originalIndex: f._originalIndex, values });
+    setEditingFeature({ originalIndex, values });
   };
 
   const saveEditDialog = async () => {
@@ -205,13 +276,12 @@ export function AttributeTablePanel() {
     try {
       const newProps = { ...(f.properties || {}), ...editingFeature.values };
 
-      if (f.properties?.db_id) {
+      if (!isGuest && !activeTableLayerId.startsWith('local-') && f.properties?.db_id) {
         const { updateFeaturePropertiesInSupabase } = await import('@/lib/database');
         await updateFeaturePropertiesInSupabase(f.properties.db_id, newProps);
       }
 
-      const updatedFC = { ...activeGeoJson };
-      updatedFC.features[editingFeature.originalIndex].properties = newProps;
+      const updatedFC = { ...activeGeoJson, features: activeGeoJson.features.map((feature: any, index: number) => index === editingFeature.originalIndex ? { ...feature, properties: newProps } : feature) };
       cacheLayerGeojson(activeTableLayerId, updatedFC);
 
       toast.success("Atribut diperbarui");
@@ -232,16 +302,17 @@ export function AttributeTablePanel() {
     });
   };
 
-  const selectedFeatures = filteredFeatures.filter((f: any) => selectedIds.has(f._originalIndex));
+  const selectedRows = filteredFeatures.filter((row) => selectedIds.has(row.originalIndex));
+  const selectedFeatures = selectedRows.map((row) => row.feature as any);
   const selectedCount = selectedFeatures.length;
   const canMerge = selectedCount >= 2 && selectedFeatures.every((f: any) => f.geometry?.type === "Polygon" || f.geometry?.type === "MultiPolygon");
   const canSplit = selectedCount === 1 && selectedFeatures[0]?.geometry?.type === "MultiPolygon";
-  const allSelected = filteredFeatures.length > 0 && filteredFeatures.every((f: any) => selectedIds.has(f._originalIndex));
+  const allSelected = filteredFeatures.length > 0 && filteredFeatures.every((row) => selectedIds.has(row.originalIndex));
 
   const toggleSelectAll = () => {
     setSelectedIds(prev => {
       if (allSelected) return new Set();
-      return new Set(filteredFeatures.map((f: any) => f._originalIndex));
+      return new Set(filteredFeatures.map((row) => row.originalIndex));
     });
   };
 
@@ -253,7 +324,7 @@ export function AttributeTablePanel() {
 
   const mergeSelectedFeatures = async () => {
     if (!activeTableLayerId || !activeGeoJson) return;
-    const selected = filteredFeatures.filter((f: any) => selectedIds.has(f._originalIndex));
+    const selected = selectedFeatures;
     if (selected.length < 2) return;
 
     const polys: any[] = [];
@@ -273,6 +344,8 @@ export function AttributeTablePanel() {
     cacheLayerGeojson(activeTableLayerId, { ...activeGeoJson, features: [...remaining, mergedFeature] });
     setSelectedIds(new Set());
 
+    if (isGuest || activeTableLayerId.startsWith('local-')) { toast.success("Fitur digabung secara lokal"); return; }
+
     try {
       const removedIds = selected.map((f: any) => f.properties?.db_id).filter(Boolean);
       if (removedIds.length) await deleteGeometriesFromSupabase(removedIds);
@@ -284,8 +357,9 @@ export function AttributeTablePanel() {
     }
   };
 
-  const splitFeature = async (f: any) => {
+  const splitFeature = async (row: AttributeTableRow) => {
     if (!activeTableLayerId || !activeGeoJson) return;
+    const f: any = row.feature;
     if (f.geometry?.type !== "MultiPolygon") return;
 
     const parts = f.geometry.coordinates.map((poly: any, i: number) => ({
@@ -294,9 +368,11 @@ export function AttributeTablePanel() {
       geometry: { type: "Polygon", coordinates: poly }
     }));
 
-    const remaining = activeGeoJson.features.filter((_: any, i: number) => i !== f._originalIndex);
+    const remaining = activeGeoJson.features.filter((_: any, i: number) => i !== row.originalIndex);
     cacheLayerGeojson(activeTableLayerId, { ...activeGeoJson, features: [...remaining, ...parts] });
     setSelectedIds(new Set());
+
+    if (isGuest || activeTableLayerId.startsWith('local-')) { toast.success("Fitur dipecah secara lokal"); return; }
 
     try {
       if (f.properties?.db_id) await deleteGeometriesFromSupabase([f.properties.db_id]);
@@ -353,7 +429,7 @@ export function AttributeTablePanel() {
               )}
               {canSplit && (
                 <button
-                  onClick={() => splitFeature(selectedFeatures[0])}
+                  onClick={() => splitFeature(selectedRows[0])}
                   className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/40 transition-colors"
                   title="Pecah MultiPolygon jadi polygon terpisah"
                 >
@@ -373,6 +449,14 @@ export function AttributeTablePanel() {
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0">
+        <span
+          className="hidden md:inline text-[10px] text-muted-foreground whitespace-nowrap"
+          aria-live="polite"
+        >
+          {searchTerm
+            ? `${filteredFeatures.length.toLocaleString('id-ID')} dari ${(activeGeoJson?.features?.length || 0).toLocaleString('id-ID')}`
+            : filteredFeatures.length.toLocaleString('id-ID')} fitur
+        </span>
         <div className="relative hidden sm:block">
           <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
@@ -438,7 +522,15 @@ export function AttributeTablePanel() {
   );
 
   const tableBody = (
-    <div className="flex-1 overflow-auto custom-scrollbar bg-black/10">
+    <div
+      ref={tableBodyRef}
+      className="flex-1 overflow-auto custom-scrollbar bg-black/10"
+      tabIndex={0}
+      role="region"
+      aria-label="Data atribut layer"
+      onScroll={handleTableScroll}
+      onKeyDown={handleTableKeyDown}
+    >
       {!activeGeoJson ? (
         <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
           <Layers className="w-12 h-12 mb-2 opacity-20" />
@@ -450,7 +542,7 @@ export function AttributeTablePanel() {
           <p className="text-sm">Data tidak ditemukan.</p>
         </div>
       ) : (
-        <table className="w-full text-left text-xs border-collapse">
+        <table className="w-full text-left text-xs border-collapse" aria-rowcount={filteredFeatures.length + 1}>
           <thead className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
             <tr>
               <th className="px-2 py-3 font-bold text-muted-foreground bg-black/20 w-8 text-center">
@@ -460,6 +552,7 @@ export function AttributeTablePanel() {
                   onChange={toggleSelectAll}
                   className="accent-orange-500 cursor-pointer"
                   title="Pilih semua"
+                  aria-label="Pilih semua fitur yang ditampilkan"
                 />
               </th>
               <th className="px-4 py-3 font-bold text-muted-foreground whitespace-nowrap bg-black/20 w-12 text-center">No</th>
@@ -472,21 +565,29 @@ export function AttributeTablePanel() {
             </tr>
           </thead>
           <tbody>
-            {filteredFeatures.map((f: any, idx: number) => (
+            {virtualWindow.topSpacerHeight > 0 && (
+              <tr aria-hidden="true">
+                <td colSpan={headers.length + 3} style={{ height: virtualWindow.topSpacerHeight, padding: 0 }} />
+              </tr>
+            )}
+            {visibleFeatures.map(({ feature: f, originalIndex }, visibleIndex) => (
               <tr
-                key={idx}
+                key={originalIndex}
+                aria-rowindex={virtualWindow.startIndex + visibleIndex + 2}
+                style={{ height: ATTRIBUTE_TABLE_ROW_HEIGHT }}
                 className="border-b border-border/30 hover:bg-white/5 transition-colors group"
               >
-                <td className="px-2 py-2 whitespace-nowrap text-center">
+                <td className="px-2 py-2 whitespace-nowrap text-center" style={{ height: ATTRIBUTE_TABLE_ROW_HEIGHT }}>
                   <input
                     type="checkbox"
-                    checked={selectedIds.has(f._originalIndex)}
-                    onChange={() => toggleSelect(f._originalIndex)}
+                    checked={selectedIds.has(originalIndex)}
+                    onChange={() => toggleSelect(originalIndex)}
                     className="accent-orange-500 cursor-pointer"
+                    aria-label={`Pilih fitur ${originalIndex + 1}`}
                   />
                 </td>
                 <td className="px-4 py-2 whitespace-nowrap text-muted-foreground text-center">
-                  {f._originalIndex + 1}
+                  {originalIndex + 1}
                 </td>
                 <td className="px-4 py-2 whitespace-nowrap text-center">
                   <div className="flex items-center justify-center gap-1">
@@ -500,7 +601,7 @@ export function AttributeTablePanel() {
                       Zoom
                     </button>
                     <button
-                      onClick={() => openEditDialog(f)}
+                      onClick={() => openEditDialog(f, originalIndex)}
                       className="text-[10px] px-2 py-1 rounded bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/40 transition-colors"
                       title="Edit atribut fitur ini"
                     >
@@ -509,7 +610,7 @@ export function AttributeTablePanel() {
                   </div>
                 </td>
                 {headers.map(h => {
-                  const isEditing = editingCell?.originalIndex === f._originalIndex && editingCell?.key === h;
+                  const isEditing = editingCell?.originalIndex === originalIndex && editingCell?.key === h;
                   const val = f.properties?.[h] !== undefined && f.properties?.[h] !== null ? String(f.properties[h]) : '';
 
                   return (
@@ -521,7 +622,7 @@ export function AttributeTablePanel() {
                       )}
                       onDoubleClick={() => {
                         if (h !== "db_id" && h !== "FID") {
-                          setEditingCell({ originalIndex: f._originalIndex, key: h });
+                          setEditingCell({ originalIndex, key: h });
                           setEditValue(val);
                         } else {
                           toast.warning("ID Internal tidak bisa diedit.");
@@ -535,8 +636,8 @@ export function AttributeTablePanel() {
                             type="text"
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, f, h, f._originalIndex)}
-                            onBlur={() => handleEditSave(f, h, f._originalIndex)}
+                            onKeyDown={(e) => handleKeyDown(e, f, h, originalIndex)}
+                            onBlur={() => handleEditSave(f, h, originalIndex)}
                             className="w-full bg-black/60 border border-orange-500/50 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                           />
                           <Check className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -551,6 +652,11 @@ export function AttributeTablePanel() {
                 })}
               </tr>
             ))}
+            {virtualWindow.bottomSpacerHeight > 0 && (
+              <tr aria-hidden="true">
+                <td colSpan={headers.length + 3} style={{ height: virtualWindow.bottomSpacerHeight, padding: 0 }} />
+              </tr>
+            )}
           </tbody>
         </table>
       )}

@@ -28,10 +28,13 @@ import { Table2 } from "lucide-react";
 import { UserProfileWidget } from "@/components/UserProfileWidget";
 import { AnalysisResultsPanel } from "@/components/AnalysisResultsPanel";
 import { FeatureExportDialogHost } from "@/components/FeatureExportDialog";
+import { FeatureInspector } from "@/components/FeatureInspector";
+import { useWorkspaceUI } from "@/lib/WorkspaceUIContext";
 
 const SceneExplorer = dynamic(() => import("@/components/SceneExplorer"), { ssr: false });
 
 export default function Home() {
+  const { activeDrawer, setActiveDrawer, request, openWorkspace, consumeRequest } = useWorkspaceUI();
   const [sceneDestination, setSceneDestination] = useState<SceneDestination | null>(null);
   const [isConverterOpen, setIsConverterOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"digitize" | "dataset">("digitize");
@@ -60,6 +63,7 @@ export default function Home() {
   };
 
   const openPanel = (tab: "digitize" | "dataset", tool: "data" | "digitize" | "analysis") => {
+    setActiveDrawer(null);
     panelTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (isDrawing && tool !== "digitize") stopDrawing();
     setIsDeviceHubOpen(false);
@@ -75,6 +79,13 @@ export default function Home() {
     setIsPanelOpen(false);
     panelTriggerRef.current?.focus({ preventScroll: true });
   };
+
+  useEffect(() => {
+    if (isAttributeTableOpen || isGpsPanelOpen || isDeviceHubOpen) {
+      setActiveDrawer(null);
+      setIsPanelOpen(false);
+    }
+  }, [isAttributeTableOpen, isGpsPanelOpen, isDeviceHubOpen, setActiveDrawer]);
 
   // "Analisis" from a layer's contextual actions switches the single workspace panel to the analysis view.
   useEffect(() => {
@@ -92,13 +103,48 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDrawing]);
 
+  useEffect(() => {
+    if (!activeDrawer) return;
+    setIsPanelOpen(false);
+    setIsDeviceHubOpen(false);
+    setIsAttributeTableOpen(false);
+    setLayoutComposerOpen(false);
+  }, [activeDrawer, setIsAttributeTableOpen, setLayoutComposerOpen]);
+
+  useEffect(() => {
+    if (!request) return;
+    setIsDeviceHubOpen(false);
+    setIsAttributeTableOpen(false);
+    setLayoutComposerOpen(false);
+    setActiveDrawer(null);
+    setActiveTool(request.target);
+    setActiveTab(request.target === "analysis" ? "dataset" : "digitize");
+    setIsPanelOpen(true);
+    if (!request.toolKey) consumeRequest(request.token);
+  }, [request, consumeRequest, setActiveDrawer, setIsAttributeTableOpen, setLayoutComposerOpen]);
+
+  useEffect(() => {
+    const digitize = () => openWorkspace("digitize");
+    const run = (event: Event) => {
+      const key = (event as CustomEvent<{toolKey?: string}>).detail?.toolKey;
+      if (key) openWorkspace("analysis", key);
+    };
+    document.addEventListener("sakagis:open-digitize", digitize);
+    document.addEventListener("sakagis:run-analysis", run);
+    return () => {
+      document.removeEventListener("sakagis:open-digitize", digitize);
+      document.removeEventListener("sakagis:run-analysis", run);
+    };
+  }, [openWorkspace]);
+
   return (
     <AuthGuard>
     <main className={cn("sakagis-app relative w-full h-[100dvh] overflow-hidden touch-manipulation", isDrawing && "digitizing-active")}>
         <UserProfileWidget />
       <MapWrapper />
       <SearchControl />
-      <AnalysisResultsPanel hidden={isPanelVisible || isGpsPanelOpen} />
+      <AnalysisResultsPanel hidden={isGpsPanelOpen || isDrawing} />
+      <FeatureInspector hidden={isGpsPanelOpen || isDrawing || isDeviceHubOpen || isAttributeTableOpen || isPanelVisible} />
       <FeatureExportDialogHost />
       <header className="studio-topbar" data-hidden={isPanelVisible}><div className="studio-wordmark"><img src="/sakagis-mark.svg" width={32} height={32} alt="" /><span>SAKAGIS<small>SPATIAL STUDIO</small></span></div><StudioClock /></header>
       {!isPanelVisible && !isDrawing && !isGpsPanelOpen && !isDeviceHubOpen && !isAttributeTableOpen && <StudioOverview onExplore={setSceneDestination} onUpload={() => openPanel("dataset", "data")} />}

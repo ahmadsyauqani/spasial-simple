@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useMapContext } from "@/lib/MapContext";
+import { normalizeJobStatus, useAnalysisHistory } from "@/lib/AnalysisHistoryContext";
 import { toast } from "sonner";
 import {
   Globe2,
@@ -149,6 +150,8 @@ function inferGeometryType(geojson: any, hint?: string[]): "Point" | "Line" | "P
 
 export function CrsReprojectButton() {
   const { layers, layerGeojsonCache, fetchLayers } = useMapContext();
+  const { startJob, updateJob, completeJob, failJob } = useAnalysisHistory();
+  const historyRunRef = useRef<string | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [sourceMode, setSourceMode] = useState<SourceMode>("layer");
@@ -233,7 +236,17 @@ export function CrsReprojectButton() {
     return form;
   };
 
-  const onProgress = (s: JobStatus) => setProgress(s);
+  const onProgress = (s: JobStatus) => {
+    setProgress(s);
+    const historyId = historyRunRef.current;
+    if (historyId) {
+      const raw = Number(s.progress) || 0;
+      updateJob(historyId, normalizeJobStatus(s.status), {
+        progress: raw <= 1 ? raw * 100 : raw,
+        message: s.message,
+      });
+    }
+  };
 
   const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -243,12 +256,15 @@ export function CrsReprojectButton() {
       toast.error("Pilih layer atau unggah file terlebih dahulu.");
       return;
     }
+    const historyId = startJob({ label: "Pemeriksaan CRS", operation: "crs-inspect", sourceNames: [sourceName], rerun: () => runInspect() });
+    historyRunRef.current = historyId;
     setActiveTask("inspect");
     setProgress({ status: "queued", progress: 0, message: "Menyiapkan data..." });
     try {
       const form = buildForm({ targetEpsg: 4326, sampleOnly: true });
       const result = (await runJob("/crs/inspect-reproject", form, onProgress)) as InspectResult;
       setInspectResult(result);
+      updateJob(historyId, "completed", { report: result, summary: result, progress: 100, message: "Pemeriksaan CRS selesai" });
       if (result?.confidence === "unknown") {
         toast.warning("CRS sumber tidak terdeteksi. Isi 'Paksa CRS sumber' sebelum reproyeksi.");
       } else if (result?.confidence === "guessed") {
@@ -257,6 +273,7 @@ export function CrsReprojectButton() {
         toast.success("Pemeriksaan CRS selesai.");
       }
     } catch (err) {
+      failJob(historyId, errorMessage(err));
       toast.error(`Gagal memeriksa CRS: ${errorMessage(err)}`);
     } finally {
       setActiveTask(null);
@@ -270,6 +287,8 @@ export function CrsReprojectButton() {
       toast.error("Pilih layer atau unggah file terlebih dahulu.");
       return;
     }
+    const historyId = startJob({ label: "Reproyeksi ke WGS84", operation: "crs-reproject", sourceNames: [sourceName], rerun: () => runSaveToMap() });
+    historyRunRef.current = historyId;
     setActiveTask("save");
     setProgress({ status: "queued", progress: 0, message: "Menyiapkan reproyeksi ke WGS84..." });
     try {
@@ -278,6 +297,7 @@ export function CrsReprojectButton() {
       if (!result?.geojson?.features) {
         throw new Error("Server tidak mengembalikan GeoJSON hasil reproyeksi.");
       }
+      completeJob(historyId, { geojson: result.geojson, report: result, summary: { featureCount: result.feature_count, targetEpsg: 4326 } });
       const geometryType = inferGeometryType(result.geojson, result.geometry_types);
       await saveLayer(`${sourceName} (WGS84)`, result.geojson, geometryType);
       await fetchLayers();
@@ -285,6 +305,7 @@ export function CrsReprojectButton() {
         `Layer "${sourceName} (WGS84)" berhasil disimpan ke peta (${(result.feature_count ?? result.geojson.features.length).toLocaleString("id-ID")} fitur).`,
       );
     } catch (err) {
+      failJob(historyId, errorMessage(err));
       toast.error(`Gagal menyimpan ke peta: ${errorMessage(err)}`);
     } finally {
       setActiveTask(null);
@@ -302,6 +323,8 @@ export function CrsReprojectButton() {
       toast.error("Masukkan kode EPSG target yang valid.");
       return;
     }
+    const historyId = startJob({ label: `Reproyeksi EPSG:${targetEpsg}`, operation: "crs-reproject-download", sourceNames: [sourceName], rerun: () => runDownload() });
+    historyRunRef.current = historyId;
     setActiveTask("download");
     setProgress({ status: "queued", progress: 0, message: `Menyiapkan reproyeksi ke EPSG:${targetEpsg}...` });
     try {
@@ -310,10 +333,12 @@ export function CrsReprojectButton() {
       if (!result?.geojson) {
         throw new Error("Server tidak mengembalikan GeoJSON hasil reproyeksi.");
       }
+      completeJob(historyId, { geojson: result.geojson, report: result, summary: { featureCount: result.feature_count, targetEpsg } });
       const blob = new Blob([JSON.stringify(result.geojson)], { type: "application/geo+json" });
       downloadBlob(blob, `${sanitizeFileName(sourceName)}_EPSG${targetEpsg}.geojson`);
       toast.success(`GeoJSON EPSG:${targetEpsg} berhasil diunduh.`);
     } catch (err) {
+      failJob(historyId, errorMessage(err));
       toast.error(`Gagal mengunduh hasil: ${errorMessage(err)}`);
     } finally {
       setActiveTask(null);
@@ -334,7 +359,6 @@ export function CrsReprojectButton() {
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (isBusy) return;
         setIsOpen(open);
       }}
     >
@@ -769,7 +793,7 @@ export function CrsReprojectButton() {
         </div>
 
         <DialogFooter className="border-t pt-4">
-          <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isBusy}>
+          <Button variant="ghost" onClick={() => setIsOpen(false)}>
             Tutup
           </Button>
         </DialogFooter>

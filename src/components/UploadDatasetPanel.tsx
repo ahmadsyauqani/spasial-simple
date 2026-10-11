@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId, useMemo } from "react";
+import "./layer-workspace.css";
+import { AnalysisCatalog } from "./LayerWorkspaceAnalysisCatalog";
+import { LayerExportButton } from "./LayerExportButton";
+import { createDemoGeojson, DEMO_LAYER_ID, DEMO_LAYER_NAME } from "./layer-workspace-data";
 import dynamic from "next/dynamic";
 
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
-import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, Palette, Filter, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff, Search, GripVertical, Cloud, CloudOff, HardDrive, RefreshCw, Table2, PenLine, BarChart3 } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertTriangle, FileUp, Trash2, Check, X, ChevronsUpDown, Loader2, DownloadCloud, Layers, Info, ArrowUp, ArrowDown, Maximize, LayoutGrid, Settings2, Pin, Eye, EyeOff, Search, Table2, PenLine, BarChart3 } from "lucide-react";
 import { parseSpatialFile } from "@/lib/spatialEngine";
 import * as turf from "@turf/turf";
 import { getOrCreateDefaultProject, uploadLayerToSupabase, fetchActiveLayers, deleteLayerFromSupabase, updateLayerStyleInSupabase, updateLayerOrderInSupabase } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { useMapContext } from "@/lib/MapContext";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -52,30 +54,36 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
   const [wizardStyle, setWizardStyle] = useState({ color: "#3b82f6", fillColor: "#3b82f6", fillOpacity: 0.2, weight: 2 });
   const [layerQuery, setLayerQuery] = useState("");
   const [showLegend, setShowLegend] = useState(false);
-  const [analysisQuery, setAnalysisQuery] = useState("");
-  const [analysisCategory, setAnalysisCategory] = useState("Semua");
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+
 
   const filteredLayers = layers.filter((layer) => layer.name?.toLowerCase().includes(layerQuery.toLowerCase()));
   const allLayersVisible = layers.length > 0 && layers.every((layer) => layer.visible !== false);
   const analysisTools = [
-    { key: "buffer", label: "Buffer", category: "Geometry", description: "Buat zona jarak di sekitar fitur.", icon: "◎", component: <BufferAnalysisButton /> },
-    { key: "clip", label: "Clip", category: "Overlay", description: "Potong layer memakai batas layer lain.", icon: "✂", component: <ClipAnalysisButton /> },
-    { key: "union", label: "Union", category: "Overlay", description: "Gabungkan geometri dua layer.", icon: "◈", component: <UnionAnalysisButton /> },
-    { key: "merge", label: "Merge", category: "Geometry", description: "Gabungkan fitur menjadi layer baru.", icon: "⊕", component: <MergeAnalysisButton /> },
-    { key: "overlap", label: "Overlap", category: "Quality", description: "Temukan area yang bertumpuk.", icon: "◌", component: <OverlapAnalysisButton /> },
-    { key: "validasi", label: "Validasi", category: "Quality", description: "Cek topology dan bidang tanah.", icon: "✓", component: <TopologyValidationButton /> },
-    { key: "dissolve", label: "Dissolve", category: "Geometry", description: "Satukan fitur berdasarkan atribut.", icon: "◉", component: <DissolveAnalysisButton /> },
-    { key: "join", label: "Spatial Join", category: "Relation", description: "Hubungkan atribut secara spasial.", icon: "⌘", component: <SpatialJoinButton /> },
-    { key: "sliver", label: "Sliver", category: "Quality", description: "Deteksi gap dan overlap tipis.", icon: "△", component: <SliverDetectionButton /> },
-    { key: "autofix", label: "Auto-fix", category: "Quality", description: "Perbaiki gap, sliver, overlap otomatis (server).", icon: "⚒", component: <TopologyAutofixButton /> },
-    { key: "crs", label: "CRS", category: "Geometry", description: "Cek & reproyeksi CRS file besar (server).", icon: "⊚", component: <CrsReprojectButton /> },
-    { key: "change", label: "Perubahan", category: "Relation", description: "Bandingkan dua snapshot bidang (server).", icon: "⇄", component: <ChangeDetectionButton /> },
+    { key: "buffer", label: "Buffer", category: "Olah geometri", description: "Buat zona jarak di sekitar fitur.", icon: "◎", component: <BufferAnalysisButton /> },
+    { key: "clip", label: "Clip", category: "Potong & gabung", description: "Potong layer memakai batas layer lain.", icon: "✂", component: <ClipAnalysisButton /> },
+    { key: "union", label: "Union", category: "Potong & gabung", description: "Gabungkan geometri dua layer.", icon: "◈", component: <UnionAnalysisButton /> },
+    { key: "merge", label: "Merge", category: "Olah geometri", description: "Gabungkan fitur menjadi layer baru.", icon: "⊕", component: <MergeAnalysisButton /> },
+    { key: "overlap", label: "Overlap", category: "Periksa kualitas", description: "Temukan area yang bertumpuk.", icon: "◌", component: <OverlapAnalysisButton /> },
+    { key: "validasi", label: "Validasi", category: "Periksa kualitas", description: "Periksa topologi dan bidang tanah.", icon: "✓", component: <TopologyValidationButton /> },
+    { key: "dissolve", label: "Dissolve", category: "Olah geometri", description: "Satukan fitur berdasarkan atribut.", icon: "◉", component: <DissolveAnalysisButton /> },
+    { key: "join", label: "Spatial Join", category: "Hubungkan & bandingkan", description: "Hubungkan atribut secara spasial.", icon: "⌘", component: <SpatialJoinButton /> },
+    { key: "sliver", label: "Sliver", category: "Periksa kualitas", description: "Deteksi gap dan overlap tipis.", icon: "△", component: <SliverDetectionButton /> },
+    { key: "autofix", label: "Auto-fix", category: "Periksa kualitas", description: "Perbaiki gap, sliver, overlap otomatis (server).", icon: "⚒", component: <TopologyAutofixButton /> },
+    { key: "crs", label: "CRS", category: "Olah geometri", description: "Cek & reproyeksi CRS file besar (server).", icon: "⊚", component: <CrsReprojectButton /> },
+    { key: "change", label: "Perubahan", category: "Hubungkan & bandingkan", description: "Bandingkan dua snapshot bidang (server).", icon: "⇄", component: <ChangeDetectionButton /> },
   ];
-  const analysisCategories = ["Semua", "Overlay", "Geometry", "Quality", "Relation"];
-  const visibleAnalysisTools = analysisTools.filter((tool) =>
-    (analysisCategory === "Semua" || tool.category === analysisCategory) &&
-    `${tool.label} ${tool.description}`.toLowerCase().includes(analysisQuery.toLowerCase())
-  );
+  const loadDemoLayer = () => {
+    const geojson = createDemoGeojson();
+    setLayers((previous) => previous.some((layer) => layer.id === DEMO_LAYER_ID) ? previous : [...previous, {
+      id: DEMO_LAYER_ID, name: DEMO_LAYER_NAME, data: geojson, geojson,
+      geometryType: "Polygon", visible: true, syncStatus: "local",
+      style: { color: "#78a898", fillColor: "#78a898", fillOpacity: 0.25, weight: 2 },
+    }]);
+    cacheLayerGeojson(DEMO_LAYER_ID, geojson);
+    setZoomFeature(geojson);
+    toast.success(`${geojson.features.length} bidang sintetis untuk belajar dimuat lokal. Bukan data pertanahan nyata.`);
+  };
 
   const [metricPayload, setMetricPayload] = useState<{ file: File, geojson: any } | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -102,7 +110,7 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
   useEffect(() => {
     fetchActiveLayers()
       .then((data) => {
-        if (data) setLayers(data);
+        if (data) setLayers((previous) => [...data, ...previous.filter((layer) => layer.syncStatus === "local" || layer.id?.startsWith("local-"))]);
       })
       .catch((err) => console.error("Gagal load layers awal:", err));
   }, [setLayers]);
@@ -198,13 +206,21 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
   const handleDeleteLayer = async (id: string, name: string) => {
     try {
       if (!id) return;
+      const layer = layers.find((item) => item.id === id);
+      if (layer?.syncStatus === "local" || id.startsWith("local-")) {
+        setLayers((previous) => previous.filter((item) => item.id !== id));
+        if (selectedLayerId === id) setSelectedLayerId(null);
+        toast.success(`Layer lokal ${name} dihapus dari sesi.`);
+        return;
+      }
       if (isGuest) {
         toast.error("Akses Ditolak: Guest tidak diizinkan menghapus data yang sudah ada di sistem SAKAGIS.");
         return;
       }
       
       await deleteLayerFromSupabase(id);
-      setLayers(layers.filter(l => l.id !== id));
+      if (selectedLayerId === id) setSelectedLayerId(null);
+      setLayers((previous) => previous.filter(l => l.id !== id));
       toast.success(`Layer ${name} berhasil dihapus.`);
     } catch (err: any) {
       toast.error(`Gagal menghapus layer: ${err.message}`);
@@ -244,8 +260,6 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
   };
 
   const [isDragging, setIsDragging] = useState(false);
-  const [isPanelPinned, setIsPanelPinned] = useState(false);
-  const [isToolsPinned, setIsToolsPinned] = useState(false);
 
   const processSelectedFile = async (file: File) => {
     const extension = file.name.split('.').pop()?.toLowerCase();
@@ -352,9 +366,8 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
   };
 
   return (
-    <div className={cn("dataset-panel text-card-foreground overflow-hidden flex flex-col", mode === "analysis" && "dataset-panel-analysis")}>
-      {mode === "analysis" && (
-        <div className="analysis-workspace analysis-workspace-primary">
+    <div className={cn("dataset-panel layer-workspace text-card-foreground overflow-hidden flex flex-col", mode === "analysis" && "dataset-panel-analysis")}>
+      <div className="analysis-workspace analysis-workspace-primary" hidden={mode !== "analysis"}>
           <div className="analysis-workspace-header">
             <div>
               <strong>Analisis Spasial</strong>
@@ -382,81 +395,35 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
               </>
             )}
           </div>
-          <div className="analysis-workspace-search">
-            <Search className="h-3.5 w-3.5" />
-            <input value={analysisQuery} onChange={(e) => setAnalysisQuery(e.target.value)} placeholder="Cari tool analisis..." />
-          </div>
-          <div className="analysis-category-tabs">
-            {analysisCategories.map((category) => (
-              <button key={category} type="button" onClick={() => setAnalysisCategory(category)} className={analysisCategory === category ? "active" : ""}>{category}</button>
-            ))}
-          </div>
-          <div className="analysis-workspace-grid">
-            {visibleAnalysisTools.map((tool) => (
-              <div className="analysis-tool-card" key={tool.key}>
-                <div className="analysis-tool-icon">{tool.icon}</div>
-                <div className="analysis-tool-copy">
-                  <strong>{tool.label}</strong>
-                  <span>{tool.description}</span>
-                  <small>{tool.category}</small>
-                </div>
-                <div className="analysis-tool-trigger">{tool.component}</div>
-              </div>
-            ))}
-          </div>
-          {visibleAnalysisTools.length === 0 && <div className="analysis-empty">Tool tidak ditemukan.</div>}
+          <AnalysisCatalog tools={analysisTools} />
           <div className="grid grid-cols-2 gap-2 mt-2">
             <LayoutPetaButton />
             <DownloadAllResultsButton />
           </div>
         </div>
-      )}
       <div className="layer-manager-heading">
         <div>
           <strong>Layer Manager</strong>
-          <span>Atur tampilan, urutan, filter, dan legenda</span>
+          <span>Pilih layer untuk tindakan. Detail menyimpan pengaturan lanjutan.</span>
         </div>
         <Layers className="h-4 w-4 text-cyan-300" />
       </div>
-      {/* Area unit switcher — compact top bar */}
-      <div className="dataset-unit-bar flex items-center justify-between px-3 py-2 border-b border-border/20 bg-black/10">
-        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Satuan Luas</span>
-        <div className="relative flex items-center bg-black/30 rounded-lg p-0.5 border border-white/5 shadow-inner overflow-hidden">
-          <div 
-            className="absolute h-[calc(100%-4px)] bg-orange-500/80 shadow-lg rounded-md transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-            style={{ 
-              width: 'calc(33.33% - 2px)',
-              left: '2px',
-              transform: `translateX(${areaUnit === 'Ha' ? '0%' : areaUnit === 'm2' ? '106%' : '212%'})`
-            }}
-          />
-          {(['Ha', 'm2', 'km2'] as const).map((unit) => (
-            <button
-              key={unit}
-              onClick={(e) => { e.stopPropagation(); setAreaUnit(unit); }}
-              className={`flex-1 relative z-10 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter transition-colors duration-300 ${
-                areaUnit === unit ? 'text-white' : 'text-white/30 hover:text-white/60'
-              }`}
-            >
-              {unit === 'Ha' ? 'Ha' : unit === 'm2' ? 'm²' : 'km²'}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10">
-          <span className="text-[10px] font-black text-white/80">{layers.length}</span>
-          <span className="text-[8px] text-white/30 uppercase font-bold">Layer</span>
-        </div>
+      <div className="dataset-unit-bar flex items-center justify-between px-3 py-2 border-b border-border/20">
+        <span>Satuan luas</span>
+        <div className="flex gap-1" aria-label="Satuan luas">{(["Ha", "m2", "km2"] as const).map((unit) => <button type="button" key={unit} aria-pressed={areaUnit === unit} onClick={() => setAreaUnit(unit)} className="rounded px-2">{unit === "m2" ? "m²" : unit === "km2" ? "km²" : unit}</button>)}</div>
+        <span>{layers.length} layer</span>
       </div>
 
       <div className="p-3 space-y-3">
 
-      <div className="flex items-center gap-2">
+      <div className="layer-workspace-search">
         <div className="relative min-w-0 flex-1">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             value={layerQuery}
             onChange={(e) => setLayerQuery(e.target.value)}
             placeholder="Cari layer..."
+            aria-label="Cari layer"
             className="w-full rounded-lg border border-border bg-background/60 py-2 pl-8 pr-2 text-[10px] text-foreground outline-none focus:border-primary"
           />
         </div>
@@ -465,6 +432,7 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
           onClick={() => setShowLegend((value) => !value)}
           className={cn("flex h-8 items-center gap-1 rounded-lg border px-2 text-[9px] font-bold uppercase", showLegend ? "border-primary/40 bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-muted")}
           title="Tampilkan legenda otomatis"
+          aria-pressed={showLegend}
         >
           <LayoutGrid className="h-3.5 w-3.5" />
           Legenda
@@ -474,6 +442,7 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
           onClick={() => setLayers((prev) => prev.map((layer) => ({ ...layer, visible: !allLayersVisible })))}
           className="flex h-8 items-center gap-1 rounded-lg border border-border px-2 text-[9px] font-bold uppercase text-muted-foreground hover:bg-muted"
           title={allLayersVisible ? "Sembunyikan semua layer" : "Tampilkan semua layer"}
+          aria-label={allLayersVisible ? "Sembunyikan semua layer" : "Tampilkan semua layer"}
         >
           {allLayersVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
         </button>
@@ -491,14 +460,20 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
         </div>
       )}
 
-      <ScrollArea className="h-52 rounded-xl border border-border bg-muted/30 dark:bg-black/20 p-2">
+      <div className="layer-workspace-list" aria-label="Daftar layer">
         {layers.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-xs text-muted-foreground flex-col gap-2 opacity-50 pt-8">
-            <Layers className="w-8 h-8" />
-            <span>Belum ada layer diunggah</span>
+          <div className="layer-workspace-empty">
+            <strong>Mulai dari satu layer</strong>
+            <span>Impor file, gambar bidang, atau coba data edukasi lokal.</span>
+            <div className="layer-workspace-empty-actions">
+              <button type="button" onClick={() => uploadInputRef.current?.click()}>Impor data</button>
+              <button type="button" onClick={() => document.dispatchEvent(new CustomEvent("sakagis:open-digitize"))}>Buka digitasi</button>
+              <button type="button" onClick={loadDemoLayer}>Muat contoh data</button>
+            </div>
+            <small>Contoh sintetis, bukan data pertanahan nyata. Tidak dikirim ke cloud.</small>
           </div>
         ) : filteredLayers.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-xs text-muted-foreground">Layer tidak ditemukan.</div>
+          <div className="layer-workspace-empty">Layer tidak ditemukan.<button type="button" onClick={() => setLayerQuery("")}>Reset pencarian</button></div>
         ) : (
           <div className="flex flex-col gap-2">
              {filteredLayers.map((layer) => {
@@ -525,8 +500,8 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
                     newLayers.splice(toIdx, 0, draggedLayer);
                     setLayers(newLayers);
                     // Sync order to database
-                    const updates = newLayers.map((l, idx) => ({ id: l.id!, sort_order: idx }));
-                    updateLayerOrderInSupabase(updates);
+                    const updates = newLayers.map((l, idx) => ({ ...l, sort_order: idx })).filter((l) => l.id && l.syncStatus !== "local" && !l.id.startsWith("local-")).map((l) => ({ id: l.id!, sort_order: l.sort_order }));
+                    if (!isGuest) updateLayerOrderInSupabase(updates).catch(() => toast.error("Urutan berubah lokal; sinkronisasi cloud gagal."));
                   }
                 }}
                 onDragEnd={(e) => {
@@ -542,7 +517,7 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
              })}
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       {/* PDF Map Overlay (Avenza Style) */}
       <PdfOverlayPanel />
@@ -568,53 +543,21 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
         ) : (
           <FileUp className="w-4 h-4" />
         )}
-        <span>{isUploading ? "Memproses..." : (isDragging ? "Lepaskan File!" : "Unggah Data Baru (.SHP/.KML/.GPKG/.CSV/.TXT)")}</span>
+        <span>{isUploading ? "Memproses..." : (isDragging ? "Lepaskan File!" : "Impor file spasial")}</span>
         <input
           type="file"
-          className="hidden"
+          ref={uploadInputRef}
+          aria-label="Impor file spasial"
+          className="sr-only"
           accept=".zip,.rar,.kml,.kmz,.geojson,.json,.gdb.zip,.gpkg,.csv,.txt"
           onChange={handleFileUpload}
           disabled={isUploading}
         />
       </label>
+      <p className="layer-workspace-context-note">SHP (ZIP/RAR), KML/KMZ, GeoJSON, GDB (ZIP), GPKG, CSV/TXT. Peta PDF tersedia di atas.</p>
 
-      {/* Unified Analysis Workspace */}
-      {mode === "dataset" && <div className="analysis-workspace">
-        <div className="analysis-workspace-header">
-          <div>
-            <strong>Analysis Workspace</strong>
-            <span>Pilih tool, atur parameter, lalu simpan hasil sebagai layer baru.</span>
-          </div>
-          <span className="analysis-layer-status">{layers.length} layer</span>
-        </div>
-        <div className="analysis-workspace-search">
-          <Search className="h-3.5 w-3.5" />
-          <input value={analysisQuery} onChange={(e) => setAnalysisQuery(e.target.value)} placeholder="Cari tool analisis..." />
-        </div>
-        <div className="analysis-category-tabs">
-          {analysisCategories.map((category) => (
-            <button key={category} type="button" onClick={() => setAnalysisCategory(category)} className={analysisCategory === category ? "active" : ""}>{category}</button>
-          ))}
-        </div>
-        <div className="analysis-workspace-grid">
-          {visibleAnalysisTools.map((tool) => (
-            <div className="analysis-tool-card" key={tool.key}>
-              <div className="analysis-tool-icon">{tool.icon}</div>
-              <div className="analysis-tool-copy">
-                <strong>{tool.label}</strong>
-                <span>{tool.description}</span>
-                <small>{tool.category}</small>
-              </div>
-              <div className="analysis-tool-trigger">{tool.component}</div>
-            </div>
-          ))}
-        </div>
-        {visibleAnalysisTools.length === 0 && <div className="analysis-empty">Tool tidak ditemukan.</div>}
-        <div className="grid grid-cols-2 gap-2 mt-2">
-          <LayoutPetaButton />
-          <DownloadAllResultsButton />
-        </div>
-      </div>}
+      {mode === "dataset" && <button type="button" className="layer-workspace-more-button" onClick={() => document.dispatchEvent(new CustomEvent("sakagis:open-analysis"))}><span><BarChart3 size={14} />Buka katalog analisis</span><span>{analysisTools.length} alat</span></button>}
+      {mode === "dataset" && <div className="grid grid-cols-2 gap-2"><LayoutPetaButton /><DownloadAllResultsButton /></div>}
 
       </div>
 
@@ -1101,442 +1044,119 @@ export function UploadDatasetPanel({ mode = "dataset" }: { mode?: "dataset" | "a
   );
 }
 
-import { ExportLayerDialog } from "./ExportLayerDialog";
+
 
 function LayerControlItem({ layer, onDelete }: { layer: any, onDelete: () => void }) {
-  const { updateLayerStyle, reorderLayer, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache, setLayers, topologyErrors, activeDigitizingLayerId, activeEditFeature, selectedLayerId, setSelectedLayerId, setIsAttributeTableOpen, setActiveTableLayerId, setActiveDigitizingLayerId } = useMapContext();
+  const { updateLayerStyle, layers, layerAreas, areaUnit, triggerZoomToLayer, layerGeojsonCache, setLayers, topologyErrors, activeDigitizingLayerId, selectedLayerId, setSelectedLayerId, setIsAttributeTableOpen, setActiveTableLayerId, setActiveDigitizingLayerId } = useMapContext();
   const { isGuest } = useAuth();
-  const style = layer.style || { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2, dissolve_key: 'none' };
-  const colorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [availableKeys, setAvailableKeys] = useState<string[]>([]);
+  const style = layer.style || { color: '#78a898', fillColor: '#78a898', fillOpacity: 0.2, weight: 2, dissolve_key: 'none' };
+  const [moreOpen, setMoreOpen] = useState(false);
+  const styleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPinned, setIsPinned] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [cloudKeys, setCloudKeys] = useState<string[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const actionId = useId();
+  const geojson = layerGeojsonCache[layer.id] || layer.geojson || layer.data;
+  const isLocal = layer.syncStatus === "local" || String(layer.id || "").startsWith("local-");
   const isVisible = layer.visible !== false;
-  const featureCount = layerGeojsonCache[layer.id!]?.features?.length || 0;
-  const validationCount = (!topologyErrors?.layerId || topologyErrors.layerId === layer.id)
-    ? topologyErrors?.features?.length || 0
-    : 0;
-  const isActive = activeDigitizingLayerId === layer.id || activeEditFeature?.layerId === layer.id;
   const isSelected = Boolean(layer.id) && selectedLayerId === layer.id;
-
-  useEffect(() => {
-    const updateConnection = () => setIsOnline(navigator.onLine);
-    updateConnection();
-    window.addEventListener('online', updateConnection);
-    window.addEventListener('offline', updateConnection);
-    return () => {
-      window.removeEventListener('online', updateConnection);
-      window.removeEventListener('offline', updateConnection);
-    };
-  }, []);
-
-  const handleToggleVisibility = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setLayers(prev => prev.map(l => l.id === layer.id ? { ...l, visible: !isVisible } : l));
-  };
-
-  useEffect(() => {
-    async function loadKeys() {
-      if (!layer.id) return;
-      const { data } = await supabase.from('geometries').select('properties').eq('layer_id', layer.id).limit(1).single();
-      if (data && data.properties) {
-        const keys = Object.keys(data.properties).filter(k => k !== 'FID' && k !== 'db_id');
-        setAvailableKeys(keys);
-
-        if (keys.length > 0 && layer.style?.dissolve_key === undefined) {
-           const newStyle = { ...style, dissolve_key: 'none' };
-           updateLayerStyle(layer.id, newStyle);
-           if (!isGuest) updateLayerStyleInSupabase(layer.id, newStyle);
-        }
-      }
-    }
-    loadKeys();
-  }, [layer.id, layer.style?.dissolve_key]);
-
-  // State lokal untuk form definition query
+  const isActive = activeDigitizingLayerId === layer.id;
+  const features = geojson?.features;
+  const featureCount = Array.isArray(features) ? features.length : undefined;
+  const geometryType = layer.geometryType || features?.[0]?.geometry?.type || layer.geometry_type || "Vektor";
+  const cachedKeys = useMemo(() => Array.from(new Set<string>((features || []).flatMap((feature: any) => Object.keys(feature.properties || {})))).filter((key) => key !== "FID" && key !== "db_id"), [features]);
+  const availableKeys = cachedKeys.length ? cachedKeys : cloudKeys;
+  const metrics = layerAreas[layer.id];
+  const validationCount = topologyErrors?.layerId === layer.id ? topologyErrors?.features?.length : undefined;
   const [defField, setDefField] = useState(layer.style?.definition_query?.field || "");
-  const [defOperator, setDefOperator] = useState(layer.style?.definition_query?.operator || "=");
   const [defValue, setDefValue] = useState(layer.style?.definition_query?.value || "");
+  const [defOperator, setDefOperator] = useState(layer.style?.definition_query?.operator || "=");
 
-  const handleApplyDefinitionQuery = async () => {
-    if (!defField || !defOperator || !defValue) return;
-    const newQuery = { field: defField, operator: defOperator, value: defValue };
-    const newStyle = { ...style, definition_query: newQuery };
-    updateLayerStyle(layer.id, newStyle);
-    if (!isGuest && layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
-  };
+  useEffect(() => {
+    const update = () => setIsOnline(navigator.onLine);
+    update(); window.addEventListener("online", update); window.addEventListener("offline", update);
+    return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); };
+  }, []);
+  useEffect(() => {
+    if (!moreOpen || isLocal || !layer.id || cachedKeys.length) return;
+    let cancelled = false;
+    supabase.from("geometries").select("properties").eq("layer_id", layer.id).limit(1).maybeSingle().then(({ data, error }) => {
+      if (!cancelled && !error) setCloudKeys(Object.keys(data?.properties || {}).filter((key) => key !== "FID" && key !== "db_id"));
+    });
+    return () => { cancelled = true; };
+  }, [moreOpen, isLocal, layer.id, cachedKeys.length]);
 
-  const handleClearDefinitionQuery = async () => {
-    setDefField("");
-    setDefOperator("=");
-    setDefValue("");
-    const newStyle = { ...style };
-    delete newStyle.definition_query;
-    updateLayerStyle(layer.id, newStyle);
-    if (!isGuest && layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
-  };
-
-  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newColor = e.target.value;
-    const newStyle = { ...style, color: newColor, fillColor: newColor };
-    
-    // Update local state immediately for smooth UI
-    updateLayerStyle(layer.id, newStyle);
-    
-    // Debounce database update
-    if (colorTimeoutRef.current) {
-      clearTimeout(colorTimeoutRef.current);
-    }
-    
-    colorTimeoutRef.current = setTimeout(async () => {
-      if (!isGuest && layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
-    }, 500); // 500ms debounce
-  };
-
-  const handleOpacityChange = async (val: number[]) => {
-    const newStyle = { ...style, fillOpacity: val[0] / 100 };
-    updateLayerStyle(layer.id, newStyle);
-    if (!isGuest && layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
-  };
-
-  const handleDissolveChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newStyle = { ...style, dissolve_key: e.target.value };
-    updateLayerStyle(layer.id, newStyle);
-    if (!isGuest && layer.id) await updateLayerStyleInSupabase(layer.id, newStyle);
-    // Refresh layer visually by triggering a re-render/re-fetch internally via MapArea dependency later
-  };
-
-  const syncOrder = async () => {
-    // Free tier debounce not fully needed for occasional clicks
-    if (isGuest) return;
-    const updates = layers.map((l, idx) => ({ id: l.id!, sort_order: idx }));
-    await updateLayerOrderInSupabase(updates);
-  };
-
-  const metrics = layer.id ? layerAreas[layer.id] : undefined;
-
-  const displayArea = metrics?.wgs84_sqm ?? (() => {
-    try {
-      return layer.id ? turf.area(layerGeojsonCache[layer.id]) : 0;
-    } catch (_) {
-      return 0;
-    }
-  })();
-  const syncStatus = (layer.syncStatus || (
-    isGuest || layer.id?.startsWith("local-")
-      ? "local"
-      : isOnline ? "cloud" : "unsynced"
-  )) as 'cloud' | 'local' | 'syncing' | 'unsynced';
-  const syncStatusLabels: Record<typeof syncStatus, string> = {
-    cloud: "Cloud",
-    local: "Cache lokal",
-    syncing: "Syncing",
-    unsynced: "Belum sinkron",
-  };
-  const syncStatusLabel = syncStatusLabels[syncStatus];
-
-  const formatUnit = (sqm: number) => {
-    if (areaUnit === 'Ha') return `${(sqm / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Ha`;
-    if (areaUnit === 'km2') return `${(sqm / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} km²`;
-    return `${sqm.toLocaleString('id-ID', { maximumFractionDigits: 3 })} m²`;
-  };
-
-  const renderGeometryIcon = () => {
-    const type = layer.geometryType || layerGeojsonCache[layer.id!]?.features?.[0]?.geometry?.type;
-    
-    if (type === 'Point' || type === 'MultiPoint') {
-      return (
-        <div 
-          className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-sm" 
-          style={{ backgroundColor: style.fillColor }} 
-        />
-      );
-    } else if (type === 'LineString' || type === 'MultiLineString') {
-      return (
-        <div className="w-4 h-3 flex items-center justify-center shrink-0">
-          <div 
-            className="w-4 h-1 rounded-none border border-black/10 dark:border-white/10 shadow-sm" 
-            style={{ backgroundColor: style.fillColor }} 
-          />
-        </div>
-      );
-    } else { // Polygon or MultiPolygon or default
-      return (
-        <div 
-          className="w-3.5 h-3.5 rounded-none shrink-0 border border-black/10 dark:border-white/10 shadow-sm" 
-          style={{ backgroundColor: style.fillColor, opacity: style.fillOpacity || 0.5 }} 
-        />
-      );
+  const saveStyle = (next: typeof style) => {
+    updateLayerStyle(layer.id, next);
+    if (!isGuest && !isLocal && layer.id) {
+      if (styleTimer.current) clearTimeout(styleTimer.current);
+      styleTimer.current = setTimeout(async () => {
+        try { await updateLayerStyleInSupabase(layer.id, next); }
+        catch { toast.error("Tampilan berubah lokal; penyimpanan cloud gagal. Coba lagi."); }
+      }, 500);
     }
   };
+  const reorder = async (direction: number) => {
+    const index = layers.findIndex((item) => item.id === layer.id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= layers.length) return;
+    const next = [...layers]; [next[index], next[target]] = [next[target], next[index]];
+    const ordered = next.map((item, order) => ({ ...item, sort_order: order }));
+    setLayers(ordered);
+    if (!isGuest) {
+      try { await updateLayerOrderInSupabase(ordered.filter((item) => item.id && item.syncStatus !== "local" && !item.id.startsWith("local-")).map((item) => ({ id: item.id!, sort_order: item.sort_order }))); }
+      catch { toast.error("Urutan berubah lokal; sinkronisasi cloud gagal."); }
+    }
+  };
+  const formatUnit = (sqm: number) => areaUnit === "Ha" ? `${(sqm / 10000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} Ha` : areaUnit === "km2" ? `${(sqm / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 3 })} km²` : `${sqm.toLocaleString("id-ID", { maximumFractionDigits: 2 })} m²`;
+  const area = metrics?.wgs84_sqm ?? (() => { try { return geojson ? turf.area(geojson) : null; } catch { return null; } })();
+  const status = isLocal ? "Lokal · hanya perangkat ini" : layer.syncStatus === "syncing" ? "Menyinkronkan" : !isOnline || layer.syncStatus === "unsynced" ? "Belum sinkron" : "Cloud";
 
   return (
-    <div 
-      className={cn(
-        "flex flex-col gap-0 rounded-2xl border transition-all duration-300 group cursor-pointer overflow-hidden",
-        "bg-white dark:bg-white/5 shadow-sm",
-        isActive
-          ? "border-cyan-300/70 bg-cyan-500/[0.06] shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-300/20"
-          : isSelected
-          ? "border-primary/60 bg-primary/[0.08] ring-1 ring-primary/30 shadow-md"
-          : isPinned
-          ? "border-primary/40 shadow-primary/10 shadow-md"
-          : "border-border/60 hover:border-primary/30 hover:shadow-md"
-      )}
-      role="button"
-      tabIndex={0}
-      aria-pressed={isSelected}
-      data-selected={isSelected}
-      onClick={() => { if (layer.id) setSelectedLayerId(isSelected ? null : layer.id); }}
-      onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); if (layer.id) setSelectedLayerId(isSelected ? null : layer.id); } }}
-      onDoubleClick={() => { if (layer.id) triggerZoomToLayer(layer.id); }}
-      title="Klik untuk memilih layer · Double klik untuk zoom"
-    >
-      {/* Accent bar top */}
-      <div className={cn(
-        "h-0.5 w-full transition-all duration-300",
-        isPinned
-          ? "bg-gradient-to-r from-primary via-primary/50 to-transparent"
-          : "bg-transparent group-hover:bg-gradient-to-r group-hover:from-primary/40 group-hover:via-primary/20 group-hover:to-transparent"
-      )} />
-
-      {/* Main row */}
-      <div className="layer-card-main flex items-center gap-3 px-3 py-3 relative">
-        <div className="layer-drag-handle" title="Geser untuk mengubah urutan layer">
-          <GripVertical className="h-4 w-4" />
-        </div>
-        {/* Geometry icon with colored bg (Click to change color) */}
-        <label 
-          className="layer-card-thumbnail shrink-0 rounded-xl flex items-center justify-center shadow-sm relative overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all group/icon" 
-          style={{ backgroundColor: (style.fillColor || '#3b82f6') + '28' }}
-          title="Ubah Warna Layer"
-          onClick={(e) => e.stopPropagation()} // Prevent triggering zoom/drag
-        >
-          <input 
-            type="color" 
-            value={style.fillColor || '#3b82f6'} 
-            onChange={handleColorChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-          />
-          <span className="layer-thumb-grid" />
-          <span className="relative z-10">{renderGeometryIcon()}</span>
-        </label>
-
-        <div className="flex-1 min-w-0 pr-1">
-          <span className="block font-bold text-[12px] text-navy dark:text-white/95 truncate leading-tight" title={layer.name}>
-            {layer.name}
-          </span>
-          <div className="layer-card-badges">
-            <span>{layer.geometryType || 'Vector'}</span>
-            <span>{featureCount.toLocaleString('id-ID')} fitur</span>
-            <span className={isOnline ? "online" : "offline"}>{isOnline ? "Online" : "Offline"}</span>
-            <span className={validationCount ? "warning" : "valid"}>{validationCount ? `${validationCount} temuan` : "Valid"}</span>
-          </div>
-          <div className="layer-card-insights">
-            <span>{displayArea > 0 ? `Luas ${formatUnit(displayArea)}` : "Luas -"}</span>
-            <span className={`layer-sync-status ${syncStatus}`} title={`Status penyimpanan: ${syncStatusLabel}`}>
-              {syncStatus === "syncing" ? <RefreshCw className="h-2.5 w-2.5 animate-spin" /> : syncStatus === "local" ? <HardDrive className="h-2.5 w-2.5" /> : syncStatus === "unsynced" ? <CloudOff className="h-2.5 w-2.5" /> : <Cloud className="h-2.5 w-2.5" />}
-              {syncStatusLabel}
-            </span>
-          </div>
-        </div>
-
-        {/* Action buttons (Absolute on hover) */}
-        <div className={cn(
-          "absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 shrink-0 transition-opacity duration-200",
-          "bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-border/40",
-          "opacity-100 pointer-events-auto md:opacity-0 md:group-hover:opacity-100 md:pointer-events-none md:group-hover:pointer-events-auto"
-        )}>
-          <button 
-            onClick={(e) => { e.stopPropagation(); setIsPinned(!isPinned); }} 
-            className={cn(
-              "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
-              isPinned 
-                ? "text-primary bg-primary/15 hover:bg-primary/25" 
-                : "text-muted-foreground/60 hover:bg-muted hover:text-foreground"
-            )}
-            title={isPinned ? "Lepas Pin" : "Pin Menu"}
-          >
-            <Pin className="w-3.5 h-3.5" />
-          </button>
-          <button 
-            onClick={handleToggleVisibility} 
-            className={cn(
-              "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
-              isVisible 
-                ? "text-muted-foreground/60 hover:bg-muted hover:text-foreground"
-                : "text-orange-500 bg-orange-500/10 hover:bg-orange-500/20" 
-            )}
-            title={isVisible ? "Sembunyikan Layer" : "Tampilkan Layer"}
-          >
-            {isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-          </button>
-          <button 
-            onClick={onDelete} 
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground/60 hover:bg-red-500/10 hover:text-red-500 transition-all"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
+    <article className="layer-workspace-row" data-selected={isSelected} aria-label={`Layer ${layer.name}`}>
+      <div className="layer-workspace-row-main layer-card-main">
+        <button type="button" className="layer-workspace-select" data-testid="layer-selection-button" aria-label={`Pilih layer ${layer.name}`} aria-pressed={isSelected} aria-expanded={isSelected || isPinned} aria-controls={actionId}
+          onClick={() => setSelectedLayerId(isSelected ? null : layer.id)} onDoubleClick={() => triggerZoomToLayer(layer.id)}>
+          <span aria-hidden="true" style={{ backgroundColor: style.fillColor, borderRadius: String(geometryType).includes("Point") ? "50%" : 2, width: 13, height: String(geometryType).includes("Line") ? 3 : 13, flexShrink: 0 }} />
+          <span className="layer-workspace-select-copy"><strong title={layer.name}>{layer.name}</strong><small><span>{geometryType}</span><span>{featureCount === undefined ? "Memuat fitur…" : `${featureCount.toLocaleString("id-ID")} fitur`}</span>{isActive && <span>Digitasi aktif</span>}</small></span>
+        </button>
+        <button type="button" className="layer-workspace-visibility" aria-label={`${isVisible ? "Sembunyikan" : "Tampilkan"} layer ${layer.name}`} aria-pressed={isVisible} onClick={() => setLayers((previous) => previous.map((item) => item.id === layer.id ? { ...item, visible: !isVisible } : item))}>{isVisible ? <Eye size={16} /> : <EyeOff size={16} />}</button>
       </div>
-      
-      {/* Expandable action tray */}
-      <div className={cn(
-        "overflow-hidden transition-all duration-300 ease-in-out",
-        isPinned 
-          ? "max-h-24 opacity-100" 
-          : "max-h-0 opacity-0 group-hover:max-h-24 group-hover:opacity-100"
-      )}>
-        {isSelected && (
-          <div className="layer-context-actions" data-testid="layer-context-actions" onClick={(e) => e.stopPropagation()}>
-            <span className="layer-context-label">Tindakan untuk layer ini</span>
-            <div className="layer-context-grid">
-              <button type="button" onClick={() => triggerZoomToLayer(layer.id!)}><Maximize className="h-3.5 w-3.5" /> Zoom</button>
-              <button type="button" onClick={() => { setActiveTableLayerId(layer.id!); setIsAttributeTableOpen(true); }}><Table2 className="h-3.5 w-3.5" /> Tabel atribut</button>
-              <button type="button" onClick={() => setActiveDigitizingLayerId(layer.id!)}><PenLine className="h-3.5 w-3.5" /> Digitasi</button>
-              <button type="button" onClick={() => document.dispatchEvent(new CustomEvent("sakagis:open-analysis", { detail: { layerId: layer.id } }))}><BarChart3 className="h-3.5 w-3.5" /> Analisis</button>
-            </div>
-          </div>
-        )}
-        <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/20 bg-muted/20 dark:bg-black/10">
-          {/* Reorder */}
-          <div className="flex items-center bg-muted/40 dark:bg-black/20 rounded-xl p-0.5 gap-0.5">
-            <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "up"); setTimeout(syncOrder, 100); }} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white dark:hover:bg-muted text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
-              <ArrowUp className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={async (e) => { e.stopPropagation(); reorderLayer(layer.id, "down"); setTimeout(syncOrder, 100); }} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white dark:hover:bg-muted text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all">
-              <ArrowDown className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button 
-              onClick={(e) => { e.stopPropagation(); triggerZoomToLayer(layer.id!); }} 
-              className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none"
-              title="Zoom ke Layer"
-            >
-              <Maximize className="w-3.5 h-3.5" />
-            </button>
-
-            <Popover>
-              <PopoverTrigger className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none">
-                <Info className="w-3.5 h-3.5" />
-              </PopoverTrigger>
-              <PopoverContent className="w-72 p-4 flex flex-col gap-3 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
-                <h4 className="font-black text-[11px] uppercase tracking-widest border-b border-border/50 pb-2 text-navy dark:text-white">Informasi Layer</h4>
-                <div className="flex flex-col gap-1.5 text-[11px]">
-                  <div className="flex justify-between items-start gap-2">
-                    <span className="text-muted-foreground shrink-0">Nama File:</span>
-                    <span className="font-bold text-navy dark:text-white text-right break-all">{layer.name}</span>
-                  </div>
-
-                  <div className="flex flex-col gap-1 pt-2 border-t border-border/50 mt-1">
-                     <span className="text-[9px] uppercase font-black text-muted-foreground/60 mb-1 tracking-wider">Metrik Area</span>
-                     <div className="flex justify-between items-center gap-2">
-                       <span className="text-muted-foreground shrink-0">WGS 84</span>
-                       <span className="font-black text-primary text-right">{metrics ? formatUnit(metrics.wgs84_sqm) : "..."}</span>
-                     </div>
-                     {metrics && (
-                       <>
-                         <div className="flex justify-between items-center gap-2">
-                           <span className="text-muted-foreground shrink-0 text-[9px]">UTM ({metrics.utm_epsg})</span>
-                           <span className="font-bold text-navy dark:text-white text-right">{metrics.utm_sqm ? formatUnit(metrics.utm_sqm) : "-"}</span>
-                         </div>
-                         {metrics.tm3_epsg && (
-                           <div className="flex justify-between items-center gap-2">
-                             <span className="text-muted-foreground shrink-0 text-[9px]">TM-3 ({metrics.tm3_epsg})</span>
-                             <span className="font-bold text-navy dark:text-white text-right">{metrics.tm3_sqm ? formatUnit(metrics.tm3_sqm) : "-"}</span>
-                           </div>
-                         )}
-                       </>
-                     )}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            <Popover>
-              <PopoverTrigger className="p-1.5 hover:bg-muted rounded-lg text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground transition-all outline-none">
-                <Palette className="w-3.5 h-3.5" />
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-4 flex flex-col gap-4 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warna Vektor</label>
-                  <div className="flex items-center gap-2">
-                    <input 
-                      type="color" 
-                      value={style.color} 
-                      onChange={handleColorChange} 
-                      className="w-8 h-8 rounded-lg shrink-0 cursor-pointer p-0 border-0 bg-transparent"
-                    />
-                    <span className="text-xs text-navy dark:text-white font-black">{style.color}</span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transparansi ({Math.round(style.fillOpacity * 100)}%)</label>
-                  <Slider 
-                    value={[Number(style.fillOpacity) * 100 || 20]} 
-                    max={100} 
-                    step={5}
-                    onValueChange={(val: any) => {
-                      const numVal = Array.isArray(val) ? val[0] : val;
-                      updateLayerStyle(layer.id, { ...style, fillOpacity: (numVal || 0) / 100 });
-                    }}
-                    onPointerUp={() => handleOpacityChange([style.fillOpacity * 100])}
-                    onTouchEnd={() => handleOpacityChange([style.fillOpacity * 100])}
-                  />
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            {availableKeys.length > 0 && (
-              <Popover>
-                <PopoverTrigger className={`p-1.5 hover:bg-muted rounded-lg transition-all outline-none ${layer.style?.definition_query ? 'text-primary bg-primary/10' : 'text-navy/60 dark:text-muted-foreground hover:text-navy dark:hover:text-foreground'}`} title="Filter Layer">
-                  <Filter className="w-3.5 h-3.5" />
-                </PopoverTrigger>
-                <PopoverContent className="w-64 p-4 flex flex-col gap-3 bg-card/90 backdrop-blur-xl text-card-foreground border border-border/50 shadow-2xl z-50 rounded-xl">
-                  <h4 className="text-[11px] font-black uppercase tracking-widest border-b border-border/50 pb-2 text-navy dark:text-white">Filter Layer</h4>
-                  <div className="flex flex-col gap-2">
-                    <select value={defField} onChange={e => setDefField(e.target.value)} className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white outline-none focus:ring-1 focus:ring-primary">
-                      <option value="">-- Pilih Kolom --</option>
-                      {availableKeys.map(k => <option key={k} value={k}>{k}</option>)}
-                    </select>
-                    <input 
-                      type="text" 
-                      value={defValue} 
-                      onChange={e => setDefValue(e.target.value)} 
-                      placeholder="Masukkan Nilai..." 
-                      className="w-full text-xs p-2 rounded-lg bg-white/50 dark:bg-black/20 border border-border/50 text-navy dark:text-white outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => { handleApplyDefinitionQuery(); }} 
-                      className="flex-1 bg-primary text-primary-foreground font-bold h-8 rounded-lg"
-                    >
-                      Terapkan
-                    </Button>
-                    {layer.style?.definition_query && (
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        onClick={handleClearDefinitionQuery} 
-                        className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 font-bold"
-                      >
-                        Reset
-                      </Button>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
-
-            <ExportLayerDialog layer={layer} />
-          </div>
+      {(isSelected || isPinned) && <div id={actionId} className="layer-workspace-context" data-testid="layer-context-actions">
+        <div className="layer-workspace-context-grid">
+          <button type="button" aria-label={`Zoom layer ${layer.name}`} onClick={() => triggerZoomToLayer(layer.id)}><Maximize size={14} />Zoom</button>
+          <button type="button" aria-label={`Buka tabel atribut ${layer.name}`} onClick={() => { setActiveTableLayerId(layer.id); setIsAttributeTableOpen(true); }}><Table2 size={14} />Tabel atribut</button>
+          <button type="button" aria-label={`Mulai digitasi ${layer.name}`} onClick={() => { setActiveDigitizingLayerId(layer.id); document.dispatchEvent(new CustomEvent("sakagis:open-digitize", { detail: { layerId: layer.id } })); }}><PenLine size={14} />Digitasi</button>
+          <button type="button" aria-label={`Buka analisis ${layer.name}`} onClick={() => { setSelectedLayerId(layer.id); document.dispatchEvent(new CustomEvent("sakagis:open-analysis", { detail: { layerId: layer.id } })); }}><BarChart3 size={14} />Analisis</button>
         </div>
-      </div>
-    </div>
+        <Popover open={moreOpen} onOpenChange={(open) => { setMoreOpen(open); if (!open) setConfirmDelete(false); }}>
+          <PopoverTrigger className="layer-workspace-more-button" aria-label={`Lainnya untuk ${layer.name}`}><span><Settings2 size={14} />Lainnya / Detail</span><ChevronsUpDown size={13} /></PopoverTrigger>
+          <PopoverContent align="start" className="layer-workspace-menu" aria-label={`Detail layer ${layer.name}`} data-testid="layer-more-menu">
+            <strong>Detail layer</strong>
+            <dl><dt>Nama</dt><dd>{layer.name}</dd><dt>Penyimpanan</dt><dd>{status}</dd><dt>Koneksi</dt><dd>{isOnline ? "Online" : "Offline"}</dd><dt>Luas WGS84</dt><dd>{area === null ? "Belum tersedia" : formatUnit(area)}</dd>{metrics?.utm_sqm !== undefined && <><dt>UTM {metrics.utm_epsg}</dt><dd>{formatUnit(metrics.utm_sqm)}</dd></>}{metrics?.tm3_sqm !== undefined && <><dt>TM-3 {metrics.tm3_epsg}</dt><dd>{formatUnit(metrics.tm3_sqm)}</dd></>}<dt>Validasi</dt><dd>{validationCount === undefined ? "Belum diperiksa" : `${validationCount} temuan`}</dd></dl>
+            <fieldset><legend>Tampilan</legend>
+              <label>Warna layer<input type="color" aria-label="Warna layer" value={style.color} onChange={(event) => saveStyle({ ...style, color: event.target.value, fillColor: event.target.value })} /></label>
+              <label>Opasitas isi ({Math.round((style.fillOpacity ?? 0.2) * 100)}%)<input type="range" aria-label="Opasitas isi" min={0} max={100} step={5} value={(style.fillOpacity ?? 0.2) * 100} onChange={(event) => saveStyle({ ...style, fillOpacity: Number(event.target.value) / 100 })} /></label>
+              <label>Ketebalan garis<input type="number" min={1} max={10} value={style.weight} onChange={(event) => saveStyle({ ...style, weight: Math.min(10, Math.max(1, Number(event.target.value) || 1)) })} /></label>
+            </fieldset>
+            <fieldset><legend>Filter atribut</legend>{availableKeys.length ? <>
+              <label>Kolom filter<select value={defField} onChange={(event) => setDefField(event.target.value)}><option value="">Pilih kolom</option>{availableKeys.map((key) => <option key={key}>{key}</option>)}</select></label>
+              <label>Operator<select value={defOperator} onChange={(event) => setDefOperator(event.target.value)}>{["=", "!=", ">", "<", ">=", "<=", "LIKE"].map((operator) => <option key={operator}>{operator}</option>)}</select></label>
+              <label>Nilai filter<input value={defValue} onChange={(event) => setDefValue(event.target.value)} /></label>
+              <div className="layer-workspace-menu-actions"><button className="layer-workspace-menu-action" type="button" disabled={!defField || !defValue} onClick={() => saveStyle({ ...style, definition_query: { field: defField, operator: defOperator, value: defValue } })}>Terapkan filter</button><button className="layer-workspace-menu-action" type="button" disabled={!style.definition_query} onClick={() => { const next = { ...style }; delete next.definition_query; saveStyle(next); setDefField(""); setDefValue(""); }}>Reset filter</button></div>
+            </> : <span>Belum ada kolom atribut yang tersedia.</span>}</fieldset>
+            <fieldset><legend>Urutan & tindakan</legend><div className="layer-workspace-menu-actions"><button type="button" className="layer-workspace-menu-action" aria-label="Naikkan urutan layer" disabled={layers[0]?.id === layer.id} onClick={() => reorder(-1)}><ArrowUp size={14} />Naik</button><button type="button" className="layer-workspace-menu-action" aria-label="Turunkan urutan layer" disabled={layers[layers.length - 1]?.id === layer.id} onClick={() => reorder(1)}><ArrowDown size={14} />Turun</button><button type="button" className="layer-workspace-menu-action" aria-pressed={isPinned} onClick={() => setIsPinned(!isPinned)}><Pin size={14} />{isPinned ? "Lepas pin tindakan" : "Pin tindakan"}</button></div>
+              <LayerExportButton layer={layer} geojson={geojson} />
+              <button type="button" className="layer-workspace-menu-action" disabled={isGuest && !isLocal} onClick={() => setConfirmDelete(true)}><Trash2 size={14} />Hapus layer</button>
+              {isGuest && !isLocal && <span>Guest tidak dapat menghapus layer cloud.</span>}
+              {confirmDelete && <div><p>Hapus {layer.name}? Tindakan ini tidak dapat dibatalkan.</p><div className="layer-workspace-menu-actions"><button type="button" className="layer-workspace-menu-action" onClick={onDelete}>Ya, hapus layer</button><button type="button" className="layer-workspace-menu-action" onClick={() => setConfirmDelete(false)}>Batal</button></div></div>}
+            </fieldset>
+          </PopoverContent>
+        </Popover>
+        {style.definition_query && <span className="layer-workspace-context-note">Filter aktif: {style.definition_query.field} {style.definition_query.operator} {style.definition_query.value}</span>}
+      </div>}
+    </article>
   );
 }
 
@@ -1593,7 +1213,7 @@ function DownloadAllResultsButton() {
           : "bg-black/5 dark:bg-white/5 text-navy/20 dark:text-white/10 border-white/5 cursor-not-allowed"
       }`}
     >
-      <DownloadCloud className={`w-3.5 h-3.5 ${hasResults ? 'animate-bounce' : ''}`} />
+      <DownloadCloud className="w-3.5 h-3.5" />
       <span>Unduh</span>
       {hasResults && (
         <span className="flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full text-[8px] font-black bg-emerald-500 text-white ml-0.5">

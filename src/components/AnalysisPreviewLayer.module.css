@@ -1,0 +1,120 @@
+.host {
+  position: absolute;
+  inset: 0;
+  z-index: 1200;
+  pointer-events: none;
+}
+
+.controls {
+  pointer-events: auto;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: min(22rem, calc(100% - 2rem));
+  color: #e5eee9;
+  background: rgba(17, 29, 31, 0.94);
+  border: 1px solid rgba(159, 179, 168, 0.24);
+  border-radius: 0.85rem;
+  box-shadow: 0 12px 32px rgba(3, 8, 9, 0.35);
+  backdrop-filter: blur(14px);
+  padding: 0.7rem;
+  font-size: 0.72rem;
+}
+
+.controlHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(159, 179, 168, 0.16);
+  padding-bottom: 0.55rem;
+}
+
+.titleWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.titleWrap strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iconButton,
+.actionButton,
+.discardButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(159, 179, 168, 0.2);
+  border-radius: 0.45rem;
+  color: #c6d5cc;
+  background: rgba(159, 179, 168, 0.08);
+  padding: 0.38rem 0.5rem;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.iconButton {
+  border: 0;
+  padding: 0.25rem;
+  color: rgba(229, 238, 233, 0.68);
+}
+
+.iconButton:hover,
+.actionButton:hover,
+.discardButton:hover {
+  border-color: rgba(180, 207, 193, 0.42);
+  background: rgba(159, 179, 168, 0.16);
+  color: #f2f8f4;
+}
+
+.actionButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.65rem;
+  padding: 0.6rem 0.05rem;
+  color: rgba(229, 238, 233, 0.72);
+  text-transform: capitalize;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.legendItem i {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.discardButton {
+  color: #fda4af;
+  border-color: rgba(251, 113, 133, 0.24);
+  background: rgba(251, 113, 133, 0.08);
+}
+
+@media (max-width: 640px) {
+  .controls {
+    top: 0.65rem;
+    right: 0.65rem;
+    width: calc(100% - 1.3rem);
+  }
+}

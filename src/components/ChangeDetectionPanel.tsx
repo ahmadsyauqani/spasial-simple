@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useMapContext } from "@/lib/MapContext";
+import { normalizeJobStatus, useAnalysisHistory } from "@/lib/AnalysisHistoryContext";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -154,6 +155,8 @@ const safeFileName = (s: string) => s.replace(/[^\w\-]+/g, "_").slice(0, 80);
 
 export function ChangeDetectionButton() {
   const { layers, layerGeojsonCache, setZoomFeature, fetchLayers } = useMapContext();
+  const { startJob, updateJob, completeJob, failJob } = useAnalysisHistory();
+  const historyRunRef = useRef<string | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [oldLayerId, setOldLayerId] = useState("");
@@ -232,6 +235,8 @@ export function ChangeDetectionButton() {
       return;
     }
 
+    const historyId = startJob({ label: "Deteksi Perubahan Bidang", operation: "change-detection", sourceNames: [oldLayer?.name, newLayer?.name].filter(Boolean) as string[], rerun: () => runDetection() });
+    historyRunRef.current = historyId;
     setIsProcessing(true);
     resetResult();
     setProgress({ pct: 0, message: "Menyiapkan data snapshot..." });
@@ -257,6 +262,9 @@ export function ChangeDetectionButton() {
                 ? "Selesai."
                 : "Memproses...");
         setProgress({ pct, message });
+        if (historyRunRef.current) {
+          updateJob(historyRunRef.current, normalizeJobStatus(s.status), { progress: pct, message });
+        }
       };
 
       const res = (await runJob("/change-detection", fd, onProgress)) as ChangeDetectionResult;
@@ -266,6 +274,13 @@ export function ChangeDetectionButton() {
       }
 
       setResult(res);
+      completeJob(historyId, {
+        geojson: res.geojson,
+        originalGeojson: oldFc ?? undefined,
+        diffGeojson: res.diff_geojson,
+        summary: res.summary,
+        report: res.summary,
+      });
       const s = res.summary;
       const changed = s.added + s.removed + s.geometry_changed + s.attribute_changed + s.both_changed + s.split + s.merged;
       if (changed === 0) {
@@ -275,6 +290,7 @@ export function ChangeDetectionButton() {
       }
     } catch (err: any) {
       console.error("Change detection error:", err);
+      failJob(historyId, err?.message || String(err));
       toast.error(`Gagal mendeteksi perubahan: ${err?.message || err}`);
     } finally {
       setIsProcessing(false);
@@ -787,7 +803,7 @@ export function ChangeDetectionButton() {
         </div>
 
         <DialogFooter className="border-t pt-4">
-          <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isProcessing}>
+          <Button variant="ghost" onClick={() => setIsOpen(false)}>
             Tutup
           </Button>
           <Button

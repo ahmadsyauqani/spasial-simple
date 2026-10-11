@@ -24,6 +24,8 @@ export const viewport: Viewport = {
 };
 
 import { MapProvider } from "@/lib/MapContext";
+import { WorkspaceUIProvider } from "@/lib/WorkspaceUIContext";
+import { AnalysisHistoryProvider } from "@/lib/AnalysisHistoryContext";
 import { AuthProvider } from "@/lib/AuthContext";
 export default function RootLayout({
   children,
@@ -57,10 +59,14 @@ export default function RootLayout({
         >
           <AuthProvider>
             <MapProvider>
+              <WorkspaceUIProvider>
+              <AnalysisHistoryProvider>
               <TooltipProvider>
                 {children}
                 <Toaster position="top-right" richColors />
               </TooltipProvider>
+              </AnalysisHistoryProvider>
+              </WorkspaceUIProvider>
             </MapProvider>
           </AuthProvider>
           <ServiceWorkerRegister />

@@ -2076,7 +2076,7 @@ input, select, textarea, button {
   filter: drop-shadow(0 0 5px rgba(167, 206, 193, 0.72));
   stroke-dasharray: 9 4;
   stroke-linecap: round;
-  animation: parcel-selection-breathe 1.8s ease-in-out infinite;
+  animation: none;
 }
 @keyframes parcel-selection-breathe {
   0%, 100% { stroke-opacity: 0.86; filter: drop-shadow(0 0 3px rgba(167, 206, 193, 0.48)); }
