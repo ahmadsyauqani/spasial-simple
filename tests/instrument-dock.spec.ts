@@ -9,6 +9,49 @@ async function enterGuest(page: Page) {
   await expect(page.locator('.map-instrument-bar')).toBeVisible();
 }
 
+test('polished dock uses layered surfaces and persistent non-color selection cues', async ({ page }, testInfo) => {
+  await enterGuest(page);
+  const bar = page.locator('.map-instrument-bar');
+  await expect(bar).toHaveCSS('background-image', /linear-gradient/);
+  await expect(bar).toHaveCSS('animation-name', 'none');
+  await expect(page.getByTestId('active-coordinate')).toHaveCSS('font-variant-numeric', 'tabular-nums');
+  const snap = bar.getByRole('button', { name: 'Snap ke vertex' });
+  const distance = bar.getByRole('button', { name: 'Ukur jarak' });
+  const area = bar.getByRole('button', { name: 'Ukur luas' });
+  for (const button of [snap, distance, area]) {
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(button.locator('span')).toHaveCSS('text-decoration-line', 'underline');
+    expect(await button.evaluate(el => getComputedStyle(el, '::after').opacity)).toBe('1');
+  }
+  await expect(distance).toHaveAttribute('aria-pressed', 'false');
+  const detail = bar.getByRole('button', { name: 'Detail peta', exact: true });
+  await detail.click();
+  await expect(detail.locator('span')).toHaveCSS('text-decoration-line', 'underline');
+  await page.getByRole('dialog', { name: 'Detail peta' }).evaluate(el => Promise.all(el.getAnimations().map(a => a.finished)));
+  await page.screenshot({ path: testInfo.outputPath('dock-active-desktop.png') });
+  await page.keyboard.press('Escape');
+  await snap.click();
+  await expect(snap.locator('span')).toHaveCSS('text-decoration-line', 'none');
+});
+
+test('touch dock keeps targets large without sticky hover movement', async ({ browser }, testInfo) => {
+  const context = await browser.newContext({ baseURL: testInfo.project.use.baseURL, viewport: { width: 390, height: 844 }, hasTouch: true });
+  const page = await context.newPage();
+  try {
+    await enterGuest(page);
+    expect(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches)).toBe(false);
+    const snap = page.getByRole('button', { name: 'Snap ke vertex' });
+    await snap.tap();
+    await expect(snap).toHaveAttribute('aria-pressed', 'true');
+    await expect(snap.locator('svg')).toHaveCSS('transform', 'none');
+    expect((await snap.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.screenshot({ path: testInfo.outputPath('dock-touch-active.png') });
+  } finally {
+    await context.close();
+  }
+});
+
 test('one active coordinate system with complete dismissible details', async ({ page }) => {
   await enterGuest(page);
   const dock = page.locator('.map-instrument-dock');

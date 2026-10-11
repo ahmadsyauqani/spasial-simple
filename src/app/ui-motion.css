@@ -22,18 +22,18 @@
 .analysis-workspace-search:focus-within,
 .analysis-tool-card:focus-within { border-color: var(--studio-mint); }
 
-:is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-actions) button {
+:is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-dock) button {
   transition: background-color var(--motion-fast), color var(--motion-fast), border-color var(--motion-fast), box-shadow var(--motion-fast);
 }
-:is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-actions) button > svg {
+:is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-dock) button > svg {
   transition: transform var(--motion-fast) var(--motion-ease);
 }
 @media (hover: hover) and (pointer: fine) {
-  :is(.desktop-tool-rail, .map-action-controls, .map-instrument-actions) button:not(:disabled):hover > svg {
+  :is(.desktop-tool-rail, .map-action-controls, .map-instrument-dock) button:not(:disabled):hover > svg {
     transform: translateY(-1px);
   }
 }
-:is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-actions) button:not(:disabled):active > svg {
+:is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-dock) button:not(:disabled):active > svg {
   transform: scale(0.92);
 }
 
@@ -41,7 +41,7 @@
   from { opacity: 0; translate: 0 6px; }
   to { opacity: 1; translate: 0 0; }
 }
-:is(.basemap-gallery, .coordinate-details-popover, .studio-overview-fab) {
+:is(.basemap-gallery, .coordinate-details-popover, .map-measure-status, .studio-overview-fab) {
   animation: ui-surface-in var(--motion-panel) var(--motion-ease) both;
 }
 [data-slot="dialog-content"] {
@@ -65,7 +65,7 @@
     transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
-  :is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-actions) button > svg,
+  :is(.desktop-tool-rail, .mobile-bottom-nav, .map-action-controls, .map-instrument-dock) button > svg,
   .studio-primary, .studio-overview-fab, .studio-scene-card, .studio-round-arrow,
   .analysis-tool-card { transform: none !important; }
 }

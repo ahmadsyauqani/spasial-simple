@@ -11,6 +11,28 @@ async function enterGuest(page: Page) {
 for (const mobile of [false, true]) {
   test.describe(mobile ? 'mobile' : 'desktop', () => {
     test.use({ viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 } });
+    test('dock feedback is interaction-only and reduced motion removes icon movement', async ({ page }, testInfo) => {
+      await enterGuest(page);
+      const bar = page.locator('.map-instrument-bar');
+      const detail = bar.getByRole('button', { name: 'Detail peta', exact: true });
+      await expect(bar).toHaveCSS('animation-name', 'none');
+      await expect(detail.locator('svg')).toHaveCSS('transition-property', 'transform');
+      await detail.hover();
+      await expect(detail.locator('svg')).not.toHaveCSS('transform', 'none');
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await expect(detail.locator('svg')).toHaveCSS('transform', 'none');
+      await expect(detail.locator('svg')).toHaveCSS('transition-duration', '0s');
+      await detail.click();
+      await expect(page.getByRole('dialog', { name: 'Detail peta' })).toHaveCSS('animation-name', 'none');
+      await page.keyboard.press('Escape');
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await bar.getByRole('button', { name: 'Ukur jarak' }).click();
+      await expect(page.locator('.map-measure-status')).toHaveCSS('animation-name', 'ui-surface-in');
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await expect(page.locator('.map-measure-status')).toHaveCSS('animation-name', 'none');
+      await expect(bar.getByRole('button', { name: 'Ukur jarak' }).locator('span')).toHaveCSS('text-decoration-line', 'underline');
+      await page.screenshot({ path: testInfo.outputPath('dock-reduced-motion.png') });
+    });
     test('workspace reveals only on intent and keeps hidden controls out of keyboard navigation', async ({ page }, testInfo) => {
       await enterGuest(page);
       await page.screenshot({ path: testInfo.outputPath('workspace-before.png') });
