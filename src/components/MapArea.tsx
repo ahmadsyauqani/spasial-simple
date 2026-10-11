@@ -156,7 +156,17 @@ function MapController() {
     // Sync initial state
     syncViewState();
 
+    const handleMapBlankClick = () => {
+      const selected = (map as L.Map & { _sakagisSelectedLayer?: any })._sakagisSelectedLayer;
+      if (!selected) return;
+      selected.setStyle(selected._sakagisBaseStyle || {});
+      selected._path?.classList.remove('parcel-selected');
+      (map as L.Map & { _sakagisSelectedLayer?: any })._sakagisSelectedLayer = undefined;
+    };
+    map.on('click', handleMapBlankClick);
+
     return () => {
+      map.off('click', handleMapBlankClick);
       map.pm.removeControls();
       document.removeEventListener('keydown', handleKeyDown);
       map.off('pm:edit', handleEdit);
@@ -1718,10 +1728,29 @@ function LayerFeature({ layer }: { layer: any }) {
     mapLayer.options.snappable = true;
 
     // Digitizing Edit Trigger
+    // Keep one clearly selected feature at a time. The selection effect is
+    // intentionally local to the map layer, so it does not mutate GeoJSON.
+    (mapLayer as any)._sakagisBaseStyle = style;
     mapLayer.on('click', (e: L.LeafletMouseEvent) => {
       L.DomEvent.stopPropagation(e);
-      // Klik sekarang hanya membuka popup standar. 
-      // Fitur edit dipindahkan ke dalam tombol di popup agar tidak mengganggu navigasi.
+      const leafletMap = mapLayer._map as (L.Map & { _sakagisSelectedLayer?: any }) | undefined;
+      const previous = leafletMap?._sakagisSelectedLayer;
+      if (previous && previous !== mapLayer) {
+        previous.setStyle(previous._sakagisBaseStyle || style);
+        previous._path?.classList.remove('parcel-selected');
+      }
+      if (leafletMap) leafletMap._sakagisSelectedLayer = mapLayer;
+      mapLayer._sakagisBaseStyle = style;
+      mapLayer.setStyle({
+        weight: 4,
+        color: '#a7cec1',
+        fillColor: '#8fc7b7',
+        fillOpacity: Math.min(0.62, Math.max(0.32, Number(style.fillOpacity ?? 0.2) + 0.2)),
+        className: 'parcel-selected',
+      });
+      mapLayer._path?.classList.add('parcel-selected');
+      mapLayer.bringToFront?.();
+      // Popup content remains the detailed action surface for the selected field.
     });
 
     if (feature.properties) {
@@ -1918,7 +1947,20 @@ function LayerFeature({ layer }: { layer: any }) {
 
       // Kembalikan seperti semula ketika popup ditutup
       mapLayer.on('popupclose', (e: any) => {
-        e.target.setStyle(style);
+        const leafletMap = mapLayer._map as (L.Map & { _sakagisSelectedLayer?: any }) | undefined;
+        if (leafletMap?._sakagisSelectedLayer === mapLayer) {
+          mapLayer.setStyle({
+            ...style,
+            weight: 4,
+            color: '#a7cec1',
+            fillColor: '#8fc7b7',
+            fillOpacity: Math.min(0.62, Math.max(0.32, Number(style.fillOpacity ?? 0.2) + 0.2)),
+            className: 'parcel-selected',
+          });
+        } else {
+          e.target.setStyle(style);
+          e.target._path?.classList.remove('parcel-selected');
+        }
       });
     }
   };

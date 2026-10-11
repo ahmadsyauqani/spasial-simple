@@ -2010,3 +2010,78 @@ input, select, textarea, button {
     padding: 7px;
   }
 }
+
+/* ── Panel redesign: calm sections, clear hierarchy, tactile micro-interactions ── */
+.workspace-panel,
+.digitize-panel,
+.dataset-panel {
+  background: linear-gradient(155deg, rgba(24, 47, 56, 0.97), rgba(10, 25, 32, 0.97) 58%, rgba(8, 20, 27, 0.98));
+  border-color: rgba(143, 199, 183, 0.16) !important;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.46), 0 1px 0 rgba(210, 235, 227, 0.08) inset;
+}
+.workspace-panel::before,
+.digitize-panel::before,
+.dataset-panel::before {
+  content: "";
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(143, 199, 183, 0.8), rgba(100, 148, 174, 0.32), transparent 82%);
+  opacity: 0.8;
+}
+.workspace-panel-header,
+.analysis-workspace-header { background: rgba(8, 20, 27, 0.22); border-bottom-color: rgba(143, 199, 183, 0.12) !important; }
+.workspace-panel-tabs,
+.dataset-unit-bar { background: rgba(4, 14, 19, 0.24) !important; border-bottom-color: rgba(143, 199, 183, 0.1) !important; }
+.workspace-panel-tabs button,
+.analysis-category-tabs button,
+.dataset-panel button,
+.digitize-panel button { transition: transform 160ms var(--motion-ease, cubic-bezier(0.22, 1, 0.36, 1)), background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+.workspace-panel-tabs button:hover,
+.analysis-category-tabs button:hover,
+.dataset-panel button:hover,
+.digitize-panel button:hover { transform: translateY(-1px); }
+.workspace-panel-tabs button:active,
+.analysis-category-tabs button:active,
+.dataset-panel button:active,
+.digitize-panel button:active { transform: scale(0.97); }
+.layer-manager-heading,
+.analysis-workspace-header { padding: 12px 13px !important; }
+.layer-manager-heading strong,
+.analysis-workspace-header strong { letter-spacing: 0.12em; }
+.layer-manager-heading span,
+.analysis-workspace-header span { color: rgba(219, 232, 239, 0.58); }
+.layer-card-main { min-height: 62px; }
+.layer-card-main:hover .layer-card-thumbnail { box-shadow: 0 0 0 4px rgba(143, 199, 183, 0.1); }
+.digitize-panel .grid.grid-cols-3 { padding: 4px !important; border-color: rgba(143, 199, 183, 0.15) !important; background: rgba(4, 14, 19, 0.34) !important; }
+.digitize-panel .grid.grid-cols-3 > button { min-height: 48px; border: 1px solid transparent; }
+.digitize-panel .grid.grid-cols-3 > button:hover { background: rgba(143, 199, 183, 0.1); }
+.digitize-panel input,
+.digitize-panel select,
+.dataset-panel input,
+.dataset-panel select { border-color: rgba(143, 199, 183, 0.16) !important; background: rgba(4, 14, 19, 0.38) !important; }
+.digitize-panel input:focus,
+.digitize-panel select:focus,
+.dataset-panel input:focus,
+.dataset-panel select:focus { border-color: rgba(143, 199, 183, 0.58) !important; box-shadow: 0 0 0 3px rgba(143, 199, 183, 0.1); }
+.analysis-tool-card { background: linear-gradient(145deg, rgba(143, 199, 183, 0.08), rgba(4, 14, 19, 0.24)); }
+.analysis-tool-card:hover { box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2); }
+.analysis-tool-card:hover .analysis-tool-trigger > button { border-color: rgba(143, 199, 183, 0.48) !important; box-shadow: 0 0 0 3px rgba(143, 199, 183, 0.08); }
+@media (prefers-reduced-motion: reduce) {
+  .workspace-panel *, .digitize-panel *, .dataset-panel * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* A selected parcel reads as a spatial focus, not a warning: soft halo, bright edge,
+   and a very short breathing pulse. The map geometry itself is never altered. */
+.leaflet-overlay-pane path.parcel-selected {
+  filter: drop-shadow(0 0 5px rgba(167, 206, 193, 0.72));
+  stroke-dasharray: 9 4;
+  stroke-linecap: round;
+  animation: parcel-selection-breathe 1.8s ease-in-out infinite;
+}
+@keyframes parcel-selection-breathe {
+  0%, 100% { stroke-opacity: 0.86; filter: drop-shadow(0 0 3px rgba(167, 206, 193, 0.48)); }
+  50% { stroke-opacity: 1; filter: drop-shadow(0 0 9px rgba(167, 206, 193, 0.78)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .leaflet-overlay-pane path.parcel-selected { animation: none; }
+}
