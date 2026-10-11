@@ -13,6 +13,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Draggable from "react-draggable";
+import dynamic from "next/dynamic";
+const CalculateGeometryDialog = dynamic(() => import('./CalculateGeometryDialog').then(module => module.CalculateGeometryDialog));
 import { supabase } from "@/lib/supabase";
 import { deleteGeometriesFromSupabase, insertGeometryToSupabase } from "@/lib/database";
 
@@ -495,6 +497,18 @@ export function AttributeTablePanel() {
     </div>
   );
 
+  const geometryActions = activeTableLayerId && activeGeoJson ? (
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/50 px-3 py-2" aria-label="Perhitungan atribut">
+      <CalculateGeometryDialog
+        key={activeTableLayerId}
+        layerId={activeTableLayerId}
+        filteredIndices={filteredFeatures.map(row => row.originalIndex)}
+        selectedIndices={[...selectedIds].filter(index => index < activeGeoJson.features.length)}
+      />
+      <span className="text-xs text-muted-foreground">Hasil hitung → kolom atribut</span>
+    </div>
+  ) : null;
+
   const minimizedHeader = (
     <div className="attr-header flex items-center justify-between gap-2 px-3 py-1.5 bg-black/20 shrink-0 cursor-grab active:cursor-grabbing select-none">
       <div className="flex items-center gap-2 text-orange-400">
@@ -730,7 +744,7 @@ export function AttributeTablePanel() {
           )}
         >
           {isMinimized ? minimizedHeader : headerBar}
-          {!isMinimized && tableBody}
+          {!isMinimized && <>{geometryActions}{tableBody}</>}
         </div>
         {editDialog}
       </>
@@ -755,7 +769,7 @@ export function AttributeTablePanel() {
         >
           {isMinimized ? minimizedHeader : headerBar}
 
-          {!isMinimized && tableBody}
+          {!isMinimized && <>{geometryActions}{tableBody}</>}
 
           {!isMinimized && (
             <>
