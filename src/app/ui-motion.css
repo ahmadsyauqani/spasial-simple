@@ -97,36 +97,10 @@
   box-shadow: 0 0 0 7px rgba(233, 239, 241, 0.12), inset 0 0 0 7px rgba(233, 239, 241, 0.12);
   transform: rotate(-25deg) translateY(15px);
 }
-.sakagis-app .map-instrument-readout strong { color: #dbe8ef; }
-.sakagis-app .map-instrument-details { color: #a7cec1; }
 .sakagis-app .mobile-bottom-nav button[data-active="true"]::before { box-shadow: none; }
 
-/* Reserve separate lanes for coordinates, map actions and attribution. */
-@media (min-width: 1024px) {
-  .sakagis-app [data-map-ui="coordinate-bar"] {
-    left: 84px !important;
-    right: 254px !important;
-    width: auto !important;
-    max-width: none !important;
-    transform: none !important;
-  }
-  .sakagis-app .coordinate-details-popover {
-    position: fixed;
-    right: 254px;
-    bottom: 90px;
-  }
-  .sakagis-app [data-map-ui="coordinate-bar"] .map-instrument-bar {
-    width: 100%;
-    overflow-x: auto;
-    scrollbar-width: thin;
-  }
-}
+/* Keep navigation above the mobile bottom bar. */
 @media (max-width: 1023px) {
-  .sakagis-app .map-instrument-dock {
-    left: 12px !important;
-    right: 58px !important;
-    bottom: calc(152px + env(safe-area-inset-bottom));
-  }
   .sakagis-app .leaflet-control-zoom { margin-bottom: 98px; }
   .sakagis-app .studio-overview { bottom: calc(220px + env(safe-area-inset-bottom)); }
   .studio-overview h1 { font-size: 18px; }

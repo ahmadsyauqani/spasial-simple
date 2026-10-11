@@ -1061,6 +1061,41 @@ function CursorCoordinates() {
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [isLocked, setIsLocked] = useState(false);
   const [showCoordinateDetails, setShowCoordinateDetails] = useState(false);
+  const [coordinateSystem, setCoordinateSystem] = useState<'wgs84' | 'utm' | 'tm3'>('wgs84');
+  const detailsTriggerRef = useRef<HTMLButtonElement>(null);
+  const detailsRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showCoordinateDetails) return;
+    detailsRef.current?.focus();
+    const close = () => {
+      setShowCoordinateDetails(false);
+      detailsTriggerRef.current?.focus({ preventScroll: true });
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
+    };
+    const onPointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !detailsRef.current?.contains(event.target) && !detailsTriggerRef.current?.contains(event.target)) {
+        close();
+        // Native pointer focus runs after this capture handler.
+        requestAnimationFrame(() => detailsTriggerRef.current?.focus({ preventScroll: true }));
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    document.addEventListener('pointerdown', onPointer, true);
+    return () => {
+      document.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('pointerdown', onPointer, true);
+    };
+  }, [showCoordinateDetails]);
+
+  // Leaflet listens outside React: keep instrument interactions off the map.
+  useEffect(() => {
+    const dock = dockRef.current;
+    if (dock) { L.DomEvent.disableClickPropagation(dock); L.DomEvent.disableScrollPropagation(dock); }
+  }, [coords !== null]);
   const [isSnapEnabled, setIsSnapEnabled] = useState(false);
   const [snapPoint, setSnapPoint] = useState<{lat: number, lng: number} | null>(null);
   const [zoom, setZoom] = useState(13); // Default safely
@@ -1312,32 +1347,33 @@ function CursorCoordinates() {
     return `${degrees}° ${pMinutes}' ${pSeconds}" ${direction}`;
   };
 
-  // Removed single string wgs84 to use separate Lat/Lng display for better alignment
-
-  const utmZone = Math.floor((lng + 180) / 6) + 1;
+  // Wrap repeated Leaflet worlds before choosing a projection zone.
+  const longitude = ((lng + 180) % 360 + 360) % 360 - 180;
+  const utmZone = Math.min(60, Math.floor((longitude + 180) / 6) + 1);
   const isSouth = lat < 0;
-  const utmProjString = `+proj=utm +zone=${utmZone} ${isSouth ? '+south ' : ''}+datum=WGS84 +units=m +no_defs`;
-  let utmResult = { x: 0, y: 0 };
-  let tm3Result = { x: 0, y: 0 };
-  let tm3ZoneDisplay = "-";
-
-  try {
-    const utmCoords = proj4('WGS84', utmProjString, [lng, lat]);
-    utmResult = { x: utmCoords[0], y: utmCoords[1] };
-  } catch (e) {}
-
-  const tm3Index = Math.round((lng - 94.5) / 3);
-  if (tm3Index >= 0 && tm3Index <= 20) {
-    const cm = 94.5 + (tm3Index * 3);
-    const tm3ProjString = `+proj=tmerc +lat_0=0 +lon_0=${cm} +k=0.9999 +x_0=200000 +y_0=1500000 +ellps=WGS84 +datum=WGS84 +units=m +no_defs`;
+  const project = (definition: string): { x: number; y: number } | null => {
     try {
-      const tm3Coords = proj4('WGS84', tm3ProjString, [lng, lat]);
-      tm3Result = { x: tm3Coords[0], y: tm3Coords[1] };
-      const baseZone = 46 + Math.floor((tm3Index + 1) / 2);
-      const subZone = (tm3Index % 2 === 0) ? 2 : 1;
-      tm3ZoneDisplay = `Zona ${baseZone}-${subZone}`;
-    } catch (e) {}
-  }
+      const [x, y] = proj4('WGS84', definition, [longitude, lat]);
+      return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+    } catch { return null; }
+  };
+  const utmResult = lat >= -80 && lat <= 84
+    ? project(`+proj=utm +zone=${utmZone} ${isSouth ? '+south ' : ''}+datum=WGS84 +units=m +no_defs`)
+    : null;
+  const utmReason = lat < -80 || lat > 84 ? 'Di luar cakupan UTM (80°S–84°N)' : 'Proyeksi UTM gagal';
+
+  // TM-3 strips: 46.2 (CM 94.5°) through 54.1 (CM 139.5°).
+  // Supported envelope, not an onshore cadastral validity check.
+  // References: https://epsg.io/23830 and https://epsg.io/23845.
+  const tm3Index = Math.floor((longitude - 93) / 3);
+  const tm3Supported = tm3Index >= 0 && tm3Index <= 15 && lat >= -11 && lat <= 6;
+  const tm3ZoneDisplay = tm3Supported ? `Zona ${46 + Math.floor((tm3Index + 1) / 2)}.${tm3Index % 2 === 0 ? 2 : 1}` : 'Tidak tersedia';
+  const tm3Result = tm3Supported
+    ? project(`+proj=tmerc +lat_0=0 +lon_0=${94.5 + tm3Index * 3} +k=0.9999 +x_0=200000 +y_0=1500000 +datum=WGS84 +units=m +no_defs`)
+    : null;
+  const tm3Reason = tm3Supported ? 'Proyeksi TM-3 gagal' : 'Di luar cakupan TM-3 yang didukung (93°–141° BT, 11° LS–6° LU)';
+  const utmText = utmResult ? `E ${utmResult.x.toFixed(2)} · N ${utmResult.y.toFixed(2)} m` : 'Tidak tersedia';
+  const tm3Text = tm3Result ? `X ${tm3Result.x.toFixed(2)} · Y ${tm3Result.y.toFixed(2)} m` : 'Tidak tersedia';
 
   const customIcon = L.divIcon({
     html: `
@@ -1433,64 +1469,79 @@ function CursorCoordinates() {
       )}
 
       {/* ── Map instrument dock ── */}
-      <div data-map-ui="coordinate-bar" className="map-instrument-dock absolute bottom-[calc(132px+env(safe-area-inset-bottom))] left-3 right-3 z-[500] pointer-events-auto lg:bottom-6">
-        <div className="map-instrument-bar">
-          <div className="map-instrument-status">
-            <Activity className="h-3.5 w-3.5 shrink-0 text-orange-300" />
-            <div>
-              <span>WORKSPACE</span>
-              <strong>{loadedLayers.length} layer · {loadedFeatureCount.toLocaleString('id-ID')} fitur</strong>
+      <div ref={dockRef} data-map-ui="coordinate-bar" className="map-instrument-dock">
+        <div className="map-instrument-bar" role="group" aria-label="Instrumen peta">
+          <div className="map-instrument-status" title="Layer dan fitur yang dimuat">
+            <Layers className="h-4 w-4" />
+            <strong>{loadedLayers.length} layer <span>· {loadedFeatureCount.toLocaleString('id-ID')} fitur</span></strong>
+          </div>
+          <div className="map-instrument-actions" role="group" aria-label="Alat ukur">
+            <button aria-label="Snap ke vertex" aria-pressed={isSnapEnabled} onClick={() => setIsSnapEnabled(!isSnapEnabled)} className="map-instrument-button" title="Snap ke vertex (25 px)">
+              <Magnet className="h-4 w-4" /><span>Snap</span>
+            </button>
+            <button aria-label="Ukur jarak" aria-pressed={isMeasuring && measureType === 'distance'} onClick={() => isMeasuring && measureType === 'distance' ? cancelMeasure() : startMeasure('distance')} className="map-instrument-button">
+              <Ruler className="h-4 w-4" /><span>Jarak</span>
+            </button>
+            <button aria-label="Ukur luas" aria-pressed={isMeasuring && measureType === 'area'} onClick={() => isMeasuring && measureType === 'area' ? cancelMeasure() : startMeasure('area')} className="map-instrument-button">
+              <Square className="h-4 w-4" /><span>Luas</span>
+            </button>
+          </div>
+          <div className="map-instrument-coordinate">
+            <select aria-label="Sistem koordinat" value={coordinateSystem} onChange={(event) => setCoordinateSystem(event.target.value as typeof coordinateSystem)}>
+              <option value="wgs84">WGS84</option><option value="utm">UTM</option><option value="tm3">TM-3</option>
+            </select>
+            <div className="map-instrument-readout">
+              <span>{coordinateSystem === 'wgs84' ? 'Lintang / Bujur · °' : coordinateSystem === 'utm' ? `Zona ${utmZone}${isSouth ? 'S' : 'N'} · meter` : `${tm3ZoneDisplay} · meter`}</span>
+              <strong data-testid="active-coordinate">{coordinateSystem === 'wgs84' ? `${lat.toFixed(6)}°, ${lng.toFixed(6)}°` : coordinateSystem === 'utm' ? utmText : tm3Text}</strong>
             </div>
           </div>
-
-          <div className="map-instrument-actions">
-            <button onClick={() => setIsSnapEnabled(!isSnapEnabled)} className={isSnapEnabled ? "map-instrument-button is-active" : "map-instrument-button"} title={isSnapEnabled ? "Matikan snap" : "Aktifkan snap ke vertex"}>
-              <Magnet className="h-3.5 w-3.5" /><span>Snap</span>
-            </button>
-            <button onClick={() => isMeasuring && measureType === 'distance' ? cancelMeasure() : (startMeasure('distance'), toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" }))} className={isMeasuring && measureType === 'distance' ? "map-instrument-button is-measuring" : "map-instrument-button"} title="Ukur jarak">
-              <Ruler className="h-3.5 w-3.5" /><span>Jarak</span>
-            </button>
-            <button onClick={() => isMeasuring && measureType === 'area' ? cancelMeasure() : (startMeasure('area'), toast.info("Klik titik di peta. Klik ganda untuk selesai.", { id: "measure-info" }))} className={isMeasuring && measureType === 'area' ? "map-instrument-button is-measuring" : "map-instrument-button"} title="Ukur luas">
-              <Square className="h-3.5 w-3.5" /><span>Luas</span>
-            </button>
-          </div>
-
-          <div className="map-instrument-divider" />
-
-          <div className="map-instrument-readout">
-            <span>KOORDINAT KURSOR · WGS 84</span>
-            <strong>{lat.toFixed(6)}°, {lng.toFixed(6)}°</strong>
-          </div>
-
-          <div className="map-instrument-projection hidden sm:flex">
-            <span>UTM {utmZone}{isSouth ? 'S' : 'N'}</span>
-            <strong>E {utmResult.x.toFixed(2)}</strong>
-            <small>N {utmResult.y.toFixed(2)}</small>
-          </div>
-
-          <div className="map-instrument-projection hidden sm:flex">
-            <span>TM-3 {tm3ZoneDisplay}</span>
-            <strong>X {tm3Result.x.toFixed(2)}</strong>
-            <small>Y {tm3Result.y.toFixed(2)}</small>
-          </div>
-
-          <div className="map-instrument-metric"><span>SKALA</span><strong>1:{new Intl.NumberFormat('id-ID').format(scale)}</strong></div>
-          <div className="map-instrument-metric"><span>ZOOM</span><strong>{zoom}</strong></div>
-
-          <button onClick={() => setShowCoordinateDetails((value) => !value)} className={showCoordinateDetails ? "map-instrument-details is-active" : "map-instrument-details"} title="Tampilkan koordinat UTM dan TM-3">
-            <Settings2 className="h-3.5 w-3.5" /><span>Detail</span>
+          <div className="map-instrument-view"><span>Skala ≈ <strong>1:{scale.toLocaleString('id-ID')}</strong></span><span>Zoom <strong>{zoom}</strong></span></div>
+          <button ref={detailsTriggerRef} aria-label="Detail peta" aria-expanded={showCoordinateDetails} aria-controls="map-coordinate-details" onClick={() => setShowCoordinateDetails((value) => !value)} className="map-instrument-details">
+            <Settings2 className="h-4 w-4" /><span>Detail</span>
           </button>
-
-          {isLocked && <button onClick={handleUnlock} className="map-instrument-lock" title="Buka kunci koordinat"><Lock className="h-3.5 w-3.5" /></button>}
-
-          {showCoordinateDetails && (
-            <div className="coordinate-details-popover">
-              <div><span>WGS84 DMS</span><strong>{toDMS(lat, true)}<br />{toDMS(lng, false)}</strong></div>
-              <div><span>UTM {utmZone}{isSouth ? 'S' : 'N'}</span><strong>X {utmResult.x.toFixed(2)} · Y {utmResult.y.toFixed(2)}</strong></div>
-              <div><span>TM-3 {tm3ZoneDisplay}</span><strong>X {tm3Result.x.toFixed(2)} · Y {tm3Result.y.toFixed(2)}</strong></div>
-            </div>
-          )}
+          {isLocked && <button onClick={handleUnlock} className="map-instrument-lock" aria-label="Buka kunci koordinat" title="Buka kunci koordinat"><Lock className="h-4 w-4" /></button>}
         </div>
+        {(isMeasuring || measureResult) && !showCoordinateDetails && (
+          <div className="map-measure-status" role="status">
+            <span>{measureResult ? measureResult.label : `${measureType === 'distance' ? 'Jarak' : 'Luas'} · ${measurePoints.length} titik${measureLiveLabel ? ` · ${measureLiveLabel}` : ''}`}</span>
+            {isMeasuring && <button aria-label="Selesaikan pengukuran" disabled={measurePoints.length < (measureType === 'area' ? 3 : 2)} onClick={() => finishMeasure()}>Selesai</button>}
+            <button aria-label="Reset pengukuran" onClick={cancelMeasure}>{isMeasuring ? 'Batal' : 'Reset'}</button>
+            {isMeasuring && <small>Klik titik di peta · klik ganda atau Selesai</small>}
+          </div>
+        )}
+        {showCoordinateDetails && (
+          <div ref={detailsRef} id="map-coordinate-details" className="coordinate-details-popover" role="dialog" aria-label="Detail peta" tabIndex={-1}>
+            <header><h2>Detail peta</h2><button aria-label="Tutup detail peta" onClick={() => { setShowCoordinateDetails(false); detailsTriggerRef.current?.focus(); }}>×</button></header>
+            <dl>
+              <div><dt>Workspace</dt><dd>{loadedLayers.length} layer · {loadedFeatureCount.toLocaleString('id-ID')} fitur dimuat</dd></div>
+              <div><dt>WGS84 · °</dt><dd>{lat.toFixed(6)}°, {lng.toFixed(6)}°</dd></div>
+              <div><dt>WGS84 DMS</dt><dd>{toDMS(lat, true)}<br />{toDMS(lng, false)}</dd></div>
+              <div><dt>UTM {utmZone}{isSouth ? 'S' : 'N'} · m</dt><dd>{utmResult ? utmText : utmReason}</dd></div>
+              <div><dt>TM-3 {tm3ZoneDisplay} · m</dt><dd>{tm3Result ? tm3Text : tm3Reason}</dd></div>
+              <div><dt>Skala / Zoom</dt><dd>≈ 1:{scale.toLocaleString('id-ID')} / {zoom}</dd></div>
+              <div><dt>Snap vertex</dt><dd>{isSnapEnabled ? 'Aktif' : 'Nonaktif'} · radius 25 px</dd></div>
+            </dl>
+            <form className="map-view-form" onSubmit={(event) => {
+              event.preventDefault();
+              const denominator = Number(new FormData(event.currentTarget).get('scale'));
+              if (!Number.isFinite(denominator) || denominator <= 0) return;
+              const target = Math.log2(156543.03392 * Math.cos(map.getCenter().lat * Math.PI / 180) / (denominator * 0.00026));
+              map.setZoom(Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), Math.round(target))));
+            }}>
+              <label>Skala 1:<input key={scale} name="scale" aria-label="Penyebut skala" type="number" min="1" required defaultValue={scale} /></label>
+              <button type="submit" aria-label="Terapkan skala">Terapkan</button>
+            </form>
+            <form className="map-view-form" onSubmit={(event) => {
+              event.preventDefault();
+              const target = Number(new FormData(event.currentTarget).get('zoom'));
+              if (Number.isFinite(target)) map.setZoom(Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), target)));
+            }}>
+              <label>Zoom<input key={zoom} name="zoom" aria-label="Level zoom" type="number" min={map.getMinZoom()} max={map.getMaxZoom()} required defaultValue={zoom} /></label>
+              <button type="submit" aria-label="Terapkan zoom">Terapkan</button>
+            </form>
+            <p>Skala perkiraan layar; disesuaikan ke level zoom peta terdekat. Klik peta untuk mengunci koordinat. Pengukuran: klik titik, klik ganda untuk selesai.</p>
+          </div>
+        )}
       </div>
     </>
   );

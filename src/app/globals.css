@@ -531,45 +531,6 @@ input, select, textarea, button {
   border-color: rgba(189,98,112,0.3);
 }
 
-.coordinate-details-popover {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  z-index: 2000;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  min-width: 250px;
-  padding: 12px;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
-  background: rgba(2, 6, 23, 0.96);
-  box-shadow: 0 14px 35px rgba(0,0,0,0.45);
-  backdrop-filter: blur(16px);
-}
-
-.coordinate-details-popover div {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.coordinate-details-popover span {
-  color: rgba(255,255,255,0.4);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.coordinate-details-popover strong {
-  color: rgba(255,255,255,0.85);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
-  text-align: right;
-}
-
 .layer-manager-heading {
   display: flex;
   align-items: center;
@@ -1044,29 +1005,7 @@ input, select, textarea, button {
     font-size: 9px;
   }
 
-  .coordinate-details-popover {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: calc(205px + env(safe-area-inset-bottom));
-    width: auto;
-    min-width: 0;
-    max-height: 34vh;
-    overflow-y: auto;
-    z-index: 2000;
-  }
 
-  .coordinate-details-popover div {
-    display: grid;
-    grid-template-columns: 82px minmax(0, 1fr);
-    align-items: start;
-    gap: 8px;
-  }
-
-  .coordinate-details-popover strong {
-    overflow-wrap: anywhere;
-    text-align: left;
-  }
 }
 
 /* -- Measurement tooltip -- */
@@ -1117,290 +1056,86 @@ input, select, textarea, button {
   box-shadow: 0 0 0 2px rgba(100,148,174, 0.08);
 }
 
+/* Instrument dock: one bounded surface, no horizontal scrolling. */
 .map-instrument-dock {
-  pointer-events: none;
+  position: absolute; z-index: 500; left: 84px; bottom: 24px;
+  width: min(960px, calc(100% - 338px)); pointer-events: none;
+  --dock-bg: #f4f7f6; --dock-text: #243c43; --dock-muted: #50666f;
+  --dock-line: #cad8d9; --dock-accent: #356e60;
 }
-
+.dark .map-instrument-dock {
+  --dock-bg: #13212b; --dock-text: #d2e0e5; --dock-muted: #9ab0bb;
+  --dock-line: #344b56; --dock-accent: #a2cabc;
+}
 .map-instrument-bar {
-  position: relative;
-  display: flex;
-  align-items: center;
-  pointer-events: auto;
-  gap: 7px;
-  min-height: 54px;
-  width: max-content;
-  max-width: 100%;
-  padding: 6px 8px;
-  overflow: visible;
-  border: 1px solid rgba(141,181,202,0.22);
-  border-radius: 17px;
-  background: rgba(5,11,19,0.97);
-  box-shadow: 0 12px 34px rgba(0,0,0,0.48), 0 0 22px rgba(100,148,174,0.06);
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px;
+  border: 1px solid var(--dock-line); border-radius: 16px;
+  background: var(--dock-bg); color: var(--dock-text); pointer-events: auto;
+  box-shadow: 0 8px 24px #0003;
 }
-
-.map-instrument-status,
-.map-instrument-actions,
-.map-instrument-readout,
-.map-instrument-metric,
-.map-instrument-details,
-.map-instrument-lock {
-  flex: 0 0 auto;
+.map-instrument-dock :is(button, select, input) {
+  min-height: 40px; border: 1px solid transparent; border-radius: 9px;
+  color: inherit; background: transparent; font: inherit; font-size: 11px;
 }
-
-.map-instrument-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 120px;
-  padding: 0 5px 0 2px;
-  border-right: 1px solid rgba(255,255,255,0.12);
+.map-instrument-dock button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 8px; cursor: pointer; }
+.map-instrument-dock :is(button, select, input):focus-visible { outline: 2px solid var(--dock-accent); outline-offset: -2px; }
+.map-instrument-dock button:hover { background: color-mix(in srgb, var(--dock-accent) 12%, transparent); }
+.map-instrument-dock button:is([aria-pressed="true"], [aria-expanded="true"]) { background: color-mix(in srgb, var(--dock-accent) 15%, transparent); border-color: var(--dock-accent); color: var(--dock-accent); }
+.map-instrument-actions { display: flex; flex-shrink: 0; gap: 2px; }
+.map-instrument-status { display: flex; align-items: center; gap: 6px; max-width: 150px; font-size: 11px; }
+.map-instrument-status strong { font-weight: 500; overflow-wrap: anywhere; }
+.map-instrument-status svg { flex-shrink: 0; color: var(--dock-accent); }
+.map-instrument-coordinate { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding-left: 8px; border-left: 1px solid var(--dock-line); }
+.map-instrument-coordinate select { width: 76px; flex-shrink: 0; cursor: pointer; }
+.map-instrument-coordinate option { background: var(--dock-bg); color: var(--dock-text); }
+.map-instrument-readout { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.map-instrument-readout > span { color: var(--dock-muted); font-size: 10px; }
+.map-instrument-readout strong { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 500; overflow-wrap: anywhere; }
+.map-instrument-view { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; color: var(--dock-muted); font-size: 10px; }
+.map-instrument-view strong { color: var(--dock-accent); font-weight: 500; font-variant-numeric: tabular-nums; }
+.map-instrument-details { flex-shrink: 0; }
+.map-instrument-lock { flex-shrink: 0; width: 40px; color: var(--dock-accent) !important; }
+.coordinate-details-popover {
+  position: absolute; right: 0; bottom: calc(100% + 8px); width: min(360px, 100%);
+  max-height: min(520px, calc(100dvh - 180px)); overflow-y: auto; overscroll-behavior: contain;
+  padding: 14px; border: 1px solid var(--dock-line); border-radius: 16px; pointer-events: auto;
+  background: var(--dock-bg); color: var(--dock-text); box-shadow: 0 12px 32px #0004;
 }
-
-.map-instrument-status div,
-.map-instrument-readout,
-.map-instrument-metric {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  line-height: 1.15;
-}
-
-.map-instrument-status span,
-.map-instrument-readout span,
-.map-instrument-metric span {
-  color: rgba(141,181,202,0.62);
-  font-size: 7px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  white-space: nowrap;
-}
-
-.map-instrument-status strong,
-.map-instrument-readout strong,
-.map-instrument-metric strong {
-  overflow: hidden;
-  color: rgba(255,255,255,0.92);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.map-instrument-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.map-instrument-button,
-.map-instrument-details,
-.map-instrument-lock {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-height: 38px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  padding: 0 8px;
-  color: rgba(255,255,255,0.55);
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  transition: background 0.18s, border-color 0.18s, color 0.18s;
-}
-
-.map-instrument-button:hover,
-.map-instrument-details:hover {
-  color: white;
-  background: rgba(255,255,255,0.08);
-}
-
-.map-instrument-button.is-active {
-  color: #a5b4fc;
-  border-color: rgba(140,123,178,0.35);
-  background: rgba(140,123,178,0.2);
-}
-
-.map-instrument-button.is-measuring {
-  color: #8fc7b7;
-  border-color: rgba(90,158,141,0.35);
-  background: rgba(90,158,141,0.2);
-}
-
-.map-instrument-divider {
-  width: 1px;
-  height: 27px;
-  flex: 0 0 auto;
-  background: rgba(255,255,255,0.12);
-}
-
-.map-instrument-readout {
-  min-width: 190px;
-  flex: 0 0 190px;
-}
-
-.map-instrument-projection {
-  min-width: 104px;
-  flex: 0 0 auto;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  padding: 0 5px;
-  border-left: 1px solid rgba(255,255,255,0.1);
-  line-height: 1.15;
-}
-
-.map-instrument-projection span {
-  color: rgba(141,181,202,0.62);
-  font-size: 7px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-}
-
-.map-instrument-projection strong,
-.map-instrument-projection small {
-  color: rgba(255,255,255,0.9);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
-  white-space: nowrap;
-}
-
-.map-instrument-projection small {
-  color: rgba(255,255,255,0.58);
-}
-
-.map-instrument-metric {
-  min-width: 68px;
-  padding: 0 4px;
-}
-
-.map-instrument-metric strong {
-  color: #6fb3a1;
-  font-size: 11px;
-}
-
-.map-instrument-details {
-  min-width: 70px;
-}
-
-.map-instrument-details.is-active {
-  color: #93c5fd;
-  border-color: rgba(59,130,246,0.3);
-  background: rgba(59,130,246,0.18);
-}
-
-.map-instrument-lock {
-  min-width: 38px;
-  padding: 0;
-  color: #de9ea6;
-  border-color: rgba(189,98,112,0.3);
-  background: rgba(189,98,112,0.16);
-}
-
-@media (min-width: 1024px) {
-  [data-map-ui="coordinate-bar"] {
-    left: 50% !important;
-    right: auto !important;
-    width: max-content !important;
-    max-width: calc(100vw - 430px) !important;
-    transform: translateX(-50%) !important;
-    z-index: 500 !important;
-  }
-
-  [data-map-ui="coordinate-bar"] .map-instrument-bar {
-    width: max-content;
-    max-width: 100%;
-  }
-
-  .map-action-controls .basemap-gallery {
-    left: auto;
-    right: 0;
-  }
-}
-
+.map-view-form { display: flex; gap: 8px; align-items: end; margin-top: 8px; }
+.map-view-form label { flex: 1; min-width: 0; font-size: 11px; color: var(--dock-muted); }
+.map-view-form input { display: block; width: 100%; padding: 0 8px; border-color: var(--dock-line) !important; }
+.map-view-form button { border-color: var(--dock-line); }
+.map-measure-status { position: absolute; bottom: calc(100% + 8px); left: 0; width: min(440px, 100%); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px; background: var(--dock-bg); color: var(--dock-text); border: 1px solid var(--dock-line); border-radius: 12px; pointer-events: auto; font-size: 12px; }
+.map-measure-status > span { flex: 1 1 160px; }
+.map-measure-status small { flex: 1 0 100%; color: var(--dock-muted); }
+.map-measure-status button:disabled { opacity: .45; cursor: not-allowed; }
+.coordinate-details-popover header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.coordinate-details-popover h2 { font-size: 14px; font-weight: 600; }
+.coordinate-details-popover header button { width: 44px; min-height: 44px; font-size: 22px; }
+.coordinate-details-popover dl > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 1px solid var(--dock-line); }
+.coordinate-details-popover dt, .coordinate-details-popover p { color: var(--dock-muted); font-size: 11px; }
+.coordinate-details-popover dd { margin: 0; font: 11px/1.6 ui-monospace, monospace; overflow-wrap: anywhere; }
+.coordinate-details-popover p { margin-top: 10px; line-height: 1.6; }
+@media (min-width: 1024px) { .map-action-controls .basemap-gallery { left: auto; right: 0; } }
+@media (min-width: 1024px) and (max-width: 1199px) { .map-instrument-status { display: none; } }
 @media (max-width: 1023px) {
-  .map-instrument-dock {
-    left: 68px !important;
-    right: 12px !important;
-    width: auto !important;
-    transform: none !important;
-  }
-
-  .map-instrument-bar {
-    min-height: 50px;
-    width: 100%;
-    gap: 5px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .map-instrument-bar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .map-instrument-status,
-  .map-instrument-divider {
-    display: none;
-  }
-
-  .map-instrument-readout {
-    min-width: 145px;
-    flex: 1 0 145px;
-  }
-
-  .map-instrument-projection {
-    min-width: 112px;
-  }
-
-  .map-instrument-readout span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .map-instrument-metric {
-    min-width: 54px;
-  }
-
-  .map-instrument-button,
-  .map-instrument-details,
-  .map-instrument-lock {
-    min-height: 38px;
-  }
-
-  .map-action-controls .basemap-gallery {
-    left: 0;
-    right: auto;
-    max-width: calc(100vw - 1.5rem);
-  }
+  .map-instrument-dock { left: 12px; bottom: calc(152px + env(safe-area-inset-bottom)); width: calc(100% - 70px); max-width: 720px; }
+  .map-instrument-status { display: none; }
+  .map-instrument-dock :is(button, select, input) { min-height: 44px; }
+  .map-instrument-lock { width: 44px; }
+  .map-action-controls .basemap-gallery { left: 0; right: auto; max-width: calc(100vw - 1.5rem); }
 }
-
-@media (min-width: 1024px) and (max-width: 1199px) {
-  [data-map-ui="coordinate-bar"] .map-instrument-bar {
-    width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  [data-map-ui="coordinate-bar"] .map-instrument-bar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .map-instrument-status {
-    display: none;
-  }
-
-  .map-instrument-projection {
-    display: none !important;
-  }
-
-  .map-instrument-readout {
-    min-width: 180px;
-    flex-basis: 180px;
-  }
+@media (max-width: 639px) {
+  .map-instrument-bar { display: grid; grid-template-columns: 1fr auto; gap: 4px 6px; padding: 5px; }
+  .map-instrument-actions { grid-column: 1; grid-row: 1; }
+  .map-instrument-actions button { flex: 1; padding: 0 6px; }
+  .map-instrument-details { grid-column: 2; grid-row: 1; }
+  .map-instrument-coordinate { grid-column: 1 / -1; grid-row: 2; border-left: 0; border-top: 1px solid var(--dock-line); padding: 2px 2px 0; gap: 4px; }
+  .map-instrument-readout strong { font-size: 10px; }
+  .map-instrument-readout > span { font-size: 9px; }
+  .map-instrument-view { display: none; }
+  .map-instrument-lock { position: absolute; right: 0; bottom: calc(100% + 8px); background: var(--dock-bg) !important; border-color: var(--dock-line) !important; pointer-events: auto; }
+  .coordinate-details-popover { max-height: calc(100dvh - 450px); width: 100%; }
 }
 
 .sakagis-app {
